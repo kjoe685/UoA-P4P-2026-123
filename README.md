@@ -13,8 +13,11 @@ Team members: **Albert Sun**, **Kieran Joe**
 │   └── engine/
 │       ├── Main.java                   # entry point
 │       ├── ChatManager.java
-│       └── openAi/
-│           └── OpenAIChatManager.java
+│       ├── openAi/
+│       │   └── OpenAIChatManager.java  # OpenAI API manager
+│       └── io/
+│           ├── EngineOutput.java
+│           └── ConsoleEngineOutput.java
 ├── resources/
 │   └── prompts/
 │       ├── BasePrompt.txt
