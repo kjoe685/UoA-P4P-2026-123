@@ -10,14 +10,17 @@ Team members: **Albert Sun**, **Kieran Joe**
 
 ```
 ├── src/
-│   ├── Engine
-│   └── OpenAI
+│   └── engine/
+│       ├── Main.java                   # entry point
+│       ├── ChatManager.java
+│       └── openAi/
+│           └── OpenAIChatManager.java
 ├── resources/
 │   └── prompts/
 │       ├── BasePrompt.txt
 │       └── PoliticanPrompt.txt
 ├── keys/
-│   └── OpenAI/
+│   └── openAi/
 │       ├── OpenAI_Key_TEMPLATE.txt
 │       └── OpenAI_Key.txt              # git ignored
 ├── README.md
