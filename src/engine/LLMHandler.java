@@ -1,6 +1,6 @@
 package engine;
 
-public interface ChatManager {
+public interface LLMHandler {
     void addMessage(String message);
     void sendChat();
     String getMessageContent();

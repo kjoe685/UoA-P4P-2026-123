@@ -1,8 +1,8 @@
 package engine.openAi;
 
-import engine.ChatManager;
+import engine.LLMHandler;
 
-public class OpenAIChatManager implements ChatManager {
+public class OpenAILLMHandler implements LLMHandler {
 
     // TODO
     public void addMessage(String message) {}
