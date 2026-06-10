@@ -24,9 +24,13 @@ keys/openAi/OpenAI_Key_TEMPLATE.txt  -> keys/openAi/OpenAI_Key.txt
 │       ├── ChatManager.java
 │       ├── openAi/
 │       │   └── OpenAIChatManager.java  # OpenAI API manager
-│       └── io/
-│           ├── EngineOutput.java
-│           └── ConsoleEngineOutput.java
+│       ├── io/
+│       │   ├── EngineOutput.java
+│       │   └── ConsoleEngineOutput.java
+│       ├── prompt/
+│       │   └── PromptManager.java      # Prompt manager/assembler
+│       └── utils/
+│           └── FileTextReader.java     # Utilities for reading text files   
 ├── resources/
 │   └── prompts/
 │       ├── BasePrompt.txt
