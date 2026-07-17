@@ -2,14 +2,21 @@ package engine.openAi;
 
 import engine.LLMHandler;
 
+import java.net.http.HttpResponse;
+
 public class OpenAILLMHandler implements LLMHandler {
 
-    // TODO
-    public void addMessage(String message) {}
+    private String apiKey;
+    private String model;
 
-    // TODO
-    public void sendChat() {}
+    public OpenAILLMHandler(String apiKey, String model) {
+        this.apiKey = apiKey;
+        this.model = model;
+    }
 
-    // TODO
-    public String getMessageContent() { return null; }
+    public void setApiKey(String apiKey) {}
+
+    public void setModel(String model) {}
+
+    public HttpResponse<String> sendRequest() { return null; }
 }
