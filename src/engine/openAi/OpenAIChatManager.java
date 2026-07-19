@@ -15,8 +15,12 @@ import java.util.Map;
 public class OpenAIChatManager implements ChatManager {
 
     private static final String CHAT_COMPLETIONS_URL = "https://api.openai.com/v1/chat/completions";
+
+    // TODO consider refactoring these parameters into an enum or similar
     private static final String MODEL = "gpt-4o-mini";
-    private static final double TEMPERATURE = 0.8;
+    private static final double TEMPERATURE = 1;
+    private static final String MODEL2 = "gpt-5-nano";
+    private static final String REASONING = "medium"; // minimal, low, medium, high
 
     private final String apiKey;
     private final HttpClient httpClient = HttpClient.newHttpClient();
@@ -41,7 +45,7 @@ public class OpenAIChatManager implements ChatManager {
                 .uri(URI.create(CHAT_COMPLETIONS_URL))
                 .header("Content-Type", "application/json")
                 .header("Authorization", "Bearer " + apiKey)
-                .POST(HttpRequest.BodyPublishers.ofString(buildRequestBody()))
+                .POST(HttpRequest.BodyPublishers.ofString(buildRequestBodyLegacy()))
                 .build();
 
         try {
@@ -62,7 +66,12 @@ public class OpenAIChatManager implements ChatManager {
         return lastResponse;
     }
 
-    private String buildRequestBody() {
+    /**
+     * This request body builder is used for old models such as the GPT-4 series and older.
+     * These use a temperature parameter and message input
+     * @return String object of the request body
+     */
+    private String buildRequestBodyLegacy() {
         StringBuilder body = new StringBuilder();
         body.append("{\"model\":\"").append(Json.escape(MODEL)).append("\",");
         body.append("\"temperature\":").append(TEMPERATURE).append(",");
@@ -76,6 +85,30 @@ public class OpenAIChatManager implements ChatManager {
                     .append(Json.escape(message.content)).append("\"}");
         }
         body.append("]}");
+        return body.toString();
+    }
+
+    /**
+     * TODO get this working
+     * This request body builder is used for newer models such as the GPT-5 series.
+     * These use the
+     * @return String object of the request body
+     */
+    private String buildRequestBodyNew() {
+        StringBuilder body = new StringBuilder();
+        body.append("{\"model\":\"").append(Json.escape(MODEL2)).append("\",");
+        body.append("\"reasoning\":{\"effort\":\"").append(Json.escape(REASONING)).append("\"},");
+        body.append("\"messages\":[");
+        for (int i = 0; i < messages.size(); i++) {
+            if (i > 0) {
+                body.append(",");
+            }
+            ChatMessage message = messages.get(i);
+            body.append("{\"role\":\"").append(message.role).append("\",\"content\":\"")
+                    .append(Json.escape(message.content)).append("\"}");
+        }
+        body.append("]}");
+                                    System.out.println(body);
         return body.toString();
     }
 
