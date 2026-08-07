@@ -14,13 +14,37 @@ import java.util.Map;
 
 public class OpenAIChatManager implements ChatManager {
 
-    private static final String CHAT_COMPLETIONS_URL = "https://api.openai.com/v1/chat/completions";
+    private enum OpenAIPreset {
+        // Name, Temperature, Reasoning Effort
+        // null for non-applicable parameters
+        GPT_4o_MINI("gpt-4o-mini", 1d, null),
+        GPT_5_NANO("gpt-5-nano", null, "medium");
 
-    // TODO consider refactoring these parameters into an enum or similar
-    private static final String MODEL = "gpt-4o-mini";
-    private static final double TEMPERATURE = 1;
-    private static final String MODEL2 = "gpt-5-nano";
-    private static final String REASONING = "medium"; // minimal, low, medium, high
+        private final String name;
+        private final Double temperature;
+        private final String reasoningEffort;
+
+        OpenAIPreset(String name, Double temperature, String reasoningEffort) {
+            this.name = name;
+            this.temperature = temperature;
+            this.reasoningEffort = reasoningEffort;
+        }
+
+        private String getName() {
+            return name;
+        }
+
+        private Double getTemperature() {
+            return temperature;
+        }
+
+        private String getReasoningEffort() {
+            return reasoningEffort;
+        }
+    }
+
+    private static final String CHAT_COMPLETIONS_URL = "https://api.openai.com/v1/chat/completions";
+    private static final OpenAIPreset PRESET = OpenAIPreset.GPT_5_NANO;
 
     private final String apiKey;
     private final HttpClient httpClient = HttpClient.newHttpClient();
@@ -45,7 +69,7 @@ public class OpenAIChatManager implements ChatManager {
                 .uri(URI.create(CHAT_COMPLETIONS_URL))
                 .header("Content-Type", "application/json")
                 .header("Authorization", "Bearer " + apiKey)
-                .POST(HttpRequest.BodyPublishers.ofString(buildRequestBodyLegacy()))
+                .POST(HttpRequest.BodyPublishers.ofString(buildRequestBody(PRESET)))
                 .build();
 
         try {
@@ -66,15 +90,16 @@ public class OpenAIChatManager implements ChatManager {
         return lastResponse;
     }
 
-    /**
-     * This request body builder is used for old models such as the GPT-4 series and older.
-     * These use a temperature parameter and message input
-     * @return String object of the request body
-     */
-    private String buildRequestBodyLegacy() {
+    private String buildRequestBody(OpenAIPreset preset) {
         StringBuilder body = new StringBuilder();
-        body.append("{\"model\":\"").append(Json.escape(MODEL)).append("\",");
-        body.append("\"temperature\":").append(TEMPERATURE).append(",");
+        body.append("{\"model\":\"").append(Json.escape(preset.getName())).append("\",");
+        if (preset.getTemperature() != null) {
+            body.append("\"temperature\":").append(preset.getTemperature()).append(",");
+        }
+        if (preset.getReasoningEffort() != null) {
+            body.append("\"reasoning_effort\":\"")
+                    .append(Json.escape(preset.getReasoningEffort())).append("\",");
+        }
         body.append("\"messages\":[");
         for (int i = 0; i < messages.size(); i++) {
             if (i > 0) {
@@ -85,30 +110,6 @@ public class OpenAIChatManager implements ChatManager {
                     .append(Json.escape(message.content)).append("\"}");
         }
         body.append("]}");
-        return body.toString();
-    }
-
-    /**
-     * TODO get this working
-     * This request body builder is used for newer models such as the GPT-5 series.
-     * These use the
-     * @return String object of the request body
-     */
-    private String buildRequestBodyNew() {
-        StringBuilder body = new StringBuilder();
-        body.append("{\"model\":\"").append(Json.escape(MODEL2)).append("\",");
-        body.append("\"reasoning\":{\"effort\":\"").append(Json.escape(REASONING)).append("\"},");
-        body.append("\"messages\":[");
-        for (int i = 0; i < messages.size(); i++) {
-            if (i > 0) {
-                body.append(",");
-            }
-            ChatMessage message = messages.get(i);
-            body.append("{\"role\":\"").append(message.role).append("\",\"content\":\"")
-                    .append(Json.escape(message.content)).append("\"}");
-        }
-        body.append("]}");
-                                    System.out.println(body);
         return body.toString();
     }
 

@@ -59,8 +59,7 @@ earlier ones. If the OpenAI API call fails for any reason (invalid key, no quota
 program prints a short, readable error message and exits cleanly rather than crashing with a stack trace.
 
 ### Changing the model
-`OpenAIChatManager` defaults to `gpt-4o-mini`. If your API key doesn't have access to that model,
-edit the `MODEL` constant near the top of `src/engine/openAi/OpenAIChatManager.java`.
+`OpenAIChatManager` contains presets in an enum for different models and parameters. Different presets can be chosen, or added to the enum.
 
 ## How It Works
 
