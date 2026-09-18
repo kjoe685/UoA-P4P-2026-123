@@ -1,54 +1,40 @@
 package engine.evaluation;
 
 import engine.ChatManager;
-import engine.utils.FileTextReader;
+import engine.chat.ChatMessage;
+import engine.chat.ChatRequest;
+import engine.config.ModelConfig;
+import engine.transcript.Transcript;
+import engine.prompt.PromptTemplate;
 import engine.utils.Json;
-
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+/** Existing provisional metric parser, adapted to isolated requests. Full rubrics/validation are stage three. */
 public final class LLMEvaluator implements Evaluator {
-    private static final String EVALUATOR_PROMPT_PATH = "resources/prompts/EvaluatorPrompt.txt";
-    private static final String DEFAULT_EVALUATOR_ID = "llm";
-    private static final String EVALUATION_CUE =
-            "Evaluate the debate responses above and return the requested metrics as JSON.";
-
     private final String evaluatorId;
     private final ChatManager chatManager;
+    private final ModelConfig model;
+    private final String systemPrompt;
+    private final String cue;
 
-    public LLMEvaluator(ChatManager chatManager) {
-        this(DEFAULT_EVALUATOR_ID, chatManager, new FileTextReader());
-    }
-
-    public LLMEvaluator(String evaluatorId, ChatManager chatManager) {
-        this(evaluatorId, chatManager, new FileTextReader());
-    }
-
-    public LLMEvaluator(ChatManager chatManager, FileTextReader fileTextReader) {
-        this(DEFAULT_EVALUATOR_ID, chatManager, fileTextReader);
-    }
-
-    public LLMEvaluator(String evaluatorId, ChatManager chatManager, FileTextReader fileTextReader) {
-        this.evaluatorId = Objects.requireNonNull(evaluatorId, "evaluatorId");
-        this.chatManager = Objects.requireNonNull(chatManager, "chatManager");
-        Objects.requireNonNull(fileTextReader, "fileTextReader");
-
-        chatManager.addMessage(fileTextReader.readText(EVALUATOR_PROMPT_PATH));
+    public LLMEvaluator(String evaluatorId, ChatManager chatManager, ModelConfig model,
+                        PromptTemplate instructions, PromptTemplate cue) {
+        this.evaluatorId = Objects.requireNonNull(evaluatorId);
+        this.chatManager = Objects.requireNonNull(chatManager);
+        this.model = Objects.requireNonNull(model);
+        this.systemPrompt = instructions.render(Map.of());
+        this.cue = cue.render(Map.of());
     }
 
     @Override
-    public void hear(String speaker, String message) {
-        Objects.requireNonNull(speaker, "speaker");
-        Objects.requireNonNull(message, "message");
-        chatManager.addMessage(speaker + ": " + message);
-    }
-
-    @Override
-    public EvaluationResult evaluate() {
-        chatManager.addMessage(EVALUATION_CUE);
-        chatManager.sendChat();
-        return parseResult(chatManager.getMessageContent());
+    public EvaluationResult evaluate(Transcript transcript) {
+        var request = new ChatRequest(systemPrompt, List.of(
+                new ChatMessage(ChatMessage.Role.USER, Json.write(transcript)),
+                new ChatMessage(ChatMessage.Role.USER, cue)), model);
+        return parseResult(chatManager.complete(request).requireCompletedText());
     }
 
     @SuppressWarnings("unchecked")

@@ -1,5 +1,9 @@
 package engine.io;
 
+import engine.transcript.DebateEvent;
+
+/** Output sinks receive only public events. */
+@FunctionalInterface
 public interface EngineOutput {
-    void displayMessage(String persona, String message);
+    void displayEvent(DebateEvent event);
 }

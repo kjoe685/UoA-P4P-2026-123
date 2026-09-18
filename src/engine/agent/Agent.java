@@ -1,45 +1,48 @@
 package engine.agent;
 
 import engine.ChatManager;
+import engine.chat.ChatMessage;
+import engine.chat.ChatRequest;
+import engine.config.InterruptionConfig;
+import engine.config.ModelConfig;
+import engine.transcript.Participant;
+import engine.transcript.Transcript;
+import engine.utils.Json;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.Random;
 
-public class Agent {
-
-    private final String name;
-    private final Party party;
-    private final AdversarialStrategy strategy;
+public final class Agent {
+    private final Participant identity;
+    private final PrivateAgentContext context;
     private final ChatManager chatManager;
 
-    public Agent(String name, Party party, AdversarialStrategy strategy, ChatManager chatManager, String systemPrompt) {
-        this.name = name;
-        this.party = party;
-        this.strategy = strategy;
-        this.chatManager = chatManager;
-        chatManager.addMessage(systemPrompt);
+    public Agent(Participant identity, AdversarialStrategy strategy, ChatManager chatManager,
+                 String systemPrompt, List<String> groundingExcerpts, ModelConfig model) {
+        this.identity = Objects.requireNonNull(identity);
+        this.context = new PrivateAgentContext(systemPrompt, strategy, groundingExcerpts, model);
+        this.chatManager = Objects.requireNonNull(chatManager);
     }
 
-    public String getName() {
-        return name;
+    public Participant identity() { return identity; }
+
+    public boolean shouldInterject(Random random, InterruptionConfig settings) {
+        double chance = context.strategy == AdversarialStrategy.NONE
+                ? settings.cooperativeChance() : settings.adversarialChance();
+        return random.nextDouble() < chance;
     }
 
-    public Party getParty() {
-        return party;
+    public String speak(Transcript publicTranscript, String cue) {
+        List<ChatMessage> messages = new ArrayList<>();
+        for (var event : publicTranscript.events()) {
+            boolean ownSpeech = event.speaker() != null && event.speaker().id().equals(identity.id());
+            messages.add(new ChatMessage(ownSpeech ? ChatMessage.Role.ASSISTANT : ChatMessage.Role.USER,
+                    Json.write(event)));
+        }
+        messages.add(new ChatMessage(ChatMessage.Role.USER, cue));
+        return chatManager.complete(new ChatRequest(context.systemPrompt, messages, context.model)).requireCompletedText();
     }
 
-    public AdversarialStrategy getStrategy() {
-        return strategy;
-    }
-
-    public boolean isAdversarial() {
-        return strategy != AdversarialStrategy.NONE;
-    }
-
-    public void hear(String speakerName, String statement) {
-        chatManager.addMessage(speakerName + ": " + statement);
-    }
-
-    public String speak(String cue) {
-        chatManager.addMessage(cue);
-        chatManager.sendChat();
-        return chatManager.getMessageContent();
-    }
+    @Override public String toString() { return "Agent[" + identity.id() + "]"; }
 }

@@ -1,7 +1,10 @@
 package engine;
 
+import engine.chat.ChatRequest;
+import engine.chat.ChatResponse;
+
+/** Stateless provider contract. Implementations must never retain or reuse conversation history. */
+@FunctionalInterface
 public interface ChatManager {
-    void addMessage(String message);
-    void sendChat();
-    String getMessageContent();
+    ChatResponse complete(ChatRequest request);
 }

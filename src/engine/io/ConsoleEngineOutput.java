@@ -1,11 +1,15 @@
 package engine.io;
 
-public class ConsoleEngineOutput implements EngineOutput {
+import engine.transcript.DebateEvent;
+import engine.transcript.EventType;
 
+public final class ConsoleEngineOutput implements EngineOutput {
     @Override
-    public void displayMessage(String persona, String message) {
-        System.out.println("[" + persona + "]");
-        System.out.println(message);
+    public void displayEvent(DebateEvent event) {
+        String name = event.speaker() == null ? "The Speaker" : event.speaker().name();
+        if (event.type() == EventType.INTERJECTION) name += " (interjecting)";
+        System.out.println("[" + name + "]");
+        System.out.println(event.text());
         System.out.println();
     }
 }

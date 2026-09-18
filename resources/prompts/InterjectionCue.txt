@@ -1,0 +1,2 @@
+The current debate topic is: "{{TOPIC}}".
+Interject briefly on what was just said: a heckle, point of order, or sharp rebuttal. Keep it to 1-2 sentences.

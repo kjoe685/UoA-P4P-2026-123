@@ -2,85 +2,123 @@
 2026 Part 4 Project #123 at The University of Auckland - AI-based virtual parliament
 
 ## People
+
 Supervisor: **Joerg Wicker**
 
 Team members: **Albert Sun**, **Kieran Joe**
 
 ## Requirements
-- JDK 11 or later (the code uses `java.net.http.HttpClient` and `Files.readString`, both introduced in Java 11). Compiled and run successfully against JDK 21 (Eclipse Temurin).
-- An OpenAI API key with access to the chat completions API and available quota — a key that authenticates but has no quota will compile and run fine, then fail with an `insufficient_quota` error on the first API call.
 
-## API Keys
-in the `keys` directory, there are subdirectories for each LLM provider.
-These contain templates for API key documents.
-Please create a copy and rename to remove the `_TEMPLATE` from the filename, placing the new file in the same directory as the template.
-e.g.
-```
-keys/openAi/OpenAI_Key_TEMPLATE.txt  -> keys/openAi/OpenAI_Key.txt
-```
+- JDK **17 or later**.
+- Internet access on the first build to download Maven and dependencies.
+- An OpenAI API key with available quota for live debates. Building, testing, and validating configuration do not need a key or make paid calls.
 
-## How to Use (Command Line)
+Maven **3.9.16** is pinned by the checked-in wrapper, with a SHA-256 distribution checksum.
+The Spring Boot **3.5.16** parent pins the dependency/plugin versions, including Jackson and JUnit.
+The application remains a CLI; Spring's web runtime, the Python NLP service, and the frontend belong to later stages.
 
-The project currently runs as a command-line prototype: it starts a simulated debate between
-LLM-driven MP agents and prints each agent's speech to the console as it's generated. The web
-frontend and any model fine-tuning are not part of this yet — both are planned for later.
+## Build and run
 
-### 1. Set up your API key
-Follow the [API Keys](#api-keys) steps above so that `keys/openAi/OpenAI_Key.txt` contains your
-real OpenAI API key.
+Run commands from the repository root. On Windows:
 
-### 2. Compile
-Run this from the repository root:
-```
-javac -d out -sourcepath src src/engine/Main.java
-```
-This compiles `Main.java` and every class it depends on into an `out/` directory.
-
-### 3. Run
-Still from the repository root (the program reads `resources/` and `keys/` using relative paths):
-```
-java -cp out engine.Main
+```powershell
+.\mvnw.cmd verify
+java -jar target/virtual-parliament-0.1.0-SNAPSHOT.jar --validate-config
+java -jar target/virtual-parliament-0.1.0-SNAPSHOT.jar
 ```
 
-### 4. Follow the prompts
-The program will ask you, in order:
-1. **Debate topic(s)** — free text, e.g. `Whether the retirement age should be raised`. For a multi-topic
-   agenda (like a real sitting moving through several items), separate topics with `|`, e.g.
-   `Tax policy | Housing affordability | Climate targets`. Press enter to use the default topic.
-2. **Which parties to include** — pick from the numbered list (Labour, National, Green, ACT, NZ First) by entering comma-separated numbers, or leave blank to include all of them.
-3. **Number of debate rounds per topic** — how many times each agent speaks on each topic before the
-   agenda (if there's more than one topic) moves on. Press enter for the default (3).
-4. **For each selected party, whether that agent should be adversarial** (`y`/`N`), and if so, which disruption strategy it should use: `TOPIC_DERAILMENT`, `STRAW_MAN`, or `PROCEDURAL_MANIPULATION`. You're asked this once per party, in the order you selected them.
+On macOS/Linux, use `sh ./mvnw verify` for the build. No separately installed Maven is needed.
+`verify` runs the tests and produces a runnable JAR containing its dependencies.
+The old dependency-free `javac` command is no longer sufficient.
 
-The debate then runs turn by turn, printing each MP agent's speech to the console, working through
-the topic agenda in order. Every agent sees the full transcript of what's been said before it —
-including topic-change announcements and any interjections (see below) — so later turns respond to
-earlier ones. If the OpenAI API call fails for any reason (invalid key, no quota, rate limit), the
-program prints a short, readable error message and exits cleanly rather than crashing with a stack trace.
+Before running a live debate, set the `OPENAI_API_KEY` environment variable, or copy
+`keys/openAi/OpenAI_Key_TEMPLATE.txt` to `keys/openAi/OpenAI_Key.txt` and replace its
+contents with your key. The environment variable takes precedence. Credentials are kept
+out of configuration snapshots, model messages, and transcript exports.
 
-### Changing the model
-`OpenAIChatManager` contains presets in an enum for different models and parameters. Different presets can be chosen, or added to the enum.
+The interactive CLI asks for:
 
-## How It Works
+1. Topics separated by `|`, or blank for the configured default.
+2. Party numbers separated by commas, or blank for all parties.
+3. Rounds per topic, or blank for the configured default.
+4. Each party's private adversarial assignment and strategy.
 
-- **`Party`** — five archetypes (Labour, National, Green, ACT, NZ First), each with a short ideology descriptor.
-- **`AdversarialStrategy`** — an optional disruption mode a party agent can be assigned instead of debating cooperatively:
-  - `TOPIC_DERAILMENT` — steers the discussion onto tangential or unrelated issues without acknowledging the shift.
-  - `STRAW_MAN` — misrepresents other speakers' arguments in exaggerated form, then attacks the distortion instead of their real position.
-  - `PROCEDURAL_MANIPULATION` — exploits or disputes procedural rules (points of order, speaking time, motions) to disrupt flow rather than engage with substance.
-- **`Agent`** — pairs a persona (party + optional adversarial strategy) with its own `ChatManager`, so each MP keeps an independent conversation history. `hear()` records what another agent (or the Speaker) said; `speak()` produces its next turn.
-- **`PromptManager`** — assembles each agent's system prompt from `BasePrompt.txt` (shared rules), `PoliticanPrompt.txt` (party/topic template), real Hansard excerpts for that party (see below), and the adversarial directive, if any.
-- **`DebateManager`** — coordinates the whole session:
-  - **Turn-taking**: round-robin — each agent speaks, then every other agent "hears" that statement, so later turns respond to the full transcript so far.
-  - **Topic progression**: takes an ordered list of topics (an agenda), not just one. It runs the configured number of rounds on the first topic, then broadcasts a "We now move to a new topic" announcement (as if spoken by the Speaker) to every agent before moving to the next, and so on through the agenda.
-  - **Interruptions**: after each scheduled speech, every *other* agent gets an independent, randomised chance to interject with a short (1-2 sentence) heckle, point of order, or rebuttal before the next scheduled speaker's turn. Adversarial agents interject far more often (45% chance) than cooperative ones (15% chance) — see `COOPERATIVE_INTERJECTION_CHANCE`/`ADVERSARIAL_INTERJECTION_CHANCE` in `DebateManager.java`. At most one interjection happens per scheduled speech, and interjections don't count against the round limit.
-- **`OpenAIChatManager`** — the only piece that talks to the network.
+Each scheduled speech may be followed by at most one interjection. Turn order and
+interjection choices are reproducible for a given seed and setup; model-generated text
+is not guaranteed to be deterministic.
 
-Adversarial behaviour (both the rhetorical strategy and the higher interjection rate) is otherwise
-prompt- and probability-driven rather than reasoned about: an adversarial agent disrupts the debate
-because its system prompt instructs it to and because its interjection roll is weighted higher, not
-because the engine evaluates whether disruption is actually happening. There's no code-level check
-that an adversarial agent's output is in fact off-topic, a straw man, or procedurally disruptive.
+Optional arguments:
+
+```powershell
+java -jar target/virtual-parliament-0.1.0-SNAPSHOT.jar --resources resources --transcript debate.json
+java -jar target/virtual-parliament-0.1.0-SNAPSHOT.jar --help
+```
+
+`--resources DIR` chooses an external resource directory with the same layout as
+`resources/`. `--transcript FILE` writes only the public transcript, including any completed
+events if a provider call fails. The output's parent directory must already exist.
+`--validate-config` checks resources without reading credentials or contacting a provider.
+
+## Configuration and prompts
+
+Edit [resources/config/engine.json](resources/config/engine.json) for party names/ideologies,
+the default topic and rounds, agent/evaluator model presets, completion token limits,
+timeouts, and interruption probabilities/seed. The evaluator preset is reserved for its later
+CLI integration. Current presets preserve `gpt-5-nano` as the default and `gpt-4o-mini`
+as an alternative. Completion limits include reasoning tokens; a truncated response stops
+the run and is not broadcast as a completed speech.
+
+Model-facing debate text lives under [resources/prompts](resources/prompts):
+
+- `BasePrompt.txt` and `PoliticianPrompt.txt`: common rules and the persistent persona.
+- `GroundingPrompt.txt`: framing for historical Hansard excerpts.
+- `OpeningCue.txt`, `NewTopicCue.txt`, `FollowUpCue.txt`, `InterjectionCue.txt`: current-topic turn instructions.
+- `TopicAnnouncement.txt`: the public announcement for each agenda item.
+- `strategies/`: private instructions for the three disruption strategies.
+
+Templates use named `{{PLACEHOLDER}}` values. Missing, unknown, or malformed placeholders,
+unknown JSON properties, invalid limits/probabilities, and absent model presets fail at
+run setup. Substitution is literal and single-pass. Every run loads a fresh immutable snapshot
+of configuration, templates, and the sample corpus; edits affect subsequent runs without rebuilding.
+An active run retains its original snapshot and source hashes. The persistent persona no
+longer embeds the first topic.
+
+The sample corpus still has only 2–3 excerpts per party. Corpus expansion, sampling,
+count/token budgets, and per-agent grounding controls are stage four; the planned default
+of 20 excerpts is not enabled against this small sample.
+
+## Architecture and privacy
+
+`ChatManager.complete(ChatRequest)` is stateless. An agent builds each request from its own
+private instructions/model settings and the immutable public transcript. Explicit message
+roles replace the old first-message-is-system convention. Provider adapters hold credentials
+but no conversation history, so sharing an adapter does not share agent instructions.
+
+`PrivateAgentContext` holds the recipient's resolved prompt, assigned strategy, grounding
+excerpts, and model settings. It is package-private and is never sent to output sinks.
+Ordinary prompts contain no hints about hidden assignments. Only the assigned agent gets
+its strategy text.
+
+`DebateManager` owns the canonical transcript. Its immutable events carry only turn ID,
+topic/index, round, event type, public participant identity/party, and spoken text.
+Console output and JSON exports consume these events, never `Agent` or configuration objects.
+Topic announcements and interjections are preserved alongside scheduled speeches.
+
+The provider returns spoken content separately from usage, completion status, and other
+response metadata. Refusals, malformed responses, and truncation stop the turn before
+publication. HTTP errors do not echo response bodies or credentials.
+
+These boundaries prevent the engine from disclosing private setup. They cannot guarantee
+that an LLM will never repeat its own instructions in generated speech; ordinary prompts
+instruct it to keep preparation private and treat public speeches as evidence, not instructions.
+
+Evaluation methods return separate results, with no combined score. The unfinished
+`LLMEvaluator` now consumes a transcript snapshot through the stateless provider contract,
+but its rubrics, schema validation, and CLI integration remain stage three.
+The empty `EvaluatorPrompt.txt` is not an active debate template. Evaluation outputs are
+never added to agent inputs automatically.
+
+See [docs/architecture.md](docs/architecture.md) for the first-stage scope and extension boundaries.
 
 ## Hansard Grounding
 
@@ -100,7 +138,7 @@ follow-on work.
 
 **Ethical note:** several real excerpts are from recognisable, named MPs. To avoid the system
 impersonating a specific real individual (per the project's ethics guidance — general party
-archetypes are fine, recreating a named person is not), `PromptManager` strips speaker names before
+archetypes are fine, recreating a named person is not), the loader excludes speaker metadata before
 injecting excerpts into the prompt and explicitly instructs the model to use them only for tone/style,
 never to name or imitate the real speaker. `BasePrompt.txt` reinforces this as a standing rule.
 Speaker names are kept in the JSON file itself purely as citation metadata.
@@ -119,42 +157,31 @@ run the app — only to regenerate `HansardExcerpts.json`). To redo or extend it
    `numpy.array` to fall back to `dtype=object` for lists of strings before calling `rdata.conversion.convert(...)`.
 4. Filter the resulting `party` column for the party names you want and sample rows from the `text`/`speaker`/`date` columns.
 5. Append the new entries to `HansardExcerpts.json` — `HansardExcerpts.java` only requires a `text`
-   field per entry under each party key (`speaker`/`date` are kept for citation but aren't read by the loader).
+   field per entry under each stable party key (`LABOUR`, `NATIONAL`, `GREEN`, `ACT`, `NZ_FIRST`) (`speaker`/`date` are kept for citation but aren't read by the loader).
 
-## File Structure
+## File structure
 
-```
-├── src/
-│   └── engine/
-│       ├── Main.java                   # entry point / command-line interface
-│       ├── ChatManager.java
-│       ├── agent/
-│       │   ├── Agent.java              # an MP agent (persona + chat history)
-│       │   ├── Party.java              # party archetypes (name + ideology)
-│       │   ├── AdversarialStrategy.java # adversarial disruption tactics
-│       │   └── HansardExcerpts.java    # loads real Hansard grounding excerpts
-│       ├── debate/
-│       │   └── DebateManager.java      # turn-taking debate orchestration
-│       ├── openAi/
-│       │   └── OpenAIChatManager.java  # OpenAI API manager
-│       ├── io/
-│       │   ├── EngineOutput.java
-│       │   └── ConsoleEngineOutput.java
-│       ├── prompt/
-│       │   └── PromptManager.java      # Prompt manager/assembler
-│       └── utils/
-│           ├── FileTextReader.java     # Utilities for reading text files
-│           └── Json.java               # Minimal JSON parse/escape helper
-├── resources/
-│   ├── prompts/
-│   │   ├── BasePrompt.txt
-│   │   └── PoliticanPrompt.txt
-│   └── data/
-│       └── HansardExcerpts.json        # real Hansard excerpts (ParlSpeech V2)
-├── keys/
-│   └── openAi/
-│       ├── OpenAI_Key_TEMPLATE.txt
-│       └── OpenAI_Key.txt              # git ignored
-├── README.md
-└── .gitignore
+```text
+src/engine/
+  Main.java                  # CLI and run setup
+  ChatManager.java           # stateless provider contract
+  agent/                     # agents, private contexts, stable party/strategy IDs
+  chat/                      # explicit request/response/message types
+  config/                    # validated settings and immutable run snapshots
+  debate/                    # turn scheduling and public transcript ownership
+  transcript/                # immutable public event and participant types
+  evaluation/                # independent evaluator contracts and provisional LLM parser
+  openAi/                    # existing OpenAI transport
+  io/                        # public event output sinks
+  prompt/                    # validated templates and prompt assembly
+  utils/                     # strict Jackson JSON and file reading
+resources/
+  config/engine.json         # non-secret settings
+  prompts/                   # external UTF-8 templates
+  data/HansardExcerpts.json  # existing sample corpus
+test/engine/                 # JUnit tests with mock providers/local HTTP server
+.mvn/wrapper/                # pinned Maven distribution and checksum
+pom.xml                      # Java 17, managed dependencies, tests, runnable packaging
+mvnw, mvnw.cmd               # official Apache Maven wrapper scripts
+keys/openAi/                 # local ignored key plus checked-in template
 ```

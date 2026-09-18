@@ -1,43 +1,33 @@
 package engine.agent;
 
-import engine.utils.FileTextReader;
 import engine.utils.Json;
-
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 
-public class HansardExcerpts {
+/** The existing small corpus, frozen at run start. Speaker metadata never enters a prompt. */
+public final class HansardExcerpts {
+    private final Map<Party, List<String>> excerptsByParty;
 
-    private static final String EXCERPTS_PATH = "resources/data/HansardExcerpts.json";
-
-    private final Map<String, List<String>> excerptsByParty = new LinkedHashMap<>();
-
-    public HansardExcerpts(FileTextReader fileTextReader) {
-        String json = fileTextReader.readText(EXCERPTS_PATH);
-        Map<String, Object> root = castToMap(Json.parse(json));
-        for (Map.Entry<String, Object> entry : root.entrySet()) {
-            List<String> texts = new ArrayList<>();
-            for (Object item : castToList(entry.getValue())) {
-                Map<String, Object> excerpt = castToMap(item);
-                texts.add((String) excerpt.get("text"));
+    public HansardExcerpts(String json) {
+        Object parsed = Json.parse(json);
+        if (!(parsed instanceof Map<?, ?> root)) throw new IllegalArgumentException("Hansard must be an object");
+        Map<Party, List<String>> result = new EnumMap<>(Party.class);
+        for (Party party : Party.values()) {
+            Object raw = root.get(party.name());
+            if (!(raw instanceof List<?> entries)) {
+                throw new IllegalArgumentException("Missing Hansard sample for " + party);
             }
-            excerptsByParty.put(entry.getKey(), texts);
+            List<String> texts = entries.stream().map(item -> {
+                if (!(item instanceof Map<?, ?> entry) || !(entry.get("text") instanceof String text) || text.isBlank()) {
+                    throw new IllegalArgumentException("Invalid Hansard excerpt for " + party);
+                }
+                return text;
+            }).toList();
+            result.put(party, texts);
         }
+        excerptsByParty = Map.copyOf(result);
     }
 
-    public List<String> getExcerpts(Party party) {
-        return excerptsByParty.getOrDefault(party.getDisplayName(), List.of());
-    }
-
-    @SuppressWarnings("unchecked")
-    private static Map<String, Object> castToMap(Object value) {
-        return (Map<String, Object>) value;
-    }
-
-    @SuppressWarnings("unchecked")
-    private static List<Object> castToList(Object value) {
-        return (List<Object>) value;
-    }
+    public List<String> getExcerpts(Party party) { return excerptsByParty.get(party); }
 }

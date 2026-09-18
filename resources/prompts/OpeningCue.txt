@@ -1,0 +1,2 @@
+The current debate topic is: "{{TOPIC}}".
+It is now your turn to open the debate. Give one concise speech (3-5 sentences) in character.

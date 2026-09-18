@@ -1,102 +1,92 @@
 package engine.debate;
 
 import engine.agent.Agent;
+import engine.config.InterruptionConfig;
 import engine.io.EngineOutput;
-
+import engine.prompt.PromptManager;
+import engine.prompt.TemplateName;
+import engine.transcript.DebateEvent;
+import engine.transcript.EventType;
+import engine.transcript.Participant;
+import engine.transcript.Transcript;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
+import java.util.Random;
 
-public class DebateManager {
-
-    private static final String OPENING_CUE =
-            "It is now your turn to open the debate. Give one concise speech (3-5 sentences) in character.";
-    private static final String NEW_TOPIC_CUE =
-            "It is now your turn to open discussion on this new topic. Give one concise speech (3-5 sentences) "
-                    + "in character.";
-    private static final String FOLLOW_UP_CUE =
-            "It is now your turn to speak again. Respond to the debate so far, in character. "
-                    + "Give one concise speech (3-5 sentences).";
-    private static final String INTERJECTION_CUE =
-            "Interject briefly right now on what was just said — a heckle, a point of order, or a sharp "
-                    + "one-line rebuttal. Keep it to 1-2 sentences.";
-
-    private static final double COOPERATIVE_INTERJECTION_CHANCE = 0.15;
-    private static final double ADVERSARIAL_INTERJECTION_CHANCE = 0.45;
-
+/** Owns turn order and the canonical public transcript, never broadcasts Agent objects. */
+public final class DebateManager {
     private final List<Agent> agents;
     private final List<String> topics;
     private final int roundsPerTopic;
     private final EngineOutput output;
+    private final PromptManager prompts;
+    private final InterruptionConfig interruptions;
+    private final Random random;
+    private final List<DebateEvent> events = new ArrayList<>();
+    private boolean started;
 
-    public DebateManager(List<Agent> agents, List<String> topics, int roundsPerTopic, EngineOutput output) {
-        this.agents = agents;
-        this.topics = topics;
+    public DebateManager(List<Agent> agents, List<String> topics, int roundsPerTopic,
+                         EngineOutput output, PromptManager prompts, InterruptionConfig interruptions) {
+        this.agents = List.copyOf(agents);
+        this.topics = List.copyOf(topics);
+        if (agents.isEmpty() || topics.isEmpty() || topics.stream().anyMatch(String::isBlank) || roundsPerTopic < 1) {
+            throw new IllegalArgumentException("A debate requires agents, topics, and positive rounds");
+        }
+        var ids = new HashSet<String>();
+        for (Agent agent : agents) {
+            if (!ids.add(agent.identity().id())) throw new IllegalArgumentException("Duplicate participant ID");
+        }
         this.roundsPerTopic = roundsPerTopic;
-        this.output = output;
+        this.output = Objects.requireNonNull(output);
+        this.prompts = Objects.requireNonNull(prompts);
+        this.interruptions = Objects.requireNonNull(interruptions);
+        this.random = new Random(interruptions.seed());
     }
 
-    public void run() {
-        boolean firstSpeechOverall = true;
+    public Transcript transcript() { return new Transcript(events); }
 
+    public Transcript run() {
+        if (started) throw new IllegalStateException("Create a new debate for each run");
+        started = true;
         for (int topicIndex = 0; topicIndex < topics.size(); topicIndex++) {
             String topic = topics.get(topicIndex);
-            System.out.println("Starting debate on: \"" + topic + "\"");
-            System.out.println();
-
-            if (topicIndex > 0) {
-                announceNewTopic(topic);
-            }
-
-            boolean firstSpeechThisTopic = true;
+            publish(topicIndex, topic, 0, EventType.TOPIC_ANNOUNCEMENT, null,
+                    prompts.cue(TemplateName.TOPIC_ANNOUNCEMENT, topic));
+            boolean firstSpeech = true;
             for (int round = 1; round <= roundsPerTopic; round++) {
                 for (Agent speaker : agents) {
-                    String cue = firstSpeechOverall
-                            ? OPENING_CUE
-                            : firstSpeechThisTopic ? NEW_TOPIC_CUE : FOLLOW_UP_CUE;
-                    firstSpeechOverall = false;
-                    firstSpeechThisTopic = false;
-
-                    String statement = speaker.speak(cue);
-                    output.displayMessage(speaker.getName(), statement);
-                    broadcast(speaker, statement);
-
-                    maybeInterject(speaker);
+                    TemplateName cue = firstSpeech
+                            ? (topicIndex == 0 ? TemplateName.OPENING : TemplateName.NEW_TOPIC)
+                            : TemplateName.FOLLOW_UP;
+                    String speech = speaker.speak(transcript(), prompts.cue(cue, topic));
+                    publish(topicIndex, topic, round, EventType.SPEECH, speaker.identity(), speech);
+                    firstSpeech = false;
+                    maybeInterject(speaker, topicIndex, topic, round);
                 }
             }
         }
+        return transcript();
     }
 
-    private void announceNewTopic(String topic) {
-        String announcement = "We now move to a new topic: \"" + topic + "\".";
-        for (Agent agent : agents) {
-            agent.hear("The Speaker", announcement);
-        }
-    }
-
-    private void maybeInterject(Agent speaker) {
+    private void maybeInterject(Agent speaker, int topicIndex, String topic, int round) {
         List<Agent> others = new ArrayList<>(agents);
         others.remove(speaker);
-        Collections.shuffle(others);
-
+        Collections.shuffle(others, random);
         for (Agent candidate : others) {
-            double chance = candidate.isAdversarial()
-                    ? ADVERSARIAL_INTERJECTION_CHANCE
-                    : COOPERATIVE_INTERJECTION_CHANCE;
-            if (Math.random() < chance) {
-                String interjection = candidate.speak(INTERJECTION_CUE);
-                output.displayMessage(candidate.getName() + " (interjecting)", interjection);
-                broadcast(candidate, interjection);
+            if (candidate.shouldInterject(random, interruptions)) {
+                String speech = candidate.speak(transcript(), prompts.cue(TemplateName.INTERJECTION, topic));
+                publish(topicIndex, topic, round, EventType.INTERJECTION, candidate.identity(), speech);
                 return;
             }
         }
     }
 
-    private void broadcast(Agent speaker, String statement) {
-        for (Agent listener : agents) {
-            if (listener != speaker) {
-                listener.hear(speaker.getName(), statement);
-            }
-        }
+    private void publish(int topicIndex, String topic, int round, EventType type, Participant speaker, String text) {
+        DebateEvent event = new DebateEvent(events.size() + 1L, topicIndex, topic, round, type, speaker, text);
+        events.add(event);
+        output.displayEvent(event);
     }
 }

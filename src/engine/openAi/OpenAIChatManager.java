@@ -1,134 +1,116 @@
 package engine.openAi;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import engine.ChatManager;
+import engine.chat.ChatRequest;
+import engine.chat.ChatResponse;
+import engine.chat.ChatResponse.CompletionStatus;
+import engine.chat.ChatResponse.TokenUsage;
 import engine.utils.Json;
-
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
-public class OpenAIChatManager implements ChatManager {
-
-    private enum OpenAIPreset {
-        // Name, Temperature, Reasoning Effort
-        // null for non-applicable parameters
-        GPT_4o_MINI("gpt-4o-mini", 1d, null),
-        GPT_5_NANO("gpt-5-nano", null, "medium");
-
-        private final String name;
-        private final Double temperature;
-        private final String reasoningEffort;
-
-        OpenAIPreset(String name, Double temperature, String reasoningEffort) {
-            this.name = name;
-            this.temperature = temperature;
-            this.reasoningEffort = reasoningEffort;
-        }
-
-        private String getName() {
-            return name;
-        }
-
-        private Double getTemperature() {
-            return temperature;
-        }
-
-        private String getReasoningEffort() {
-            return reasoningEffort;
-        }
-    }
-
-    private static final String CHAT_COMPLETIONS_URL = "https://api.openai.com/v1/chat/completions";
-    private static final OpenAIPreset PRESET = OpenAIPreset.GPT_5_NANO;
-
+/** Stateless transport; only credentials and the reusable HTTP client live here. */
+public final class OpenAIChatManager implements ChatManager {
+    private static final URI ENDPOINT = URI.create("https://api.openai.com/v1/chat/completions");
     private final String apiKey;
-    private final HttpClient httpClient = HttpClient.newHttpClient();
-    private final List<ChatMessage> messages = new ArrayList<>();
-    private String lastResponse;
+    private final HttpClient client;
+    private final URI endpoint;
 
     public OpenAIChatManager(String apiKey) {
+        this(apiKey, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(20)).build(), ENDPOINT);
+    }
+
+    // Package-private transport seam for local mock-server tests, not a user-configurable credential destination.
+    OpenAIChatManager(String apiKey, HttpClient client, URI endpoint) {
+        // Reject invalid header characters ourselves so HttpRequest never echoes the key in an error.
+        if (apiKey == null || apiKey.isBlank() || apiKey.chars().anyMatch(c -> c < 33 || c > 126)) {
+            throw new IllegalArgumentException("A valid API key is required");
+        }
         this.apiKey = apiKey;
+        this.client = client;
+        this.endpoint = endpoint;
     }
 
     @Override
-    public void addMessage(String message) {
-        // ChatManager has no role parameter, so by convention the first message on a
-        // fresh manager seeds the system prompt and every later call is a user turn.
-        String role = messages.isEmpty() ? "system" : "user";
-        messages.add(new ChatMessage(role, message));
-    }
+    public ChatResponse complete(ChatRequest request) {
+        if (!"openai".equals(request.model().provider())) throw new IllegalArgumentException("Provider mismatch");
+        List<Map<String, String>> messages = new ArrayList<>();
+        messages.add(Map.of("role", "system", "content", request.systemInstructions()));
+        request.messages().forEach(message -> messages.add(Map.of(
+                "role", message.role().name().toLowerCase(Locale.ROOT), "content", message.content())));
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("model", request.model().model());
+        body.put("messages", messages);
+        body.put("max_completion_tokens", request.model().maxCompletionTokens());
+        body.put("store", false);
+        if (request.model().temperature() != null) body.put("temperature", request.model().temperature());
+        if (request.model().reasoningEffort() != null) body.put("reasoning_effort", request.model().reasoningEffort());
 
-    @Override
-    public void sendChat() {
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(CHAT_COMPLETIONS_URL))
+        HttpRequest httpRequest = HttpRequest.newBuilder(endpoint)
+                .timeout(Duration.ofSeconds(request.model().timeoutSeconds()))
                 .header("Content-Type", "application/json")
                 .header("Authorization", "Bearer " + apiKey)
-                .POST(HttpRequest.BodyPublishers.ofString(buildRequestBody(PRESET)))
-                .build();
-
+                .POST(HttpRequest.BodyPublishers.ofString(Json.write(body), StandardCharsets.UTF_8)).build();
+        long start = System.nanoTime();
         try {
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response = client.send(httpRequest, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
             if (response.statusCode() != 200) {
-                throw new RuntimeException(
-                        "OpenAI API request failed (status " + response.statusCode() + "): " + response.body());
+                // Never surface an untrusted response body (it may echo credentials or private prompts).
+                throw new IllegalStateException("OpenAI request failed (HTTP " + response.statusCode() + ")");
             }
-            lastResponse = extractContent(response.body());
-            messages.add(new ChatMessage("assistant", lastResponse));
-        } catch (IOException | InterruptedException e) {
-            throw new RuntimeException("Failed to contact OpenAI API", e);
+            return parseResponse(response.body(), request.model().model(), (System.nanoTime() - start) / 1_000_000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("OpenAI request interrupted");
+        } catch (IOException e) {
+            throw new IllegalStateException("Could not contact OpenAI (connection failed or timed out)");
         }
     }
 
-    @Override
-    public String getMessageContent() {
-        return lastResponse;
-    }
-
-    private String buildRequestBody(OpenAIPreset preset) {
-        StringBuilder body = new StringBuilder();
-        body.append("{\"model\":\"").append(Json.escape(preset.getName())).append("\",");
-        if (preset.getTemperature() != null) {
-            body.append("\"temperature\":").append(preset.getTemperature()).append(",");
-        }
-        if (preset.getReasoningEffort() != null) {
-            body.append("\"reasoning_effort\":\"")
-                    .append(Json.escape(preset.getReasoningEffort())).append("\",");
-        }
-        body.append("\"messages\":[");
-        for (int i = 0; i < messages.size(); i++) {
-            if (i > 0) {
-                body.append(",");
+    private ChatResponse parseResponse(String body, String requestedModel, long latency) {
+        try {
+            JsonNode root = Json.read(body, JsonNode.class);
+            JsonNode choice = root.path("choices").path(0);
+            JsonNode message = choice.path("message");
+            if (!choice.isObject() || !message.isObject()) throw new IllegalArgumentException();
+            CompletionStatus status;
+            if (!message.path("refusal").isMissingNode() && !message.path("refusal").isNull()) {
+                status = CompletionStatus.REFUSED;
+            } else {
+                status = switch (choice.path("finish_reason").asText()) {
+                    case "stop" -> CompletionStatus.COMPLETED;
+                    case "length" -> CompletionStatus.TRUNCATED;
+                    case "content_filter" -> CompletionStatus.REFUSED;
+                    default -> CompletionStatus.UNSUPPORTED;
+                };
             }
-            ChatMessage message = messages.get(i);
-            body.append("{\"role\":\"").append(message.role).append("\",\"content\":\"")
-                    .append(Json.escape(message.content)).append("\"}");
-        }
-        body.append("]}");
-        return body.toString();
-    }
-
-    @SuppressWarnings("unchecked")
-    private String extractContent(String responseBody) {
-        Map<String, Object> root = (Map<String, Object>) Json.parse(responseBody);
-        List<Object> choices = (List<Object>) root.get("choices");
-        Map<String, Object> firstChoice = (Map<String, Object>) choices.get(0);
-        Map<String, Object> messageObject = (Map<String, Object>) firstChoice.get("message");
-        return (String) messageObject.get("content");
-    }
-
-    private static final class ChatMessage {
-        private final String role;
-        private final String content;
-
-        private ChatMessage(String role, String content) {
-            this.role = role;
-            this.content = content;
+            String text = message.path("content").isTextual() ? message.path("content").textValue() : null;
+            if (status == CompletionStatus.COMPLETED && (text == null || text.isBlank())) {
+                throw new IllegalArgumentException();
+            }
+            TokenUsage usage = null;
+            JsonNode input = root.path("usage").path("prompt_tokens");
+            JsonNode output = root.path("usage").path("completion_tokens");
+            if (input.isIntegralNumber() && output.isIntegralNumber() && input.canConvertToLong() && output.canConvertToLong()) {
+                usage = new TokenUsage(input.longValue(), output.longValue());
+            }
+            String model = root.path("model").isTextual() ? root.path("model").textValue() : requestedModel;
+            return new ChatResponse(text, "openai", model, status, usage, latency);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalStateException("OpenAI returned an invalid chat response");
         }
     }
+
+    @Override public String toString() { return "OpenAIChatManager[credentials redacted]"; }
 }

@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "defaultRounds": 3,
+  "defaultTopic": "Whether the retirement age should be raised",
+  "agentModelPreset": "gpt-5-nano",
+  "evaluatorModelPreset": "gpt-5-nano",
+  "models": {
+    "gpt-5-nano": {
+      "provider": "openai",
+      "model": "gpt-5-nano",
+      "temperature": null,
+      "reasoningEffort": "medium",
+      "maxCompletionTokens": 4096,
+      "timeoutSeconds": 120
+    },
+    "gpt-4o-mini": {
+      "provider": "openai",
+      "model": "gpt-4o-mini",
+      "temperature": 1,
+      "reasoningEffort": null,
+      "maxCompletionTokens": 1024,
+      "timeoutSeconds": 120
+    }
+  },
+  "parties": {
+    "LABOUR": {
+      "displayName": "Labour",
+      "ideology": "centre-left, emphasising social welfare, workers' rights, and public services"
+    },
+    "NATIONAL": {
+      "displayName": "National",
+      "ideology": "centre-right, emphasising fiscal responsibility, business growth, and personal responsibility"
+    },
+    "GREEN": {
+      "displayName": "Green",
+      "ideology": "progressive, emphasising environmental sustainability, climate action, and social justice"
+    },
+    "ACT": {
+      "displayName": "ACT",
+      "ideology": "classical liberal, emphasising free markets, individual liberty, and small government"
+    },
+    "NZ_FIRST": {
+      "displayName": "NZ First",
+      "ideology": "populist and nationalist, emphasising national sovereignty, immigration control, and provincial New Zealand"
+    }
+  },
+  "interruptions": {
+    "cooperativeChance": 0.15,
+    "adversarialChance": 0.45,
+    "seed": 123
+  }
+}

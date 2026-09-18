@@ -31,3 +31,12 @@ replay_pid*
 
 # Claude Code
 .claude/
+
+# Build output and local dependency cache
+/target/
+/out/
+/.maven-cache/
+
+# Private run records and credentials
+/runs/
+.env
