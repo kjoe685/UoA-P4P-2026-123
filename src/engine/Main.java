@@ -35,6 +35,9 @@ public final class Main {
 
     static int execute(String[] args) {
         try {
+            if (args.length > 0 && args[0].equals("evaluate")) {
+                return engine.evaluation.EvaluationCommand.execute(java.util.Arrays.copyOfRange(args, 1, args.length), System.out);
+            }
             run(args);
             return 0;
         } catch (NoSuchElementException e) {
@@ -65,6 +68,7 @@ public final class Main {
                 case "--help" -> {
                     System.out.println("Usage: java -jar target/virtual-parliament-0.1.0-SNAPSHOT.jar"
                             + " [--resources DIR] [--validate-config] [--transcript FILE]");
+                    System.out.println("       java -jar target/virtual-parliament-0.1.0-SNAPSHOT.jar evaluate --help");
                     return;
                 }
                 default -> throw new IllegalArgumentException("Unknown command-line option");

@@ -14,7 +14,7 @@ isolation depend on constructing and managing separate adapter instances correct
 - Spring Boot 3.5.16 parent manages exact dependency and build-plugin versions. Jackson 2.21.4
   replaces the handwritten JSON parser; JUnit Jupiter 5.12.2 provides tests.
 - The CLI is packaged as a runnable JAR. There is no Spring application context or HTTP server yet.
-  Python/uv dependencies belong to the NLP stage; React/npm dependencies belong to the web stage.
+  Python/uv dependencies are isolated in the optional `nlp/` service; React/npm dependencies belong to the web stage.
 - `ConfigurationSnapshot.load(resources)` reads the external settings, all active debate templates,
   and sample corpus once. All subsequent operations use immutable values. SHA-256 hashes identify
   the source files used for that snapshot. There is no global mutable configuration cache.
@@ -88,12 +88,43 @@ default of 20 cannot be applied honestly to the present 2–3 examples per party
 
 `Evaluator.evaluate(Transcript)` now takes an immutable snapshot instead of maintaining an
 incremental `hear()` history. `LLMEvaluator` has only been adapted to that contract; its parser
-remains provisional and its empty legacy prompt is not loaded by a debate. No evaluator runs
-automatically through the CLI yet. No scores are combined or normalized across methods.
+remains provisional and its empty legacy prompt is not loaded by a debate. Local evaluators run
+explicitly through `evaluate` on a saved transcript; no evaluator runs automatically during a debate.
+No scores are combined or normalized across methods.
 
-The next stage can implement independent local sentiment and policy-stance methods against this
+The second stage now implements independent local sentiment and policy-stance methods against this
 transcript. The later LLM stage will add rubric/schema validation, evidence turn references,
 insufficient-evidence handling, repair limits, provider capabilities, and additional adapters.
+
+## Second stage: local evaluation modules
+
+`EvaluationCoordinator` accepts independently replaceable `Evaluator` implementations. Results
+carry explicit success, failure, or insufficient-evidence status; a failing method does not remove
+other results. `LocalNlpEvaluator` represents exactly one method and preserves successful batches
+when later HTTP/schema failures occur. `LocalAnalysisMetric` retains typed method-specific evidence
+without forcing probability distributions into scalar `NumericMetric` values. The provisional LLM
+evaluator remains compatible; party prediction can later supply its own metric type.
+
+`NlpInputMapper` alone projects public transcripts into identity-free requests and maps policy
+propositions by topic index. `NlpClient` separates transport from evaluator orchestration;
+`HttpNlpClient` handles timeouts, interruption, and sanitized HTTP errors. `NlpResponseValidator`
+checks response membership, ranges, status consistency, exact Unicode evidence spans, and coverage.
+`EvaluationCommand` is a thin CLI/report frontend and loads neither debate prompts nor credentials.
+
+The Python package separately owns validated schemas/configuration, lossless sentence/token
+chunking, model-specific adapters, a lazy registry/failure coordinator, and FastAPI transport.
+CPU inference is serialized. Model loading resolves pinned local snapshot paths so tokenizer
+compatibility checks cannot fall back to network metadata lookups. No inference request downloads
+weights. Dependency/model versions are pinned independently from the Java engine.
+
+VADER lexical scores, Cardiff sentiment, and experimental DeBERTa policy stance remain separate.
+Transformer confidence indicators are uncalibrated; VADER does not fabricate confidence.
+Human-reviewed NZ debate validation remains necessary. The pilot utility supports 200 reviewed
+items, source-debate-separated calibration/held-out splits, grounding-source exclusion, macro-F1,
+confusion matrices, abstentions/failures, latency, and complete per-item evidence.
+
+See [the NLP guide](../nlp/README.md) for setup, the wire contract, score semantics, extension points,
+and the outstanding human annotation work. Web serving and the LLM evaluator remain later stages.
 
 ## Validation
 

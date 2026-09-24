@@ -15,7 +15,8 @@ Team members: **Albert Sun**, **Kieran Joe**
 
 Maven **3.9.16** is pinned by the checked-in wrapper, with a SHA-256 distribution checksum.
 The Spring Boot **3.5.16** parent pins the dependency/plugin versions, including Jackson and JUnit.
-The application remains a CLI; Spring's web runtime, the Python NLP service, and the frontend belong to later stages.
+The application remains a CLI. An optional private Python service now runs local sentiment and
+policy-stance evaluation; Spring's web runtime and the frontend belong to later stages.
 
 ## Build and run
 
@@ -58,6 +59,26 @@ java -jar target/virtual-parliament-0.1.0-SNAPSHOT.jar --help
 `resources/`. `--transcript FILE` writes only the public transcript, including any completed
 events if a provider call fails. The output's parent directory must already exist.
 `--validate-config` checks resources without reading credentials or contacting a provider.
+
+## Local sentiment and policy-stance evaluation
+
+Step two adds independent VADER, Cardiff RoBERTa sentiment, and experimental DeBERTa stance
+methods. The Python service runs on CPU and loads pinned local model snapshots. Java sends
+only public speech, turn IDs, and explicit policy propositions; reports preserve each method's
+scores, evidence chunks, uncertainty, provenance, and failures separately.
+
+See [nlp/README.md](nlp/README.md) for setup, module boundaries, the HTTP contract, and the
+200-item human-review pilot workflow. With the service running, evaluate an exported transcript
+without an API key or a new debate:
+
+```powershell
+java -jar target/virtual-parliament-0.1.0-SNAPSHOT.jar evaluate --input debate.json --output evaluation.json --methods vader-sentiment
+```
+
+Configure selected methods, endpoint, batching, timeout, and per-topic policy propositions in
+[resources/config/evaluation.json](resources/config/evaluation.json). A runnable synthetic example
+is in [examples/evaluation](examples/evaluation). No overall score or party-alignment inference
+is produced. Parliamentary-text accuracy still requires the human-reviewed pilot.
 
 ## Configuration and prompts
 
@@ -118,7 +139,8 @@ but its rubrics, schema validation, and CLI integration remain stage three.
 The empty `EvaluatorPrompt.txt` is not an active debate template. Evaluation outputs are
 never added to agent inputs automatically.
 
-See [docs/architecture.md](docs/architecture.md) for the first-stage scope and extension boundaries.
+See [docs/architecture.md](docs/architecture.md) for stage boundaries and [nlp/README.md](nlp/README.md)
+for the local evaluation architecture.
 
 ## Hansard Grounding
 
@@ -170,16 +192,19 @@ src/engine/
   config/                    # validated settings and immutable run snapshots
   debate/                    # turn scheduling and public transcript ownership
   transcript/                # immutable public event and participant types
-  evaluation/                # independent evaluator contracts and provisional LLM parser
+  evaluation/                # coordinator, report/CLI, local NLP client, provisional LLM parser
   openAi/                    # existing OpenAI transport
   io/                        # public event output sinks
   prompt/                    # validated templates and prompt assembly
   utils/                     # strict Jackson JSON and file reading
 resources/
   config/engine.json         # non-secret settings
+  config/evaluation.json     # local methods, endpoint, and explicit policy targets
   prompts/                   # external UTF-8 templates
   data/HansardExcerpts.json  # existing sample corpus
 test/engine/                 # JUnit tests with mock providers/local HTTP server
+nlp/                         # Python service, model adapters, uv lockfile, tests, pilot tooling
+examples/evaluation/         # synthetic transcript and topic-specific policy targets
 .mvn/wrapper/                # pinned Maven distribution and checksum
 pom.xml                      # Java 17, managed dependencies, tests, runnable packaging
 mvnw, mvnw.cmd               # official Apache Maven wrapper scripts

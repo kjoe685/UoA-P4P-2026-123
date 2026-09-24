@@ -1,0 +1,9 @@
+{
+  "events": [
+    {"turnId":1,"topicIndex":0,"topic":"Housing","round":0,"type":"TOPIC_ANNOUNCEMENT","speaker":null,"text":"The House will debate housing."},
+    {"turnId":2,"topicIndex":0,"topic":"Housing","round":1,"type":"SPEECH","speaker":{"id":"a","name":"Example A","party":"Example party A"},"text":"I support building more public housing because every family deserves a safe home."},
+    {"turnId":3,"topicIndex":0,"topic":"Housing","round":1,"type":"INTERJECTION","speaker":{"id":"b","name":"Example B","party":"Example party B"},"text":"I oppose building more public housing because it would waste money and fail to address restrictive planning rules."},
+    {"turnId":4,"topicIndex":1,"topic":"Climate","round":0,"type":"TOPIC_ANNOUNCEMENT","speaker":null,"text":"The House will debate climate policy."},
+    {"turnId":5,"topicIndex":1,"topic":"Climate","round":1,"type":"SPEECH","speaker":{"id":"a","name":"Example A","party":"Example party A"},"text":"I support raising the carbon price to reduce emissions."}
+  ]
+}

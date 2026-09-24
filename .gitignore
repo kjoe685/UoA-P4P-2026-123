@@ -40,3 +40,13 @@ replay_pid*
 # Private run records and credentials
 /runs/
 .env
+
+# Local NLP environments, model weights, and bootstrap tools
+/.tools/
+/.uv-cache/
+**/.venv/
+**/__pycache__/
+**/.pytest_cache/
+/nlp/.models/
+/nlp/dist/
+*.egg-info/

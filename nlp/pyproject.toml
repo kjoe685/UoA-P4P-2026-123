@@ -1,0 +1,43 @@
+[project]
+name = "parliament-nlp"
+version = "0.1.0"
+description = "Private local sentiment and policy-stance evaluation service"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+    "fastapi==0.141.1",
+    "uvicorn==0.53.0",
+    "vaderSentiment==3.3.2",
+]
+
+[project.optional-dependencies]
+models = [
+    "torch==2.10.0",
+    "transformers==4.57.6",
+    "sentencepiece==0.2.2",
+    "protobuf==7.36.2",
+]
+
+[dependency-groups]
+dev = ["pytest==9.1.1", "httpx==0.28.1"]
+
+[project.scripts]
+parliament-nlp = "parliament_nlp.cli:main"
+parliament-nlp-pilot = "parliament_nlp.pilot:main"
+
+[build-system]
+requires = ["hatchling==1.32.3"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+required-version = "==0.12.16"
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu", marker = "sys_platform != 'darwin'" }]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
