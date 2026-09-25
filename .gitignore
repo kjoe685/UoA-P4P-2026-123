@@ -27,7 +27,7 @@ hs_err_pid*
 replay_pid*
 
 # API Keys
-/keys/openAi/OpenAI_Key.txt
+/keys/OpenAI_Key.txt
 
 # Claude Code
 .claude/

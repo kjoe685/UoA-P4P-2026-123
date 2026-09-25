@@ -1,241 +1,240 @@
 # UoA-P4P-2026-123
-2026 Part 4 Project #123 at The University of Auckland - AI-based virtual parliament
+
+AI-based virtual parliament — University of Auckland Part 4 Project #123, 2026.
+
+Simulate New Zealand parliamentary debates with language-model agents representing Labour,
+National, Green, ACT and NZ First. Choose topics, models and private adversarial strategies,
+export the public debate transcript, and evaluate it using local NLP models or an LLM rubric.
+
+## Requirements
+
+- JDK **17 or later**.
+- Internet access to download Maven and dependencies on the first build.
+- An API key for each cloud provider you select, or Ollama with a downloaded local model.
+- For local sentiment and stance evaluation: Python **3.11–3.13** and **uv 0.12.16**.
+  See the [NLP setup guide](nlp/README.md).
+
+The Maven wrapper supplies Maven; a separate Maven installation is unnecessary.
+For a first run without a provider key or model downloads, build the JAR below and follow the
+[VADER quickstart](nlp/README.md#vader-quickstart).
+
+## Open the project in IntelliJ
+
+Open the repository folder containing [pom.xml](pom.xml) and import it as a Maven project.
+Set the project SDK and Maven runner JDK to 17 or later. Use IntelliJ's Terminal for the commands
+below, with its working directory set to this folder. For a Java run configuration, select
+`engine.Main` and set **Working directory** to `$PROJECT_DIR$`; environment variables belong in
+that run configuration if you launch Java from the IDE rather than the terminal.
+
+Documentation links are relative to the Markdown file containing them. Keep the repository layout
+when opening the files. IntelliJ's Markdown preview supports these links; in the source editor,
+use Ctrl+Click to navigate. If the preview is unavailable, enable the bundled Markdown plugin.
+See [IntelliJ's Markdown help](https://www.jetbrains.com/help/idea/markdown.html).
+
+## Build and run a debate
+
+Run commands from the repository root (the directory containing `pom.xml`). On Windows:
+
+```powershell
+java -version
+javac -version
+.\mvnw.cmd verify
+java -jar target/virtual-parliament-0.1.0-SNAPSHOT.jar --validate-config
+```
+
+On macOS/Linux, build with `sh ./mvnw verify`. The build produces a runnable JAR in `target/`.
+Both version commands should report 17 or later. If Java resolves to an old JRE, set `JAVA_HOME`
+to your JDK and put its `bin` directory first in `PATH`; IntelliJ's project SDK does not change
+the Java executable used by an already-open terminal.
+Building and validating configuration require no API key. Validation checks files and settings;
+it does not check credentials, model availability or whether a local service is running.
+
+The default model is OpenAI's `gpt-5-nano`. Set `OPENAI_API_KEY`, or copy
+[keys/OpenAI_Key_TEMPLATE.txt](keys/OpenAI_Key_TEMPLATE.txt) to `keys/OpenAI_Key.txt` and
+replace its contents with your key. The environment variable takes precedence; the key file
+is ignored by Git.
+
+For example, set the key in the PowerShell session where you will run Java:
+
+```powershell
+$env:OPENAI_API_KEY = "YOUR_API_KEY"
+```
+
+On macOS/Linux, use `export OPENAI_API_KEY="YOUR_API_KEY"`. Substitute the appropriate variable
+from the provider table below for another provider. The application does not load `.env` files.
+
+Start a debate and save its transcript:
+
+```powershell
+java -jar target/virtual-parliament-0.1.0-SNAPSHOT.jar --transcript debate.json
+```
+
+The interactive prompts ask for:
+
+1. Topics separated by `|`, or blank for the configured default.
+2. Party numbers separated by commas, or blank for all parties.
+3. Rounds per topic, or blank for the configured default.
+4. Whether each party's agent has a private adversarial strategy, and which strategy to use.
+
+The transcript includes topic announcements, speeches and interjections. Its output directory
+must exist; an existing transcript at that path is overwritten. If a provider call fails during
+the debate, completed events are saved. Turn scheduling uses a
+configurable seed; generated speech is not guaranteed to be reproducible.
+
+## Choose model providers
+
+| Provider | Preset | Credential |
+|---|---|---|
+| OpenAI | `gpt-5-nano`, `gpt-4o-mini` | `OPENAI_API_KEY` or `keys/OpenAI_Key.txt` |
+| Anthropic | `claude-sonnet` | `ANTHROPIC_API_KEY` |
+| Google Gemini | `gemini-flash` | `GEMINI_API_KEY` |
+| xAI Grok | `grok` | `XAI_API_KEY` |
+| Local Ollama | `qwen3-local` | No API key; requires the `qwen3:8b` model |
+
+Use `--agent-model` for the default model and repeat `--party-model PARTY=PRESET` to override
+individual agents. Party IDs are `LABOUR`, `NATIONAL`, `GREEN`, `ACT` and `NZ_FIRST`.
+
+```powershell
+java -jar target/virtual-parliament-0.1.0-SNAPSHOT.jar --agent-model gemini-flash --party-model GREEN=grok --transcript debate.json
+```
+
+The CLI accepts preset names from the table, which map to provider-specific model IDs.
+Model IDs, generation limits and default presets are configured in
+[resources/config/engine.json](resources/config/engine.json). See the
+[provider guide](docs/llm-evaluation.md#provider-setup-and-selection) for supported options and
+[local Ollama setup](docs/llm-evaluation.md#local-ollama).
+
+## Evaluate a transcript
+
+Evaluation runs on a saved transcript. Each selected method produces its own scores, evidence
+and failures; results are not combined into an overall score.
+
+### Local sentiment and policy stance
+
+The Python service provides VADER sentiment, Cardiff RoBERTa sentiment and experimental
+DeBERTa policy stance. Follow the [NLP setup guide](nlp/README.md) to start the service, then run:
+
+```powershell
+java -jar target/virtual-parliament-0.1.0-SNAPSHOT.jar evaluate --input debate.json --output evaluation.json --methods vader-sentiment
+```
+
+Select methods, the service endpoint and per-topic policy propositions in
+[resources/config/evaluation.json](resources/config/evaluation.json). Stance analysis requires
+an explicit proposition, such as “Build more public housing”; a topic label alone is insufficient.
+For a debate using the current default topic, “Whether the retirement age should be raised”, use
+[resources/evaluation/config.json](resources/evaluation/config.json). It supplies the proposition
+“Raise the retirement age” for topic index 0:
+
+```powershell
+java -jar target/virtual-parliament-0.1.0-SNAPSHOT.jar evaluate --input debate.json --config resources/evaluation/config.json --output evaluation.json
+```
+
+This selects all three local methods and needs the [full NLP setup](nlp/README.md#transformer-setup).
+Policy targets are matched by **zero-based topic index**, not topic text: update them when changing
+topics or their order. The generic default config has no policy targets. The separate
+[sample transcript](examples/evaluation/transcript.json) covers housing and climate and should use
+its matching [sample policy configuration](examples/evaluation/config.json).
+
+These models do not infer party affiliation or political intent. Their suitability for parliamentary
+speech requires human validation; the [NLP guide](nlp/README.md) explains score interpretation and
+how to run a review pilot.
+
+### LLM rubric
+
+`llm-rubric` is the built-in Java evaluator ID selected with `--methods`. Its implementation is
+[LLMEvaluator.java](src/engine/evaluation/LLMEvaluator.java), and its scoring definitions are in
+[rubric.json](resources/evaluation/rubric.json). It uses the selected model to assess
+consistency, logical reasoning, responsiveness, relevance and
+observable rhetorical tactics for each participant and topic. Results include explanations and
+evidence turn IDs, with explicit insufficient-evidence results where a judgment cannot be supported.
+
+```powershell
+java -jar target/virtual-parliament-0.1.0-SNAPSHOT.jar evaluate --input debate.json --output llm-evaluation.json --methods llm-rubric --model gemini-flash
+```
+
+`--model` selects the evaluator independently of agent models. To run multiple methods, use a
+comma-separated list such as `--methods vader-sentiment,llm-rubric`. Local methods require the
+Python service; an LLM-only evaluation does not.
+
+The [LLM evaluation guide](docs/llm-evaluation.md) covers report fields, resource budgets,
+insufficient evidence, and optional private comparisons against assigned strategies.
+The guide also links the [evaluator prompts and validation code](docs/llm-evaluation.md#rubric-and-output).
+To try evaluation before generating a debate, substitute `examples/evaluation/transcript.json`
+for `debate.json`; cloud LLM evaluation makes billable API calls.
+
+Reports are JSON files: open the `--output` file in IntelliJ or another editor. Its `methods` array
+contains entries identified by `evaluatorId`, each with a `status`, `error` and `metrics` object.
+A failed method still produces a report if export succeeds. Exit codes are 0 for successful or
+insufficient-evidence results, 1 for method failures, and 2 for invalid setup. Existing reports are
+overwritten, so choose a new filename to retain a previous run.
+
+## Configuration
+
+| File | Purpose |
+|---|---|
+| [resources/config/engine.json](resources/config/engine.json) | Party profiles, model presets, debate defaults and interruption settings |
+| [resources/config/evaluation.json](resources/config/evaluation.json) | Local evaluation methods, endpoint and policy propositions |
+| [resources/evaluation/config.json](resources/evaluation/config.json) | Explicit `--config` for the default retirement-age debate |
+| [resources/config/llm-evaluation.json](resources/config/llm-evaluation.json) | LLM evaluation call, token and repair limits |
+| [resources/evaluation/rubric.json](resources/evaluation/rubric.json) | Metric definitions, scoring anchors and evidence requirements |
+| [BasePrompt.txt](resources/prompts/BasePrompt.txt), [PoliticianPrompt.txt](resources/prompts/PoliticianPrompt.txt) | Agent behavior and party persona; other templates are listed in [TemplateName.java](src/engine/prompt/TemplateName.java) |
+| [EvaluatorPrompt.txt](resources/prompts/EvaluatorPrompt.txt), [EvaluatorCue.txt](resources/prompts/EvaluatorCue.txt), [EvaluatorRepair.txt](resources/prompts/EvaluatorRepair.txt) | LLM evaluator instructions, assessment cue and repair request |
+
+Configuration and prompts are loaded at the start of each invocation, so edits take effect without
+rebuilding. Templates use named `{{PLACEHOLDER}}` substitutions. Use `--resources DIR` to select an
+alternative resource directory with the same layout.
+Paths resolve from the process working directory. `evaluate --config FILE` overrides only the
+local NLP configuration; it does not select an engine configuration or an LLM rubric. Select
+`llm-rubric` with `--methods`, rather than adding it to a local NLP config's `methods` array.
+
+```powershell
+java -jar target/virtual-parliament-0.1.0-SNAPSHOT.jar --validate-config
+java -jar target/virtual-parliament-0.1.0-SNAPSHOT.jar evaluate --validate-config --methods llm-rubric --model grok
+java -jar target/virtual-parliament-0.1.0-SNAPSHOT.jar --help
+java -jar target/virtual-parliament-0.1.0-SNAPSHOT.jar evaluate --help
+```
+
+## Privacy and research limitations
+
+Each agent receives its own private instructions and the public transcript. Other agents' prompts,
+assigned strategies and grounding excerpts are excluded from its input. Public transcript exports
+contain participant identities and spoken content, without credentials or private configuration.
+Generated speech can nevertheless disclose information an LLM was instructed to keep private.
+
+Evaluator results are not fed back to debate agents. Supplying `--assignments` explicitly creates an
+owner report containing private assignment data; keep that report separate from public exports.
+
+## Hansard grounding
+
+Party prompts use a small sample of historical NZ parliamentary speech from
+[ParlSpeech V2](https://doi.org/10.7910/DVN/L4OAKN), by Rauh and Schwalbach (2020), distributed
+under CC0. [HansardExcerpts.json](resources/data/HansardExcerpts.json) contains **2–3 excerpts per
+party from 2019**. This sample provides rhetorical examples and is not evidence of current party policy.
+
+Speaker names are retained as source metadata but excluded from agent prompts. Agents are instructed
+to use excerpts for style without naming or impersonating their original speakers.
+
+## Repository layout
+
+```text
+src/engine/             Java debate engine, providers and evaluators
+resources/              Configuration, prompt templates, rubrics and Hansard sample
+test/engine/            Java tests
+nlp/src/                Python inference service and model adapters
+nlp/tests/              Python tests
+nlp/pyproject.toml      Python project and dependency configuration
+nlp/uv.lock             Locked Python dependencies
+examples/evaluation/   Sample transcript and policy targets
+docs/                   Architecture and provider/evaluation guides
+keys/                   API-key template and ignored local key
+pom.xml                 Java build configuration
+mvnw, mvnw.cmd          Maven wrapper
+```
+
+See [docs/architecture.md](docs/architecture.md) for component responsibilities and data boundaries.
 
 ## People
 
 Supervisor: **Joerg Wicker**
 
 Team members: **Albert Sun**, **Kieran Joe**
-
-## Requirements
-
-- JDK **17 or later**.
-- Internet access on the first build to download Maven and dependencies.
-- A key for each selected cloud provider, or a local Ollama installation and model. Building, testing, and validating configuration do not need keys or make paid calls.
-
-Maven **3.9.16** is pinned by the checked-in wrapper, with a SHA-256 distribution checksum.
-The Spring Boot **3.5.16** parent pins the dependency/plugin versions, including Jackson and JUnit.
-The application remains a CLI. An optional private Python service now runs local sentiment and
-policy-stance evaluation; Spring's web runtime and the frontend belong to later stages.
-
-## Build and run
-
-Run commands from the repository root. On Windows:
-
-```powershell
-.\mvnw.cmd verify
-java -jar target/virtual-parliament-0.1.0-SNAPSHOT.jar --validate-config
-java -jar target/virtual-parliament-0.1.0-SNAPSHOT.jar
-```
-
-On macOS/Linux, use `sh ./mvnw verify` for the build. No separately installed Maven is needed.
-`verify` runs the tests and produces a runnable JAR containing its dependencies.
-The old dependency-free `javac` command is no longer sufficient.
-
-Before running a live debate, set the `OPENAI_API_KEY` environment variable, or copy
-`keys/openAi/OpenAI_Key_TEMPLATE.txt` to `keys/openAi/OpenAI_Key.txt` and replace its
-contents with your key. The environment variable takes precedence. Credentials are kept
-out of configuration snapshots, model messages, and transcript exports.
-
-OpenAI remains the default. Anthropic, Gemini, Grok and Ollama are also available for both
-agents and the LLM evaluator. See [docs/llm-evaluation.md](docs/llm-evaluation.md) for credentials,
-local setup, provider limits and report semantics. For example, use Gemini by default and Grok
-for the Green agent with `--agent-model gemini-flash --party-model GREEN=grok`.
-
-The interactive CLI asks for:
-
-1. Topics separated by `|`, or blank for the configured default.
-2. Party numbers separated by commas, or blank for all parties.
-3. Rounds per topic, or blank for the configured default.
-4. Each party's private adversarial assignment and strategy.
-
-Each scheduled speech may be followed by at most one interjection. Turn order and
-interjection choices are reproducible for a given seed and setup; model-generated text
-is not guaranteed to be deterministic.
-
-Optional arguments:
-
-```powershell
-java -jar target/virtual-parliament-0.1.0-SNAPSHOT.jar --resources resources --transcript debate.json
-java -jar target/virtual-parliament-0.1.0-SNAPSHOT.jar --help
-```
-
-`--resources DIR` chooses an external resource directory with the same layout as
-`resources/`. `--transcript FILE` writes only the public transcript, including any completed
-events if a provider call fails. The output's parent directory must already exist.
-`--validate-config` checks resources without reading credentials or contacting a provider.
-
-## Local sentiment and policy-stance evaluation
-
-Step two adds independent VADER, Cardiff RoBERTa sentiment, and experimental DeBERTa stance
-methods. The Python service runs on CPU and loads pinned local model snapshots. Java sends
-only public speech, turn IDs, and explicit policy propositions; reports preserve each method's
-scores, evidence chunks, uncertainty, provenance, and failures separately.
-
-See [nlp/README.md](nlp/README.md) for setup, module boundaries, the HTTP contract, and the
-200-item human-review pilot workflow. With the service running, evaluate an exported transcript
-without an API key or a new debate:
-
-```powershell
-java -jar target/virtual-parliament-0.1.0-SNAPSHOT.jar evaluate --input debate.json --output evaluation.json --methods vader-sentiment
-```
-
-Configure selected methods, endpoint, batching, timeout, and per-topic policy propositions in
-[resources/config/evaluation.json](resources/config/evaluation.json). A runnable synthetic example
-is in [examples/evaluation](examples/evaluation). No overall score or party-alignment inference
-is produced. Parliamentary-text accuracy still requires the human-reviewed pilot.
-
-## LLM evaluation and model providers
-
-Step three adds the independent `llm-rubric` method. It evaluates all observed participants
-once per topic for consistency, logical reasoning, responsiveness, relevance and observable
-rhetorical tactics. Each metric retains its score, explanation and evidence turn IDs, or an
-explicit insufficient-evidence result. Failed topics do not erase successful topics.
-An optional owner assignment file adds a private comparison report after scoring; assignments
-never reach the evaluator or other agents.
-
-```powershell
-java -jar target/virtual-parliament-0.1.0-SNAPSHOT.jar evaluate --input debate.json --output llm-evaluation.json --methods llm-rubric --model gemini-flash
-java -jar target/virtual-parliament-0.1.0-SNAPSHOT.jar evaluate --input debate.json --output combined-report.json --methods vader-sentiment,llm-rubric --model grok
-java -jar target/virtual-parliament-0.1.0-SNAPSHOT.jar evaluate --validate-config --methods llm-rubric --model qwen3-local
-```
-
-The default method list remains local-only. Explicitly select `llm-rubric` to use an LLM;
-`--model` chooses its preset independently of agent models. Rubrics, scoring anchors, prompts,
-and repair/call/token budgets live in external files under `resources/`. See the
-[LLM guide](docs/llm-evaluation.md) for the complete workflow and limitations.
-
-## Configuration and prompts
-
-Edit [resources/config/engine.json](resources/config/engine.json) for party names/ideologies,
-the default topic and rounds, agent/evaluator model presets, completion token limits,
-timeouts, and interruption probabilities/seed. `agentModelPreset` and `evaluatorModelPreset`
-are independent defaults; CLI overrides apply to one invocation. Presets include `gpt-5-nano`,
-`gpt-4o-mini`, `claude-sonnet`, `gemini-flash`, `grok`, and `qwen3-local`.
-Completion limits include provider reasoning where applicable; a truncated response stops
-the run and is not broadcast as a completed speech.
-
-Model-facing debate text lives under [resources/prompts](resources/prompts):
-
-- `BasePrompt.txt` and `PoliticianPrompt.txt`: common rules and the persistent persona.
-- `GroundingPrompt.txt`: framing for historical Hansard excerpts.
-- `OpeningCue.txt`, `NewTopicCue.txt`, `FollowUpCue.txt`, `InterjectionCue.txt`: current-topic turn instructions.
-- `TopicAnnouncement.txt`: the public announcement for each agenda item.
-- `strategies/`: private instructions for the three disruption strategies.
-
-Templates use named `{{PLACEHOLDER}}` values. Missing, unknown, or malformed placeholders,
-unknown JSON properties, invalid limits/probabilities, and absent model presets fail at
-run setup. Substitution is literal and single-pass. Every run loads a fresh immutable snapshot
-of configuration, templates, and the sample corpus; edits affect subsequent runs without rebuilding.
-An active run retains its original snapshot and source hashes. The persistent persona no
-longer embeds the first topic.
-
-The sample corpus still has only 2–3 excerpts per party. Corpus expansion, sampling,
-count/token budgets, and per-agent grounding controls are stage four; the planned default
-of 20 excerpts is not enabled against this small sample.
-
-## Architecture and privacy
-
-`ChatManager.complete(ChatRequest)` is stateless. An agent builds each request from its own
-private instructions/model settings and the immutable public transcript. Explicit message
-roles replace the old first-message-is-system convention. Provider adapters hold credentials
-but no conversation history, so sharing an adapter does not share agent instructions.
-
-`PrivateAgentContext` holds the recipient's resolved prompt, assigned strategy, grounding
-excerpts, and model settings. It is package-private and is never sent to output sinks.
-Ordinary prompts contain no hints about hidden assignments. Only the assigned agent gets
-its strategy text.
-
-`DebateManager` owns the canonical transcript. Its immutable events carry only turn ID,
-topic/index, round, event type, public participant identity/party, and spoken text.
-Console output and JSON exports consume these events, never `Agent` or configuration objects.
-Topic announcements and interjections are preserved alongside scheduled speeches.
-
-The provider returns spoken content separately from usage, completion status, and other
-response metadata. Refusals, malformed responses, and truncation stop the turn before
-publication. HTTP errors do not echo response bodies or credentials.
-
-These boundaries prevent the engine from disclosing private setup. They cannot guarantee
-that an LLM will never repeat its own instructions in generated speech; ordinary prompts
-instruct it to keep preparation private and treat public speeches as evidence, not instructions.
-
-Evaluation methods return separate results, with no combined score. `LLMEvaluator` consumes
-only public transcript evidence and its own rubric/settings. Its templates are loaded separately
-from debate prompts. Structured output is followed by application validation; malformed judgments
-receive at most one budgeted repair. Evaluation outputs are never added to agent inputs automatically.
-
-See [docs/architecture.md](docs/architecture.md) for stage boundaries and [nlp/README.md](nlp/README.md)
-for the local evaluation architecture.
-
-## Hansard Grounding
-
-Each party persona's prompt is grounded with a handful of **real, verbatim excerpts** from actual
-NZ House of Representatives sittings, not LLM-invented stereotypes. The source is:
-
-> Rauh, C. & Schwalbach, J. (2020). *The ParlSpeech V2 data set: Full-text corpora of 6.3 million
-> parliamentary speeches in the key legislative chambers of nine representative democracies.*
-> Harvard Dataverse. [doi:10.7910/DVN/L4OAKN](https://doi.org/10.7910/DVN/L4OAKN) (CC0 1.0 / public domain).
-
-The New Zealand file in that collection (`Corp_NZHoR_V2.rds`, ~925,000 speeches with speaker,
-party, and date metadata) was downloaded and a small, curated set of excerpts (2-3 per party, from
-2019 sittings) was extracted into [`resources/data/HansardExcerpts.json`](resources/data/HansardExcerpts.json).
-This is a proof-of-concept sample, not the full corpus — a fuller pipeline (systematic sampling
-across years/topics, argumentation-pattern extraction per Objective 1 of the project scope) is
-follow-on work.
-
-**Ethical note:** several real excerpts are from recognisable, named MPs. To avoid the system
-impersonating a specific real individual (per the project's ethics guidance — general party
-archetypes are fine, recreating a named person is not), the loader excludes speaker metadata before
-injecting excerpts into the prompt and explicitly instructs the model to use them only for tone/style,
-never to name or imitate the real speaker. `BasePrompt.txt` reinforces this as a standing rule.
-Speaker names are kept in the JSON file itself purely as citation metadata.
-
-parliament.nz's own Hansard site and HathiTrust were not used as sources: the former sits behind bot
-protection and the latter returned 403s to automated requests, so pulling from those directly wasn't attempted.
-
-### Reproducing / extending the excerpt sample
-The extraction was a one-off Python data-prep step and isn't part of this repo (it's not needed to
-run the app — only to regenerate `HansardExcerpts.json`). To redo or extend it:
-1. Download `Corp_NZHoR_V2.rds` from the Dataverse link above.
-2. Parse it with the [`rdata`](https://pypi.org/project/rdata/) package, not `pyreadr` — `pyreadr`'s
-   C parser throws `LibrdataError: The file contains an unrecognized object` on this file.
-3. `rdata`'s default conversion still fails: it builds a fixed-width NumPy unicode array sized to the
-   *longest* string in the `text` column (one very long speech blows this up to ~117 GiB). Patch
-   `numpy.array` to fall back to `dtype=object` for lists of strings before calling `rdata.conversion.convert(...)`.
-4. Filter the resulting `party` column for the party names you want and sample rows from the `text`/`speaker`/`date` columns.
-5. Append the new entries to `HansardExcerpts.json` — `HansardExcerpts.java` only requires a `text`
-   field per entry under each stable party key (`LABOUR`, `NATIONAL`, `GREEN`, `ACT`, `NZ_FIRST`) (`speaker`/`date` are kept for citation but aren't read by the loader).
-
-## File structure
-
-```text
-src/engine/
-  Main.java                  # CLI and run setup
-  ChatManager.java           # stateless provider contract
-  agent/                     # agents, private contexts, stable party/strategy IDs
-  chat/                      # explicit request/response/message types
-  config/                    # validated settings and immutable run snapshots
-  debate/                    # turn scheduling and public transcript ownership
-  transcript/                # immutable public event and participant types
-  evaluation/                # coordinator, report/CLI, local NLP client and validated LLM evaluator
-  evaluation/llm/            # rubric, frozen resources, schema/evidence validation and report types
-  openAi/                    # OpenAI adapter entry point
-  provider/                  # Anthropic, Gemini, Grok, Ollama, credentials and bounded transport
-  io/                        # public event output sinks
-  prompt/                    # validated templates and prompt assembly
-  utils/                     # strict Jackson JSON and file reading
-resources/
-  config/engine.json         # non-secret settings
-  config/evaluation.json     # local methods, endpoint, and explicit policy targets
-  config/llm-evaluation.json # independent LLM call, repair and size budgets
-  evaluation/rubric.json     # versioned metric definitions, scales and evidence requirements
-  prompts/                   # external UTF-8 templates
-  data/HansardExcerpts.json  # existing sample corpus
-test/engine/                 # JUnit tests with mock providers/local HTTP server
-nlp/                         # Python service, model adapters, uv lockfile, tests, pilot tooling
-examples/evaluation/         # synthetic transcript and topic-specific policy targets
-.mvn/wrapper/                # pinned Maven distribution and checksum
-pom.xml                      # Java 17, managed dependencies, tests, runnable packaging
-mvnw, mvnw.cmd               # official Apache Maven wrapper scripts
-keys/openAi/                 # local ignored key plus checked-in template
-```

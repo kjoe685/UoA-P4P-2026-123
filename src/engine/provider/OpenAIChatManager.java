@@ -1,7 +1,5 @@
-package engine.openAi;
+package engine.provider;
 
-import engine.provider.ChatCompletionsProvider;
-import engine.provider.ProviderHttp;
 import java.net.URI;
 import java.net.http.HttpClient;
 

@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "endpoint": "http://127.0.0.1:8765/v1/analyze",
+  "timeoutSeconds": 300,
+  "batchSize": 16,
+  "methods": ["vader-sentiment", "cardiff-sentiment", "deberta-stance"],
+  "policyTargets": [
+    {
+      "id": "raise-retirement-age",
+      "topicIndex": 0,
+      "proposition": "Raise the retirement age"
+    }
+  ]
+}

@@ -2,7 +2,6 @@ package engine.provider;
 
 import engine.ChatManager;
 import engine.config.ModelConfig;
-import engine.openAi.OpenAIChatManager;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.net.URI;
@@ -16,7 +15,7 @@ public final class ProviderFactory {
     private final Function<String, String> environment;
     private final Path legacyOpenAiKey;
     private final Map<String, ChatManager> providers = new HashMap<>();
-    public ProviderFactory() { this(System::getenv, Path.of("keys/openAi/OpenAI_Key.txt")); }
+    public ProviderFactory() { this(System::getenv, Path.of("keys/OpenAI_Key.txt")); }
     ProviderFactory(Function<String, String> environment, Path legacyOpenAiKey) {
         this.environment = environment; this.legacyOpenAiKey = legacyOpenAiKey;
     }

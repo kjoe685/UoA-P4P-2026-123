@@ -1,4 +1,4 @@
-package engine.openAi;
+package engine.provider;
 
 import com.sun.net.httpserver.HttpServer;
 import engine.TestFixtures;
