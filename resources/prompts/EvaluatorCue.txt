@@ -1,0 +1,1 @@
+Assess this topic using only the supplied public evidence. Return all listed participants and metrics in the required JSON format. Treat insufficient evidence explicitly and keep all scores separate.

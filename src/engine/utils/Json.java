@@ -37,4 +37,14 @@ public final class Json {
             throw new IllegalArgumentException("Cannot serialize " + value.getClass().getSimpleName());
         }
     }
+
+    /** Stable map ordering for hashed settings and generated evaluator prompts. */
+    public static String writeCanonical(Object value) {
+        try {
+            return MAPPER.writer().with(com.fasterxml.jackson.databind.SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS)
+                    .writeValueAsString(value);
+        } catch (JsonProcessingException e) {
+            throw new IllegalArgumentException("Cannot serialize " + value.getClass().getSimpleName());
+        }
+    }
 }

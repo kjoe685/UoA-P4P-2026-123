@@ -148,7 +148,8 @@ exceptions never echo input or raw exception bodies. Results never enter an agen
 Add a local model by implementing `Analyzer`, registering its factory, and extending the wire
 validation/config allowlist for its labels/score semantics. A later party predictor can instead
 implement the generic Java `Evaluator` contract with its own `MetricValue`, without depending
-on sentiment schemas. LLM rubric/provider work remains stage three.
+on sentiment schemas. Stage three's independent LLM rubric and provider adapters are described in
+[the LLM guide](../docs/llm-evaluation.md); local-only runs do not load their credentials or prompts.
 
 ## Verification
 

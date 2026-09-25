@@ -18,4 +18,12 @@ class MainTest {
         assertEquals(2, Main.execute(new String[]{"--resources"}));
         assertEquals(2, Main.execute(new String[]{"--unknown"}));
     }
+
+    @Test void modelOverridesAreValidatedWithoutCredentials() {
+        assertEquals(0, Main.execute(new String[]{"--validate-config", "--agent-model", "gemini-flash", "--party-model", "GREEN=grok"}));
+        assertEquals(2, Main.execute(new String[]{"--validate-config", "--agent-model", "missing"}));
+        assertEquals(2, Main.execute(new String[]{"--validate-config", "--party-model", "GREEN=missing"}));
+        assertEquals(2, Main.execute(new String[]{"--validate-config", "--party-model", "INVALID=grok"}));
+        assertEquals(2, Main.execute(new String[]{"--validate-config", "--party-model", "GREEN=grok", "--party-model", "GREEN=grok"}));
+    }
 }

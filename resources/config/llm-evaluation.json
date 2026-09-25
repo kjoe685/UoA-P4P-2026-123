@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "maxRepairAttempts": 1,
+  "maxCalls": 20,
+  "maxInputCharacters": 100000,
+  "maxResponseCharacters": 100000,
+  "maxTotalCompletionTokens": 81920
+}

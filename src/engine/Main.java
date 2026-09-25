@@ -7,10 +7,11 @@ import engine.config.ConfigurationSnapshot;
 import engine.config.EngineConfig;
 import engine.debate.DebateManager;
 import engine.io.ConsoleEngineOutput;
-import engine.openAi.OpenAIChatManager;
+import engine.provider.ProviderFactory;
+import engine.config.ModelConfig;
+import engine.evaluation.llm.LlmEvaluationResources;
 import engine.prompt.PromptManager;
 import engine.transcript.Participant;
-import engine.utils.FileTextReader;
 import engine.utils.Json;
 
 import java.io.IOException;
@@ -24,8 +25,6 @@ import java.util.NoSuchElementException;
 import java.util.Scanner;
 
 public final class Main {
-    private static final String API_KEY_PATH = "keys/openAi/OpenAI_Key.txt";
-
     public static void main(String[] args) {
         System.setOut(new PrintStream(System.out, true, StandardCharsets.UTF_8));
         System.setErr(new PrintStream(System.err, true, StandardCharsets.UTF_8));
@@ -56,18 +55,30 @@ public final class Main {
         Path resources = Path.of("resources");
         Path transcriptPath = null;
         boolean validateOnly = false;
+        String agentPreset = null;
+        java.util.Map<Party, String> partyPresets = new java.util.EnumMap<>(Party.class);
         for (int i = 0; i < args.length; i++) {
             switch (args[i]) {
-                case "--resources", "--transcript" -> {
+                case "--resources", "--transcript", "--agent-model", "--party-model" -> {
                     String option = args[i];
                     if (++i == args.length) throw new IllegalArgumentException("Missing value for " + option);
                     if (option.equals("--resources")) resources = Path.of(args[i]);
-                    else transcriptPath = Path.of(args[i]);
+                    else if (option.equals("--transcript")) transcriptPath = Path.of(args[i]);
+                    else if (option.equals("--agent-model")) agentPreset = args[i];
+                    else {
+                        String[] assignment = args[i].split("=", -1);
+                        if (assignment.length != 2 || assignment[1].isBlank()) throw new IllegalArgumentException("Use --party-model PARTY=PRESET");
+                        Party party;
+                        try { party = Party.valueOf(assignment[0]); }
+                        catch (IllegalArgumentException e) { throw new IllegalArgumentException("Unknown party in --party-model"); }
+                        if (partyPresets.putIfAbsent(party, assignment[1]) != null) throw new IllegalArgumentException("Duplicate party model override");
+                    }
                 }
                 case "--validate-config" -> validateOnly = true;
                 case "--help" -> {
                     System.out.println("Usage: java -jar target/virtual-parliament-0.1.0-SNAPSHOT.jar"
-                            + " [--resources DIR] [--validate-config] [--transcript FILE]");
+                            + " [--resources DIR] [--validate-config] [--transcript FILE]"
+                            + " [--agent-model PRESET] [--party-model PARTY=PRESET]");
                     System.out.println("       java -jar target/virtual-parliament-0.1.0-SNAPSHOT.jar evaluate --help");
                     return;
                 }
@@ -78,20 +89,13 @@ public final class Main {
         // Validate and freeze every active template/profile before reading credentials or making paid calls.
         ConfigurationSnapshot snapshot = ConfigurationSnapshot.load(resources);
         EngineConfig config = snapshot.config();
+        String defaultPreset = agentPreset == null ? config.agentModelPreset() : agentPreset;
+        if (!config.models().containsKey(defaultPreset) || !config.models().keySet().containsAll(partyPresets.values()))
+            throw new IllegalArgumentException("Unknown agent model preset");
         if (validateOnly) {
-            System.out.println("Configuration, templates, and Hansard sample are valid. No API calls made.");
+            LlmEvaluationResources.load(resources);
+            System.out.println("Configuration, templates, evaluator rubric, and Hansard sample are valid. No API calls made.");
             return;
-        }
-        String apiKey = System.getenv("OPENAI_API_KEY");
-        if (apiKey == null || apiKey.isBlank()) {
-            try {
-                apiKey = new FileTextReader().readText(API_KEY_PATH).trim();
-            } catch (RuntimeException e) {
-                throw new IllegalArgumentException("Set OPENAI_API_KEY or create " + API_KEY_PATH + " from its template.");
-            }
-        }
-        if (apiKey.isBlank() || apiKey.contains("#")) {
-            throw new IllegalArgumentException("Replace the API-key placeholder before running a debate.");
         }
 
         Scanner scanner = new Scanner(System.in, StandardCharsets.UTF_8);
@@ -109,7 +113,14 @@ public final class Main {
         int rounds = parseRounds(scanner.nextLine().trim(), config.defaultRounds());
 
         PromptManager prompts = new PromptManager(snapshot);
-        ChatManager provider = new OpenAIChatManager(apiKey);
+        ProviderFactory providers = new ProviderFactory();
+        // Resolve all selected credentials before any turn can be generated.
+        java.util.Map<Party, ModelConfig> models = new java.util.EnumMap<>(Party.class);
+        for (Party party : selected) {
+            ModelConfig model = config.models().get(partyPresets.getOrDefault(party, defaultPreset));
+            models.put(party, model);
+            providers.forModel(model);
+        }
         List<Agent> agents = new ArrayList<>();
         for (Party party : selected) {
             var profile = config.parties().get(party);
@@ -118,7 +129,7 @@ public final class Main {
             List<String> excerpts = snapshot.excerpts().getExcerpts(party);
             String systemPrompt = prompts.assemblePersonaPrompt(name, profile, strategy, excerpts);
             agents.add(new Agent(new Participant(party.name(), name, profile.displayName()),
-                    strategy, provider, systemPrompt, excerpts, config.agentModel()));
+                    strategy, providers.forModel(models.get(party)), systemPrompt, excerpts, models.get(party)));
         }
 
         DebateManager debate = new DebateManager(agents, topics, rounds, new ConsoleEngineOutput(),

@@ -1,7 +1,7 @@
-# First implementation stage
+# Implementation architecture
 
-This stage implements the first item in the revised plan from **Plan prompt and evaluator overhaul**:
-dependency management, configuration, transcript types, and private agent-context boundaries.
+The first three stages of the revised plan from **Plan prompt and evaluator overhaul** are implemented:
+engine isolation/configuration, local NLP evaluation, and LLM evaluation with multiple providers.
 
 The revised ordering is sound: the canonical transcript and isolation rules give the local NLP
 evaluators and later web exports a safe, stable input. One prerequisite has moved forward:
@@ -59,7 +59,7 @@ or evaluator outputs. The persistent persona does not contain an initial topic. 
 templates do not mention hidden roles or exceptions for special directives. A strategy template is
 appended only to its recipient's instructions.
 
-The transport extracts only `message.content` as response text. Usage, finish status, refusal data,
+The transports extract only spoken text blocks as response text. Usage, finish status, refusal data,
 and any other provider fields are not broadcast. Structured position updates are not requested in
 this stage; their future parser must extract public speech separately before creating an event.
 The engine stops a turn on refusal, truncation, empty/malformed content, or transport failure.
@@ -86,15 +86,10 @@ default of 20 cannot be applied honestly to the present 2–3 examples per party
 
 ## Evaluation boundary and next stages
 
-`Evaluator.evaluate(Transcript)` now takes an immutable snapshot instead of maintaining an
-incremental `hear()` history. `LLMEvaluator` has only been adapted to that contract; its parser
-remains provisional and its empty legacy prompt is not loaded by a debate. Local evaluators run
-explicitly through `evaluate` on a saved transcript; no evaluator runs automatically during a debate.
-No scores are combined or normalized across methods.
-
-The second stage now implements independent local sentiment and policy-stance methods against this
-transcript. The later LLM stage will add rubric/schema validation, evidence turn references,
-insufficient-evidence handling, repair limits, provider capabilities, and additional adapters.
+`Evaluator.evaluate(Transcript)` takes an immutable snapshot instead of maintaining incremental
+history. Local and LLM evaluators run explicitly through `evaluate` on a saved transcript; no evaluator
+runs automatically during a debate. No scores are combined or normalized across methods.
+The LLM method is opt-in and retains per-topic assessments, evidence and failures independently.
 
 ## Second stage: local evaluation modules
 
@@ -102,14 +97,15 @@ insufficient-evidence handling, repair limits, provider capabilities, and additi
 carry explicit success, failure, or insufficient-evidence status; a failing method does not remove
 other results. `LocalNlpEvaluator` represents exactly one method and preserves successful batches
 when later HTTP/schema failures occur. `LocalAnalysisMetric` retains typed method-specific evidence
-without forcing probability distributions into scalar `NumericMetric` values. The provisional LLM
-evaluator remains compatible; party prediction can later supply its own metric type.
+without forcing probability distributions into scalar `NumericMetric` values. `LlmAnalysisMetric`
+similarly preserves its own typed judgments; party prediction can later supply its own metric type.
 
 `NlpInputMapper` alone projects public transcripts into identity-free requests and maps policy
 propositions by topic index. `NlpClient` separates transport from evaluator orchestration;
 `HttpNlpClient` handles timeouts, interruption, and sanitized HTTP errors. `NlpResponseValidator`
 checks response membership, ranges, status consistency, exact Unicode evidence spans, and coverage.
-`EvaluationCommand` is a thin CLI/report frontend and loads neither debate prompts nor credentials.
+`EvaluationCommand` is a CLI/report frontend. It loads no debate prompts and reads cloud credentials
+only if an explicitly selected LLM method reaches a provider call.
 
 The Python package separately owns validated schemas/configuration, lossless sentence/token
 chunking, model-specific adapters, a lazy registry/failure coordinator, and FastAPI transport.
@@ -124,7 +120,43 @@ items, source-debate-separated calibration/held-out splits, grounding-source exc
 confusion matrices, abstentions/failures, latency, and complete per-item evidence.
 
 See [the NLP guide](../nlp/README.md) for setup, the wire contract, score semantics, extension points,
-and the outstanding human annotation work. Web serving and the LLM evaluator remain later stages.
+and the outstanding human annotation work. Web serving remains a later stage.
+
+## Third stage: LLM evaluation and providers
+
+`ChatRequest` carries an optional immutable `OutputSchema`. Provider implementations remain stateless.
+OpenAI and Grok share a Chat Completions wire implementation; Anthropic Messages, Gemini generateContent,
+and Ollama `/api/chat` have separate adapters. `ProviderFactory` resolves only selected credentials.
+Provider capability checks reject unsupported generation options before HTTP and choose native schema
+output or a prompt-schema fallback for evaluation. Every result undergoes the same application validation.
+
+`ProviderHttp` provides timeouts, interrupt preservation, no redirects, sanitized errors and one bounded
+retry on explicit HTTP 429 responses. It does not replay ambiguous connection failures or server errors.
+Ollama generation is serialized within the JVM, uses a bounded context, and rejects oversized inputs
+using a conservative UTF-8 byte estimate; it never trims evidence to fit. Cloud model availability and
+local throughput are not probed by configuration validation.
+
+`LlmEvaluationResources` freezes separate evaluator settings, versioned rubric, system prompt, cue and
+repair prompt with source hashes. `LLMEvaluator` groups the immutable public transcript by topic, lists
+all participants observed anywhere in the transcript, and requests one complete assessment per topic.
+`LlmResponseValidator` checks exact participant/metric coverage, integer ranges, status/score consistency,
+same-topic speech references, per-metric minimum own-speaker evidence and prior-other-speaker requirements.
+Topic announcements are context, never score evidence. Missing evidence yields null scores, not zeroes.
+
+Only malformed completed judgments can receive one repair, under both a call limit and conservatively
+reserved output-token budget. Refusals, truncation, provider errors and oversized inputs fail explicitly.
+Topic failures preserve other topic results. Reports retain metric definitions, source hashes, requested
+model settings and response usage/model/latency for each attempt; raw malformed responses are not exported.
+These budgets bound generation requests and output allowances; they are not monetary cost estimates.
+
+The evaluator is blind to private assignments. An optional owner assignment file is validated locally
+and joined to observed rhetorical evidence only after evaluation in `OwnerEvaluationReport`. The normal
+report stays unchanged; the explicitly requested owner export includes assignments and is private.
+Private position cards remain part of the later debate-state stage; they must not enter the public transcript.
+Judgment quality, factual support and behavioral resistance to prompt injection still require empirical
+evaluation. Unit tests validate the application boundary, not model accuracy.
+
+See [LLM evaluation and provider setup](llm-evaluation.md) for supported settings and commands.
 
 ## Validation
 

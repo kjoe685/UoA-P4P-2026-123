@@ -11,7 +11,7 @@ Team members: **Albert Sun**, **Kieran Joe**
 
 - JDK **17 or later**.
 - Internet access on the first build to download Maven and dependencies.
-- An OpenAI API key with available quota for live debates. Building, testing, and validating configuration do not need a key or make paid calls.
+- A key for each selected cloud provider, or a local Ollama installation and model. Building, testing, and validating configuration do not need keys or make paid calls.
 
 Maven **3.9.16** is pinned by the checked-in wrapper, with a SHA-256 distribution checksum.
 The Spring Boot **3.5.16** parent pins the dependency/plugin versions, including Jackson and JUnit.
@@ -36,6 +36,11 @@ Before running a live debate, set the `OPENAI_API_KEY` environment variable, or 
 `keys/openAi/OpenAI_Key_TEMPLATE.txt` to `keys/openAi/OpenAI_Key.txt` and replace its
 contents with your key. The environment variable takes precedence. Credentials are kept
 out of configuration snapshots, model messages, and transcript exports.
+
+OpenAI remains the default. Anthropic, Gemini, Grok and Ollama are also available for both
+agents and the LLM evaluator. See [docs/llm-evaluation.md](docs/llm-evaluation.md) for credentials,
+local setup, provider limits and report semantics. For example, use Gemini by default and Grok
+for the Green agent with `--agent-model gemini-flash --party-model GREEN=grok`.
 
 The interactive CLI asks for:
 
@@ -80,13 +85,34 @@ Configure selected methods, endpoint, batching, timeout, and per-topic policy pr
 is in [examples/evaluation](examples/evaluation). No overall score or party-alignment inference
 is produced. Parliamentary-text accuracy still requires the human-reviewed pilot.
 
+## LLM evaluation and model providers
+
+Step three adds the independent `llm-rubric` method. It evaluates all observed participants
+once per topic for consistency, logical reasoning, responsiveness, relevance and observable
+rhetorical tactics. Each metric retains its score, explanation and evidence turn IDs, or an
+explicit insufficient-evidence result. Failed topics do not erase successful topics.
+An optional owner assignment file adds a private comparison report after scoring; assignments
+never reach the evaluator or other agents.
+
+```powershell
+java -jar target/virtual-parliament-0.1.0-SNAPSHOT.jar evaluate --input debate.json --output llm-evaluation.json --methods llm-rubric --model gemini-flash
+java -jar target/virtual-parliament-0.1.0-SNAPSHOT.jar evaluate --input debate.json --output combined-report.json --methods vader-sentiment,llm-rubric --model grok
+java -jar target/virtual-parliament-0.1.0-SNAPSHOT.jar evaluate --validate-config --methods llm-rubric --model qwen3-local
+```
+
+The default method list remains local-only. Explicitly select `llm-rubric` to use an LLM;
+`--model` chooses its preset independently of agent models. Rubrics, scoring anchors, prompts,
+and repair/call/token budgets live in external files under `resources/`. See the
+[LLM guide](docs/llm-evaluation.md) for the complete workflow and limitations.
+
 ## Configuration and prompts
 
 Edit [resources/config/engine.json](resources/config/engine.json) for party names/ideologies,
 the default topic and rounds, agent/evaluator model presets, completion token limits,
-timeouts, and interruption probabilities/seed. The evaluator preset is reserved for its later
-CLI integration. Current presets preserve `gpt-5-nano` as the default and `gpt-4o-mini`
-as an alternative. Completion limits include reasoning tokens; a truncated response stops
+timeouts, and interruption probabilities/seed. `agentModelPreset` and `evaluatorModelPreset`
+are independent defaults; CLI overrides apply to one invocation. Presets include `gpt-5-nano`,
+`gpt-4o-mini`, `claude-sonnet`, `gemini-flash`, `grok`, and `qwen3-local`.
+Completion limits include provider reasoning where applicable; a truncated response stops
 the run and is not broadcast as a completed speech.
 
 Model-facing debate text lives under [resources/prompts](resources/prompts):
@@ -133,11 +159,10 @@ These boundaries prevent the engine from disclosing private setup. They cannot g
 that an LLM will never repeat its own instructions in generated speech; ordinary prompts
 instruct it to keep preparation private and treat public speeches as evidence, not instructions.
 
-Evaluation methods return separate results, with no combined score. The unfinished
-`LLMEvaluator` now consumes a transcript snapshot through the stateless provider contract,
-but its rubrics, schema validation, and CLI integration remain stage three.
-The empty `EvaluatorPrompt.txt` is not an active debate template. Evaluation outputs are
-never added to agent inputs automatically.
+Evaluation methods return separate results, with no combined score. `LLMEvaluator` consumes
+only public transcript evidence and its own rubric/settings. Its templates are loaded separately
+from debate prompts. Structured output is followed by application validation; malformed judgments
+receive at most one budgeted repair. Evaluation outputs are never added to agent inputs automatically.
 
 See [docs/architecture.md](docs/architecture.md) for stage boundaries and [nlp/README.md](nlp/README.md)
 for the local evaluation architecture.
@@ -192,14 +217,18 @@ src/engine/
   config/                    # validated settings and immutable run snapshots
   debate/                    # turn scheduling and public transcript ownership
   transcript/                # immutable public event and participant types
-  evaluation/                # coordinator, report/CLI, local NLP client, provisional LLM parser
-  openAi/                    # existing OpenAI transport
+  evaluation/                # coordinator, report/CLI, local NLP client and validated LLM evaluator
+  evaluation/llm/            # rubric, frozen resources, schema/evidence validation and report types
+  openAi/                    # OpenAI adapter entry point
+  provider/                  # Anthropic, Gemini, Grok, Ollama, credentials and bounded transport
   io/                        # public event output sinks
   prompt/                    # validated templates and prompt assembly
   utils/                     # strict Jackson JSON and file reading
 resources/
   config/engine.json         # non-secret settings
   config/evaluation.json     # local methods, endpoint, and explicit policy targets
+  config/llm-evaluation.json # independent LLM call, repair and size budgets
+  evaluation/rubric.json     # versioned metric definitions, scales and evidence requirements
   prompts/                   # external UTF-8 templates
   data/HansardExcerpts.json  # existing sample corpus
 test/engine/                 # JUnit tests with mock providers/local HTTP server

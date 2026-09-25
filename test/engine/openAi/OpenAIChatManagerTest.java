@@ -87,6 +87,18 @@ class OpenAIChatManagerTest {
         assertFalse(body.containsKey("reasoning_effort"));
     }
 
+    @Test void structuredOutputsAreOptInAndKeepAnImmutableSchema() {
+        var schema = new engine.chat.OutputSchema("assessment", "{\"type\":\"object\",\"properties\":{},\"required\":[],\"additionalProperties\":false}");
+        provider.complete(new ChatRequest("Private", List.of(), TestFixtures.model(), schema));
+        var body = Json.read(bodies.get(0), com.fasterxml.jackson.databind.JsonNode.class);
+        assertEquals("json_schema", body.path("response_format").path("type").asText());
+        assertTrue(body.path("response_format").path("json_schema").path("strict").asBoolean());
+        ((Map<?, ?>) schema.value()).clear();
+        assertTrue(schema.json().contains("additionalProperties"));
+        provider.complete(request("ordinary"));
+        assertFalse(Json.read(bodies.get(1), com.fasterxml.jackson.databind.JsonNode.class).has("response_format"));
+    }
+
     @Test void errorsNeverEchoResponseBodiesCredentialsOrPrompts() {
         status = 429;
         response = "TEST_CREDENTIAL_SENTINEL FIRST_PRIVATE_SENTINEL";
