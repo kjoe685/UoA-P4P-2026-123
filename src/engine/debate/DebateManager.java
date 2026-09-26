@@ -6,8 +6,12 @@ import engine.io.EngineOutput;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class DebateManager {
+
+    private static final String SPEAKER_NAME = "The Speaker";
 
     private static final String OPENING_CUE =
             "It is now your turn to open the debate. Give one concise speech (3-5 sentences) in character.";
@@ -29,6 +33,10 @@ public class DebateManager {
     private final int roundsPerTopic;
     private final EngineOutput output;
 
+    // Written from other threads (e.g. the web frontend) while run() is in progress.
+    private final Queue<String> pendingRulings = new ConcurrentLinkedQueue<>();
+    private volatile boolean stopRequested = false;
+
     public DebateManager(List<Agent> agents, List<String> topics, int roundsPerTopic, EngineOutput output) {
         this.agents = agents;
         this.topics = topics;
@@ -40,9 +48,11 @@ public class DebateManager {
         boolean firstSpeechOverall = true;
 
         for (int topicIndex = 0; topicIndex < topics.size(); topicIndex++) {
+            if (stopRequested) {
+                return;
+            }
             String topic = topics.get(topicIndex);
-            System.out.println("Starting debate on: \"" + topic + "\"");
-            System.out.println();
+            output.topicStarted(topicIndex + 1, topics.size(), topic);
 
             if (topicIndex > 0) {
                 announceNewTopic(topic);
@@ -51,14 +61,20 @@ public class DebateManager {
             boolean firstSpeechThisTopic = true;
             for (int round = 1; round <= roundsPerTopic; round++) {
                 for (Agent speaker : agents) {
+                    deliverSpeakerRulings();
+                    if (stopRequested) {
+                        return;
+                    }
+
                     String cue = firstSpeechOverall
                             ? OPENING_CUE
                             : firstSpeechThisTopic ? NEW_TOPIC_CUE : FOLLOW_UP_CUE;
                     firstSpeechOverall = false;
                     firstSpeechThisTopic = false;
 
+                    output.speakerCalled(speaker, false);
                     String statement = speaker.speak(cue);
-                    output.displayMessage(speaker.getName(), statement);
+                    output.displayMessage(speaker, statement, false);
                     broadcast(speaker, statement);
 
                     maybeInterject(speaker);
@@ -67,14 +83,46 @@ public class DebateManager {
         }
     }
 
+    /**
+     * Queues a ruling from the Speaker of the House. It is read out to every agent before the next scheduled
+     * speech, so it can steer the rest of the debate (e.g. calling an adversarial member back to the topic).
+     * Safe to call from another thread while {@link #run()} is in progress.
+     */
+    public void addSpeakerRuling(String ruling) {
+        pendingRulings.add(ruling);
+    }
+
+    /** Asks the debate to stop before the next speech. Safe to call from another thread. */
+    public void requestStop() {
+        stopRequested = true;
+    }
+
+    public boolean isStopRequested() {
+        return stopRequested;
+    }
+
     private void announceNewTopic(String topic) {
         String announcement = "We now move to a new topic: \"" + topic + "\".";
+        output.displaySpeakerMessage(announcement);
         for (Agent agent : agents) {
-            agent.hear("The Speaker", announcement);
+            agent.hear(SPEAKER_NAME, announcement);
+        }
+    }
+
+    private void deliverSpeakerRulings() {
+        String ruling;
+        while ((ruling = pendingRulings.poll()) != null) {
+            output.displaySpeakerMessage(ruling);
+            for (Agent agent : agents) {
+                agent.hear(SPEAKER_NAME, ruling);
+            }
         }
     }
 
     private void maybeInterject(Agent speaker) {
+        if (stopRequested) {
+            return;
+        }
         List<Agent> others = new ArrayList<>(agents);
         others.remove(speaker);
         Collections.shuffle(others);
@@ -84,8 +132,9 @@ public class DebateManager {
                     ? ADVERSARIAL_INTERJECTION_CHANCE
                     : COOPERATIVE_INTERJECTION_CHANCE;
             if (Math.random() < chance) {
+                output.speakerCalled(candidate, true);
                 String interjection = candidate.speak(INTERJECTION_CUE);
-                output.displayMessage(candidate.getName() + " (interjecting)", interjection);
+                output.displayMessage(candidate, interjection, true);
                 broadcast(candidate, interjection);
                 return;
             }
