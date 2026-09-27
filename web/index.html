@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en-NZ">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Virtual Parliament · Pāremata Aotearoa</title>
+  <meta name="description" content="Convene a simulated sitting of the New Zealand House of Representatives, debated by AI MP agents.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <symbol id="fern" viewBox="0 0 64 64"><path fill="currentColor" d="M15.6 60.1L15.8 57.6L16.0 55.2L16.2 52.8L16.5 50.5L16.9 48.2L17.4 46.0L17.9 43.8L18.6 41.6L19.2 39.5L20.0 37.4L20.8 35.4L21.7 33.4L22.7 31.5L23.7 29.6L24.8 27.8L26.0 26.0L27.2 24.2L28.5 22.5L29.9 20.8L31.4 19.2L32.9 17.6L34.6 16.0L36.2 14.5L38.0 13.1L39.8 11.6L41.7 10.3L43.7 8.9L45.8 7.7L47.9 6.4L50.1 5.2L49.9 4.8L47.6 5.9L45.4 7.1L43.3 8.3L41.3 9.5L39.3 10.9L37.4 12.2L35.5 13.6L33.7 15.1L32.0 16.6L30.4 18.2L28.8 19.8L27.3 21.4L25.9 23.2L24.5 24.9L23.2 26.7L22.0 28.6L20.8 30.5L19.7 32.5L18.7 34.5L17.8 36.6L16.9 38.7L16.1 40.8L15.4 43.0L14.8 45.3L14.2 47.6L13.7 50.0L13.2 52.4L12.9 54.9L12.6 57.4L12.4 59.9ZM14.9 51.2Q12.3 43.9 3.8 40.1Q7.6 48.5 14.9 51.2ZM14.9 51.2Q22.7 51.0 29.0 44.2Q19.8 45.1 14.9 51.2ZM15.7 47.3Q13.6 40.2 5.8 36.2Q8.9 44.4 15.7 47.3ZM15.7 47.3Q23.1 47.6 29.4 41.5Q20.6 41.8 15.7 47.3ZM16.7 43.5Q15.1 36.7 7.9 32.5Q10.4 40.4 16.7 43.5ZM16.7 43.5Q23.6 44.2 29.9 38.8Q21.6 38.5 16.7 43.5ZM17.8 39.9Q16.8 33.3 10.2 29.1Q12.0 36.7 17.8 39.9ZM17.8 39.9Q24.3 41.0 30.5 36.2Q22.7 35.4 17.8 39.9ZM19.2 36.3Q18.6 30.2 12.7 25.8Q13.9 33.0 19.2 36.3ZM19.2 36.3Q25.2 37.8 31.2 33.6Q24.0 32.5 19.2 36.3ZM20.7 33.0Q20.6 27.2 15.3 22.8Q16.0 29.6 20.7 33.0ZM20.7 33.0Q26.2 34.7 32.1 31.2Q25.4 29.6 20.7 33.0ZM22.5 29.7Q22.8 24.3 18.1 20.0Q18.3 26.3 22.5 29.7ZM22.5 29.7Q27.5 31.7 33.1 28.7Q27.0 26.8 22.5 29.7ZM24.4 26.6Q25.1 21.6 21.0 17.4Q20.7 23.3 24.4 26.6ZM24.4 26.6Q28.9 28.8 34.3 26.3Q28.8 24.2 24.4 26.6ZM26.6 23.6Q27.5 19.1 24.0 15.0Q23.3 20.4 26.6 23.6ZM26.6 23.6Q30.6 25.9 35.6 23.9Q30.7 21.6 26.6 23.6ZM29.0 20.8Q30.1 16.7 27.1 12.8Q26.1 17.6 29.0 20.8ZM29.0 20.8Q32.4 23.2 37.1 21.6Q32.8 19.1 29.0 20.8ZM31.5 18.0Q32.9 14.5 30.3 10.8Q29.1 15.1 31.5 18.0ZM31.5 18.0Q34.4 20.4 38.7 19.2Q35.1 16.7 31.5 18.0ZM34.3 15.4Q35.7 12.4 33.6 9.0Q32.2 12.7 34.3 15.4ZM34.3 15.4Q36.7 17.8 40.6 16.9Q37.5 14.4 34.3 15.4ZM37.2 13.0Q38.8 10.4 37.0 7.4Q35.5 10.5 37.2 13.0ZM37.2 13.0Q39.2 15.2 42.6 14.6Q40.1 12.1 37.2 13.0ZM40.4 10.7Q41.9 8.5 40.5 5.9Q39.0 8.5 40.4 10.7ZM40.4 10.7Q41.9 12.8 44.9 12.3Q42.9 10.0 40.4 10.7ZM43.8 8.5Q45.2 6.8 44.0 4.5Q42.6 6.6 43.8 8.5ZM43.8 8.5Q44.9 10.4 47.4 10.0Q45.9 7.9 43.8 8.5Z"/></symbol>
+  </svg>
+
+  <header class="masthead">
+    <div class="masthead-inner">
+      <a class="brand" href="./" aria-label="Virtual Parliament home">
+        <svg class="brand-fern" aria-hidden="true"><use href="#fern"/></svg>
+        <span class="brand-text">
+          <span class="brand-title">Virtual Parliament</span>
+          <span class="brand-sub">Pāremata Aotearoa · AI House of Representatives</span>
+        </span>
+      </a>
+      <div class="status" id="status" data-state="idle">
+        <span class="status-dot" aria-hidden="true"></span>
+        <span id="status-text">House not sitting</span>
+      </div>
+    </div>
+    <svg class="masthead-watermark" aria-hidden="true"><use href="#fern"/></svg>
+    <div class="koru-band" aria-hidden="true"></div>
+  </header>
+
+  <main>
+    <!-- ============ Setup: convene a sitting ============ -->
+    <section id="setup-view" class="view" aria-labelledby="setup-title">
+      <div class="intro">
+        <p class="eyebrow">Kia ora, haere mai</p>
+        <h1 id="setup-title">Convene a sitting of the House</h1>
+        <p class="lede">
+          Set the Order Paper, choose which parties take their seats, and watch AI members debate in the
+          style of the New Zealand House of Representatives, grounded in real Hansard excerpts. You preside
+          from the Speaker's chair.
+        </p>
+      </div>
+
+      <div id="config-notice" class="notice" role="alert" hidden></div>
+
+      <form id="setup-form" class="setup-grid" novalidate>
+        <fieldset class="card setup-order">
+          <legend class="card-title"><span class="step">1</span> Order Paper</legend>
+          <p class="hint">Items of business are debated in order. Each item gets the same number of rounds.</p>
+          <ol id="topic-list" class="topic-list"></ol>
+          <div class="topic-add">
+            <input id="new-topic" type="text" maxlength="300" autocomplete="off"
+                   placeholder="Add an item of business…" aria-label="New Order Paper item">
+            <button type="button" id="add-topic" class="btn btn-secondary">Add item</button>
+          </div>
+          <div class="suggestions">
+            <span class="hint">Suggested items</span>
+            <div id="suggestion-list" class="chip-row"></div>
+          </div>
+        </fieldset>
+
+        <fieldset class="card setup-members">
+          <legend class="card-title"><span class="step">2</span> Members of the House</legend>
+          <p class="hint">
+            Each party is represented by one MP agent. Any member can be made a <strong>disruptor</strong>
+            with an adversarial strategy. Disruptors also interject far more often.
+          </p>
+          <div id="party-grid" class="party-grid"></div>
+        </fieldset>
+
+        <fieldset class="card setup-length">
+          <legend class="card-title"><span class="step">3</span> Length of the sitting</legend>
+          <div class="stepper-row">
+            <div class="stepper" role="group" aria-label="Rounds per item">
+              <button type="button" class="stepper-btn" id="rounds-down" aria-label="Fewer rounds">−</button>
+              <output id="rounds-value" class="stepper-value" aria-live="polite">3</output>
+              <button type="button" class="stepper-btn" id="rounds-up" aria-label="More rounds">+</button>
+            </div>
+            <p class="hint">rounds per item. In each round, every member speaks once.</p>
+          </div>
+          <p id="sitting-summary" class="summary"></p>
+        </fieldset>
+
+        <div class="setup-actions">
+          <p id="form-error" class="form-error" role="alert"></p>
+          <button type="submit" id="convene-btn" class="btn btn-primary btn-large">
+            <svg class="btn-icon" aria-hidden="true"><use href="#fern"/></svg>
+            Call the House to order
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- ============ Chamber: a sitting in progress ============ -->
+    <section id="chamber-view" class="view chamber-layout" hidden aria-label="Sitting of the House">
+      <div class="card chamber-card">
+        <h2 class="card-title">The Chamber</h2>
+        <svg id="chamber-svg" class="chamber-svg" viewBox="0 0 320 236" role="img"
+             aria-label="Seating plan of the debating chamber"></svg>
+        <ul id="member-list" class="member-list"></ul>
+      </div>
+
+      <div class="card agenda-card">
+        <h2 class="card-title">Order Paper</h2>
+        <ol id="agenda" class="agenda"></ol>
+      </div>
+
+      <div class="card tally-card">
+        <h2 class="card-title">Tally</h2>
+        <table class="tally">
+          <thead><tr><th scope="col">Member</th><th scope="col">Speeches</th><th scope="col">Interjections</th></tr></thead>
+          <tbody id="tally-body"></tbody>
+          <tfoot><tr><th scope="row">Rulings from the chair</th><td id="tally-rulings" colspan="2">0</td></tr></tfoot>
+        </table>
+      </div>
+
+      <div class="card hansard-card">
+        <div class="hansard-head">
+          <div>
+            <p class="eyebrow">Hansard · Simulated transcript</p>
+            <h2 id="sitting-title" class="hansard-title">Sitting of the House</h2>
+          </div>
+          <button type="button" id="export-btn" class="btn btn-ghost">Download transcript</button>
+        </div>
+        <div id="transcript-scroller" class="transcript-scroller">
+          <div id="transcript" class="transcript" aria-live="polite" aria-relevant="additions"></div>
+          <div id="floor" class="floor" hidden>
+            <span id="floor-seat" class="floor-seat"></span>
+            <span id="floor-text"></span>
+            <span class="typing" aria-hidden="true"><i></i><i></i><i></i></span>
+          </div>
+        </div>
+        <button type="button" id="jump-latest" class="jump-latest" hidden>New speeches ↓</button>
+      </div>
+
+      <aside class="card chair-card" aria-labelledby="chair-title">
+        <h2 id="chair-title" class="card-title">The Speaker's Chair</h2>
+        <p class="hint">
+          You are presiding. Every member hears your ruling before the next speech, so you can steer
+          the debate, e.g. call a disruptor back to the question.
+        </p>
+        <div id="quick-rulings" class="chip-row chip-stack"></div>
+        <form id="ruling-form" class="ruling-form">
+          <label for="ruling-input" class="field-label">Your ruling</label>
+          <textarea id="ruling-input" rows="3" maxlength="500"
+                    placeholder="Order! The member will return to the question before the House."></textarea>
+          <button type="submit" class="btn btn-secondary" id="ruling-btn">Rule from the chair</button>
+          <p id="ruling-status" class="ruling-status" role="status"></p>
+        </form>
+        <div class="chair-footer">
+          <button type="button" id="adjourn-btn" class="btn btn-danger">Adjourn the House</button>
+          <button type="button" id="new-sitting-btn" class="btn btn-primary" hidden>Convene a new sitting</button>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>
+      A University of Auckland Part IV research project (P4P #123). Members are AI party archetypes,
+      not real MPs, and this is not a record of the New Zealand Parliament. Rhetorical grounding uses
+      Hansard excerpts from the ParlSpeech V2 corpus.
+    </p>
+  </footer>
+</body>
+</html>

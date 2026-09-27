@@ -7,6 +7,7 @@ import engine.debate.DebateManager;
 import engine.io.ConsoleEngineOutput;
 import engine.io.EngineOutput;
 import engine.openAi.OpenAIChatManager;
+import engine.openAi.OpenAIKeyReader;
 import engine.prompt.PromptManager;
 import engine.utils.FileTextReader;
 
@@ -18,7 +19,6 @@ import java.util.Scanner;
 
 public class Main {
 
-    private static final String API_KEY_PATH = "keys/openAi/OpenAI_Key.txt";
     private static final int DEFAULT_ROUNDS = 3;
 
     public static void main(String[] args) {
@@ -30,17 +30,9 @@ public class Main {
 
         String apiKey;
         try {
-            apiKey = fileTextReader.readText(API_KEY_PATH).trim();
-        } catch (RuntimeException e) {
-            System.out.println("Could not read an OpenAI API key from " + API_KEY_PATH);
-            System.out.println("Copy keys/openAi/OpenAI_Key_TEMPLATE.txt to keys/openAi/OpenAI_Key.txt "
-                    + "and paste your key inside, then try again.");
-            return;
-        }
-
-        if (apiKey.isBlank() || apiKey.contains("#")) {
-            System.out.println(API_KEY_PATH + " does not contain a real API key yet.");
-            System.out.println("Replace the placeholder in that file with your actual OpenAI API key, then try again.");
+            apiKey = OpenAIKeyReader.read(fileTextReader);
+        } catch (IllegalStateException e) {
+            System.out.println(e.getMessage());
             return;
         }
 
