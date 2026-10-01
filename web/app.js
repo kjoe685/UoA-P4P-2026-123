@@ -150,7 +150,7 @@ function setStatus(state, text) {
 let config = null;
 const setup = { topics: [], policyTargets: [], rounds: 3, members: {} };
 
-async function initSetup() {
+async function initSetup(suppliedSettings = null) {
   try {
     config = await api('/api/config');
   } catch (error) {
@@ -159,11 +159,9 @@ async function initSetup() {
     return;
   }
 
-  if (!config.apiKeyConfigured) {
-    showConfigNotice(false, 'The demonstration is ready. OpenAI needs an API key.', config.apiKeyProblem);
-  }
+  showConfigNotice(false, 'The demonstration is ready without credentials.', config.credentialHelp);
 
-  const saved = readStore(localStorage, SETUP_STORAGE_KEY) || {};
+  const saved = suppliedSettings || readStore(localStorage, SETUP_STORAGE_KEY) || {};
   setup.agentModelPreset = config.models[saved.agentModelPreset] ? saved.agentModelPreset : config.agentModelPreset;
   setup.evaluatorModelPreset = config.models[saved.evaluatorModelPreset] ? saved.evaluatorModelPreset : config.evaluatorModelPreset;
   setup.policyTargets = Array.isArray(saved.policyTargets) ? saved.policyTargets : [];
@@ -400,8 +398,7 @@ async function convene(event) {
   try {
     const { id } = await api('/api/debates', {
       method: 'POST',
-      body: { topics: setup.topics.map((title, index) => ({ title: title.trim(), policyTarget: setup.policyTargets[index] || null })).filter(topic => topic.title),
-        rounds: setup.rounds, members, agentModelPreset: setup.agentModelPreset, evaluatorModelPreset: setup.evaluatorModelPreset },
+      body: currentSettings(),
     });
     openSitting(id);
   } catch (error) {
@@ -414,6 +411,62 @@ async function convene(event) {
 /* =========================================================================
    Chamber view: a sitting in progress
    ========================================================================= */
+
+function currentSettings() {
+  return { topics: setup.topics.map((title, index) => ({ title: title.trim(), policyTarget: setup.policyTargets[index] || null })).filter(topic => topic.title),
+    rounds: setup.rounds, members: selectedMembers(), agentModelPreset: setup.agentModelPreset, evaluatorModelPreset: setup.evaluatorModelPreset };
+}
+
+async function refreshSettings() {
+  const names = await api('/api/settings');
+  $('#saved-settings').replaceChildren(el('option', { text: 'Choose settings', attrs: { value: '' } }),
+    ...names.map(name => el('option', { text: name, attrs: { value: name } })));
+}
+
+async function loadSettings() {
+  try {
+    const name = $('#saved-settings').value;
+    if (!name) throw new Error('Choose saved settings to load.');
+    const saved = await api(`/api/settings/${encodeURIComponent(name)}`);
+    const values = { topics: saved.topics.map(topic => topic.title), policyTargets: saved.topics.map(topic => topic.policyTarget || ''),
+      rounds: saved.rounds, agentModelPreset: saved.agentModelPreset, evaluatorModelPreset: saved.evaluatorModelPreset, members: {} };
+    for (const party of config.parties) {
+      const member = saved.members.find(item => item.party === party.id);
+      values.members[party.id] = { included: !!member, strategy: member?.strategy || 'NONE', modelPreset: member?.modelPreset || '' };
+    }
+    writeStore(localStorage, SETUP_STORAGE_KEY, values);
+    await initSetup(values);
+    $('#settings-name').value = name;
+    $('#settings-status').textContent = `Loaded ${name}. Review the setup before starting.`;
+  } catch (error) { $('#settings-status').textContent = error.message; }
+}
+
+async function saveSettings() {
+  try {
+    const name = $('#settings-name').value.trim();
+    if (!name) throw new Error('Enter a settings name.');
+    await api(`/api/settings/${encodeURIComponent(name)}`, { method: 'POST', body: currentSettings() });
+    await refreshSettings(); $('#saved-settings').value = name;
+    $('#settings-status').textContent = `Saved ${name}. Existing settings with this name are replaced.`;
+  } catch (error) { $('#settings-status').textContent = error.message; }
+}
+
+async function readAsset() {
+  try {
+    const value = await api(`/api/assets?path=${encodeURIComponent($('#asset-path').value)}`);
+    $('#asset-text').value = value.text; $('#asset-status').textContent = `Loaded ${value.path}.`;
+    $('#asset-text').dataset.path = value.path;
+  } catch (error) { $('#asset-status').textContent = error.message; }
+}
+
+async function updateAsset(save) {
+  try {
+    if ($('#asset-text').dataset.path !== $('#asset-path').value) throw new Error('Load the selected asset before editing.');
+    await api('/api/assets', { method: 'POST', body: { path: $('#asset-path').value, text: $('#asset-text').value, save } });
+    if (save) await initSetup();
+    $('#asset-status').textContent = save ? 'Saved validated contents. New sittings use this revision.' : 'Contents are valid. Nothing saved yet.';
+  } catch (error) { $('#asset-status').textContent = error.message; }
+}
 
 let sitting = null;
 
@@ -876,6 +929,11 @@ async function downloadJson() {
 }
 
 function wireEvents() {
+  $('#load-settings').addEventListener('click', loadSettings);
+  $('#save-settings').addEventListener('click', saveSettings);
+  $('#read-asset').addEventListener('click', readAsset);
+  $('#validate-asset').addEventListener('click', () => updateAsset(false));
+  $('#save-asset').addEventListener('click', () => updateAsset(true));
   $('#agent-model').addEventListener('change', event => { setup.agentModelPreset = event.target.value; saveSetup(); });
   $('#evaluator-model').addEventListener('change', event => { setup.evaluatorModelPreset = event.target.value; saveSetup(); });
   $('#refresh-runs').addEventListener('click', refreshSavedRuns);
@@ -925,6 +983,11 @@ async function main() {
   wireEvents();
   renderQuickRulings();
   await initSetup();
+  try {
+    await refreshSettings();
+    const paths = await api('/api/assets');
+    $('#asset-path').replaceChildren(...paths.map(path => el('option', { text: path, attrs: { value: path } })));
+  } catch (error) { $('#settings-status').textContent = error.message; }
   await refreshSavedRuns();
 
   // Rejoin a sitting in progress after a page reload.

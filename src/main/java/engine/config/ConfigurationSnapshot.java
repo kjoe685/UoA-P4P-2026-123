@@ -23,19 +23,23 @@ public final class ConfigurationSnapshot {
     }
 
     public static ConfigurationSnapshot load(Path root) {
+        return load(root,Map.of());
+    }
+    public static ConfigurationSnapshot load(Path root,Map<String,String> replacements) {
         Map<String,String> contents=new LinkedHashMap<>(), hashes=new LinkedHashMap<>();
-        EngineConfig config=Json.read(read(root, "config/engine.json", contents, hashes), EngineConfig.class);
+        EngineConfig config=Json.read(read(root, "config/engine.json", replacements, contents, hashes), EngineConfig.class);
         Map<TemplateName,PromptTemplate> templates=new EnumMap<>(TemplateName.class);
         for (TemplateName name:TemplateName.values())
             templates.put(name,new PromptTemplate(name.fileName(),
-                    read(root,"prompts/"+name.fileName(),contents,hashes),name.placeholders()));
-        HansardExcerpts excerpts=new HansardExcerpts(read(root,"data/hansard/excerpts.json",contents,hashes));
+                    read(root,"prompts/"+name.fileName(),replacements,contents,hashes),name.placeholders()));
+        HansardExcerpts excerpts=new HansardExcerpts(read(root,"data/hansard/excerpts.json",replacements,contents,hashes));
         return new ConfigurationSnapshot(config,templates,excerpts,contents,hashes);
     }
 
-    private static String read(Path root,String relative,Map<String,String> contents,Map<String,String> hashes) {
+    private static String read(Path root,String relative,Map<String,String> replacements,Map<String,String> contents,Map<String,String> hashes) {
         try {
-            byte[] data=Files.readAllBytes(root.resolve(relative));
+            byte[] data=replacements.containsKey(relative) ? replacements.get(relative).getBytes(StandardCharsets.UTF_8)
+                    : Files.readAllBytes(root.resolve(relative));
             String text=new String(data,StandardCharsets.UTF_8);
             contents.put(relative,text);
             hashes.put(relative,HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(data)));

@@ -863,3 +863,8 @@ textarea { resize: vertical; min-height: 72px; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+.settings-card, .advanced-assets { margin-block: 16px; }
+.settings-card input, .settings-card select, .advanced-assets select { max-width: 420px; }
+.advanced-assets summary { cursor: pointer; }
+.advanced-assets textarea { width: 100%; font-family: ui-monospace, monospace; margin-block: 8px; }

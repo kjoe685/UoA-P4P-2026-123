@@ -5,6 +5,22 @@
   "agentModelPreset": "demo",
   "evaluatorModelPreset": "gpt-5-nano",
   "models": {
+    "claude-sonnet": {
+      "provider": "anthropic", "model": "claude-sonnet-4-6", "temperature": null,
+      "reasoningEffort": null, "maxCompletionTokens": 4096, "timeoutSeconds": 120
+    },
+    "gemini-flash": {
+      "provider": "gemini", "model": "gemini-3.8-flash", "temperature": null,
+      "reasoningEffort": null, "maxCompletionTokens": 4096, "timeoutSeconds": 120
+    },
+    "grok": {
+      "provider": "grok", "model": "grok-4.7", "temperature": null,
+      "reasoningEffort": null, "maxCompletionTokens": 4096, "timeoutSeconds": 120
+    },
+    "qwen3-local": {
+      "provider": "ollama", "model": "qwen3:8b", "temperature": 0.6,
+      "reasoningEffort": null, "maxCompletionTokens": 4096, "timeoutSeconds": 300
+    },
     "gpt-5-nano": {
       "provider": "openai",
       "model": "gpt-5-nano",

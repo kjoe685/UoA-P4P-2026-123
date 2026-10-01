@@ -56,6 +56,30 @@
 
       <div id="config-notice" class="notice" role="alert" hidden></div>
 
+      <div class="card settings-card">
+        <h2 class="card-title">Reusable sitting settings</h2>
+        <label for="saved-settings" class="field-label">Saved settings</label>
+        <select id="saved-settings"><option value="">Choose settings</option></select>
+        <button id="load-settings" type="button" class="btn btn-secondary">Load settings</button>
+        <label for="settings-name" class="field-label">Save current setup as</label>
+        <input id="settings-name" type="text" maxlength="64" placeholder="housing-demo">
+        <button id="save-settings" type="button" class="btn btn-secondary">Save settings</button>
+        <p id="settings-status" class="hint" role="status"></p>
+      </div>
+
+      <details class="card advanced-assets">
+        <summary class="card-title">Advanced configuration</summary>
+        <p class="hint">Edit model presets, party profiles, interruptions, prompts or grounding. Credentials stay in environment variables or key files. Changes apply to new sittings.</p>
+        <label for="asset-path" class="field-label">Editable asset</label>
+        <select id="asset-path"></select>
+        <button id="read-asset" type="button" class="btn btn-secondary">Load asset</button>
+        <label for="asset-text" class="field-label">Asset contents</label>
+        <textarea id="asset-text" rows="16" spellcheck="false"></textarea>
+        <button id="validate-asset" type="button" class="btn btn-secondary">Validate contents</button>
+        <button id="save-asset" type="button" class="btn btn-secondary">Save validated asset</button>
+        <p id="asset-status" class="hint" role="status"></p>
+      </details>
+
       <form id="setup-form" class="setup-grid" novalidate>
         <fieldset class="card setup-order">
           <legend class="card-title"><span class="step">1</span> Order Paper</legend>

@@ -3,11 +3,8 @@ package engine.application;
 import engine.transcript.Transcript;
 import engine.utils.Json;
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
 import java.nio.file.*;
 import java.util.*;
-import static java.nio.file.StandardOpenOption.*;
 
 /** File-backed owner storage. Public transcripts are committed before UI notification. */
 public class RunStore {
@@ -40,18 +37,6 @@ public class RunStore {
         catch (IOException e) { throw new IllegalStateException("Cannot read saved run"); }
     }
     private static void write(Path path,Object value) {
-        Path temporary=path.resolveSibling(path.getFileName()+"."+UUID.randomUUID()+".part");
-        try {
-            Files.createDirectories(path.getParent());
-            byte[] bytes=Json.write(value).getBytes(java.nio.charset.StandardCharsets.UTF_8);
-            try (FileChannel channel=FileChannel.open(temporary,CREATE_NEW,WRITE)) {
-                ByteBuffer data=ByteBuffer.wrap(bytes);
-                while (data.hasRemaining()) channel.write(data);
-                channel.force(true);
-            }
-            try { Files.move(temporary,path,StandardCopyOption.ATOMIC_MOVE,StandardCopyOption.REPLACE_EXISTING); }
-            catch (AtomicMoveNotSupportedException e) { Files.move(temporary,path,StandardCopyOption.REPLACE_EXISTING); }
-        } catch (IOException e) { throw new IllegalStateException("Cannot save run; check available disk space and write access"); }
-        finally { try { Files.deleteIfExists(temporary); } catch (IOException ignored) { } }
+        engine.utils.AtomicFiles.write(path,Json.write(value));
     }
 }

@@ -3,8 +3,6 @@ package engine.application;
 import engine.ChatManager;
 import engine.agent.*;
 import engine.config.*;
-import engine.demo.DemoChatManager;
-import engine.openAi.OpenAIKeyReader;
 import engine.prompt.PromptManager;
 import engine.transcript.*;
 import engine.utils.*;
@@ -17,11 +15,14 @@ import java.util.function.Function;
 public final class DebateApplication implements AutoCloseable {
     private final Path root;
     private final RunStore store;
+    private final AssetService assets;
+    private final SettingsService settings;
     private final Function<ModelConfig,ChatManager> providers;
     private final Map<String,RunSession> sessions=new ConcurrentHashMap<>();
     private final ThreadPoolExecutor jobs;
     public DebateApplication(Path root,RunStore store,Function<ModelConfig,ChatManager> providers) {
         this.root=root; this.store=store; this.providers=providers;
+        this.assets=new AssetService(root); this.settings=new SettingsService(root.resolve("runs/settings"));
         this.jobs=new ThreadPoolExecutor(2,2,0,TimeUnit.SECONDS,new ArrayBlockingQueue<>(4),
                 task -> { Thread thread=new Thread(task,"parliament-job"); thread.setDaemon(true); return thread; });
         for (String id:store.ids()) {
@@ -30,16 +31,15 @@ public final class DebateApplication implements AutoCloseable {
         }
     }
     public static DebateApplication local(Path root) {
-        return new DebateApplication(root,new RunStore(root.resolve("runs")),model -> switch (model.provider()) {
-            case "demo" -> new DemoChatManager();
-            case "openai" -> new engine.provider.OpenAIChatManager(OpenAIKeyReader.read(new FileTextReader()));
-            default -> throw new IllegalArgumentException("This provider is not integrated yet");
-        });
+        var factory=new engine.provider.ProviderFactory(root);
+        return new DebateApplication(root,new RunStore(root.resolve("runs")),factory::forModel);
     }
     public ConfigurationSnapshot configuration() { return ConfigurationSnapshot.load(root); }
+    public AssetService assets() { return assets; }
+    public SettingsService settings() { return settings; }
     public synchronized RunSession start(Map<String,Object> body) {
         if (jobs.getActiveCount()+jobs.getQueue().size()>=6) throw new IllegalStateException("Debate job limit reached");
-        var snapshot=configuration(); var spec=RunSpec.resolve(body,snapshot.config());
+        var snapshot=configuration(); var spec=RunSpec.resolve(settings.resolve(body),snapshot.config());
         var prompts=new PromptManager(snapshot);
         List<Agent> agents=new ArrayList<>(); Map<String,String> resolved=new LinkedHashMap<>();
         for (var member:spec.members()) {

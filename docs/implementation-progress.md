@@ -6,18 +6,20 @@
 - Branch: `codex/dual-interface-integration`, created from refreshed `origin/main` at `a99269c`.
 - Recovered primary plan from previous chat `01a0f6c1-32c6-7a33-bf8c-6ad9fee837e5`; that chat ended in Plan mode without writing changes.
 - Preserved secondary plan from `9cbcb12`. Evaluation reference: `c41c4c2`, file-level reuse only.
-- T01 documentation complete (`f7690fc`). T02 build/bootstrap implemented; automated Windows checks pass. T03/T04 privacy, configuration and saved-run workflow implemented; T05 providers/advanced settings next.
+- T01 documentation complete (`f7690fc`). T02 build/bootstrap implemented; automated Windows checks pass. T03/T04 privacy, configuration and saved-run workflow committed `48e69e6`. T05 providers/advanced settings verified; T06 local evaluation next.
 - Existing untracked `UoA-P4P-2026-123.iml` belongs to the user; preserve it.
 
 ## Active task
 
-**T03 — Privacy/configuration contracts (REQ-01–11, 12–15, 53, 55, 57).**
+**T05 — Providers and advanced settings (REQ-05–11, 12–13, 20–26, 49–50, 53–55, 57).**
 
-Outcome: stateless provider requests contain only recipient setup and public evidence; external prompt/config changes affect new runs only; versioned transcripts include roster, stable topic/turn IDs and truthful outcomes.
+Outcome: independent provider/model selection and reusable settings plus validated prompt/profile/model editing through browser, guided CLI and commands.
 
-Contracts: immutable chat requests/configuration, private agent context, public transcript, UI progress/owner metadata. Dependencies: T02 checkpoint `d7b284e`. Reuse: reviewed chat/config/prompt/provider transport files at `c41c4c2`; keep main scheduler and chair/cancel behaviour.
+Contracts: model/provider settings, credential resolution, allowlisted editable assets, saved settings, shared API. Dependencies: T03/T04 checkpoint `48e69e6`. Reuse: review Anthropic/Gemini/Grok/Ollama adapters and corresponding tests at `c41c4c2`; never import branch history.
 
-Edits: selectively ported immutable chat/config/template/OpenAI transport components, moved editable resources to `config`, `prompts`, `data/hansard`, and removed the stateful provider path. Adapted main's scheduler with public-event contracts and a cancellation/publication lock. Added shared application services and file persistence while adapting both callers together (T04 dependency). Browser saved-run browsing/import/export and CLI commands/menu now use the same API.
+Implemented and verified: Anthropic/Gemini/Grok/Ollama adapters and mock tests, thread-safe lazy provider factory, environment-first credentials and conflict-aware legacy OpenAI fallback, allowlisted asset validation/atomic save, named settings/precedence, browser editor and settings controls, CLI commands/menu. Maven verify passes 33 tests. Browser verifies save/load and rejected prompt writes. Corrupt presentation-cache recovery, guided policy propositions and generalized credential help included.
+
+Browser verified latest JAR: new demo run, chair ruling followed by reload (tally 1), native JSON download to Downloads with schema 2 public fields. Download automation unexpectedly blocked ~14 minutes despite requested timeout; avoid repeating it. Screenshot `parliament-advanced-settings.png` saved in thread visualization directory. No live calls made. Current temporary server session 32604, port 18087. Unix Java 8 version parsing corrected; native OS checks remain pending.
 
 Verification: Maven verify passes 12 tests covering actual outbound HTTP sentinels, frozen/reloaded resources, cancellation/restart, failures/storage failure, imports, interrupted-run recovery, strict validation, CLI/menu parity and HTTP chair/replay/download headers. Corpus adapter initially assumed enum-name keys; corrected to main's display-name keys. Browser visual QA passes live demonstration, ruling, reload replay and reopening saved runs. Fixed replay chair-tally metadata with explicit `CHAIR_RULING`. Browser download-event automation timed out for Blob export; replaced with direct attachment routes, whose content and headers are tested. Final native browser download/save handling remains pending. Screenshot saved outside repository in the automation visualization directory.
 
@@ -33,7 +35,8 @@ Verification: Maven verify passes 2 tests (HTTP demo/chair/replay and cancellati
 | T02 build/bootstrap/baseline | Implemented; platform acceptance partial | 2 tests pass; managed downloads/checksums and built-in-only Windows PATH pass; native Unix/pristine OS pending |
 | T03 privacy/configuration | Implemented | Outbound HTTP sentinels, immutable snapshots, strict public/private contracts; 12-test suite passes |
 | T04 runtime/persistence/parity | Implemented; download UX acceptance partial | Shared application, bounded jobs, persistence/recovery/import/export; commands/menu/API tests and browser replay pass |
-| T05–T10 | Pending | See primary plan |
+| T05 providers/settings | Complete | 33 tests pass, browser save/load/rejection and real JSON download; no live provider verification |
+| T06–T10 | Pending | See primary plan |
 
 ## Recovery procedure
 

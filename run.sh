@@ -20,6 +20,7 @@ download() {
 if [ "${PARLIAMENT_MANAGED_JAVA:-0}" != 1 ] && command -v java >/dev/null 2>&1 && command -v javac >/dev/null 2>&1; then
   java_major=$(java -XshowSettings:properties -version 2>&1 | sed -n 's/.*java.specification.version = //p')
 else java_major=0; fi
+case "${java_major:-0}" in 1.*) java_major=${java_major#1.} ;; esac
 if [ "${java_major:-0}" -lt 17 ]; then
   case "$(uname -s):$(uname -m)" in
     Linux:x86_64) platform=x64_linux; checksum=3808d1d15e3ec6bd5b84057fb5d84c33d8a1536a258146bcea2e603fc726e08e ;;

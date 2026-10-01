@@ -43,6 +43,26 @@ public final class Main {
     public void command(String[] args) throws Exception {
         switch (args[0]) {
             case "config" -> output.println(get("/api/config"));
+            case "settings" -> {
+                requireArgs(args,2);
+                switch (args[1]) {
+                    case "list" -> output.println(get("/api/settings"));
+                    case "show" -> { requireArgs(args,3); output.println(get("/api/settings/"+encode(args[2]))); }
+                    case "save" -> { requireArgs(args,4); output.println(post("/api/settings/"+encode(args[2]),Files.readString(Path.of(args[3])))); }
+                    default -> throw new IllegalArgumentException("settings list | show NAME | save NAME FILE");
+                }
+            }
+            case "assets" -> {
+                requireArgs(args,2);
+                switch (args[1]) {
+                    case "list" -> output.println(get("/api/assets"));
+                    case "show" -> { requireArgs(args,3); output.println(get("/api/assets?path="+encode(args[2]))); }
+                    case "validate", "save" -> {
+                        requireArgs(args,4); output.println(post("/api/assets",Json.write(Map.of("path",args[2],"text",Files.readString(Path.of(args[3])),"save",args[1].equals("save")))));
+                    }
+                    default -> throw new IllegalArgumentException("assets list | show PATH | validate PATH FILE | save PATH FILE");
+                }
+            }
             case "runs" -> output.println(get("/api/debates"));
             case "start" -> { requireArgs(args,2); output.println(post("/api/debates",Files.readString(Path.of(args[1])))); }
             case "import" -> { requireArgs(args,2); output.println(post("/api/debates/import",Files.readString(Path.of(args[1])))); }
@@ -53,12 +73,12 @@ public final class Main {
                 requireArgs(args,2); String text=get(runPath(args[1])+(args[0].equals("transcript") ? "/transcript" : "/export"));
                 if (args.length>2) Files.writeString(Path.of(args[2]),text,StandardCharsets.UTF_8); else output.println(text);
             }
-            default -> throw new IllegalArgumentException("Commands: config, runs, start SETTINGS.json, import TRANSCRIPT.json, watch ID, ruling ID TEXT, cancel ID, transcript ID [FILE], export ID [FILE]");
+            default -> throw new IllegalArgumentException("Commands: config, settings, assets, runs, start SETTINGS.json, import TRANSCRIPT.json, watch ID, ruling ID TEXT, cancel ID, transcript ID [FILE], export ID [FILE]");
         }
     }
     void menu() throws Exception {
         while (true) {
-            output.println("\n1 Start sitting\n2 Saved sittings\n3 Watch sitting\n4 Chair ruling\n5 Adjourn\n6 Export JSON\n7 Export text\n8 Import transcript\n0 Exit");
+            output.println("\n1 Start sitting\n2 Saved sittings\n3 Watch sitting\n4 Chair ruling\n5 Adjourn\n6 Export JSON\n7 Export text\n8 Import transcript\n9 Saved settings\n10 Advanced assets\n11 Start from saved settings\n0 Exit");
             String choice=ask("Choice: ");
             if (choice.equals("0") || choice.isEmpty() && !input.hasNextLine()) return;
             try {
@@ -71,6 +91,32 @@ public final class Main {
                     case "4" -> output.println(post(runPath(ask("Sitting id: "))+"/speaker",Json.write(Map.of("message",ask("Ruling: ")))));
                     case "5" -> output.println(post(runPath(ask("Sitting id: "))+"/adjourn","{}"));
                     case "8" -> output.println(post("/api/debates/import",Files.readString(Path.of(ask("Transcript JSON file: ")))));
+                    case "9" -> {
+                        output.println(get("/api/settings"));
+                        String name=ask("Settings name (blank = return): ");
+                        if (name.isBlank()) break;
+                        String file=ask("Settings JSON file to save (blank = show existing): ");
+                        output.println(file.isBlank() ? get("/api/settings/"+encode(name)) : post("/api/settings/"+encode(name),Files.readString(Path.of(file))));
+                    }
+                    case "10" -> {
+                        output.println(get("/api/assets"));
+                        String path=ask("Listed asset path (blank = return): ");
+                        if (path.isBlank()) break;
+                        output.println(get("/api/assets?path="+encode(path)));
+                        String file=ask("Edited UTF-8 file (blank = return): ");
+                        if (file.isBlank()) break;
+                        String text=Files.readString(Path.of(file));
+                        output.println(post("/api/assets",Json.write(Map.of("path",path,"text",text,"save",false))));
+                        if (ask("Save validated contents? Type save: ").equals("save"))
+                            output.println(post("/api/assets",Json.write(Map.of("path",path,"text",text,"save",true))));
+                    }
+                    case "11" -> {
+                        output.println(get("/api/settings")); String name=ask("Settings name: ");
+                        String overrides=ask("Overrides JSON file (blank = none): ");
+                        @SuppressWarnings("unchecked") Map<String,Object> values=overrides.isBlank() ? new LinkedHashMap<>()
+                                : new LinkedHashMap<>((Map<String,Object>)Json.parse(Files.readString(Path.of(overrides))));
+                        values.put("settingsName",name); output.println(post("/api/debates",Json.write(values)));
+                    }
                     case "6", "7" -> {
                         String id=ask("Sitting id: "), file=ask("Output file (blank = print): ");
                         String text=get(runPath(id)+(choice.equals("6") ? "/transcript" : "/export"));
@@ -109,7 +155,14 @@ public final class Main {
             members.add(member);
         }
         Map<String,Object> settings=new LinkedHashMap<>();
-        settings.put("topics",Arrays.stream(topic.split("\\|")).map(String::trim).filter(value -> !value.isEmpty()).toList());
+        List<String> titles=Arrays.stream(topic.split("\\|")).map(String::trim).filter(value -> !value.isEmpty()).toList();
+        if (titles.isEmpty()) titles=List.of((String)config.get("defaultTopic"));
+        List<Map<String,Object>> topics=new ArrayList<>();
+        for (String title:titles) {
+            String target=ask("Optional policy proposition for '"+title+"' (blank = none): ");
+            Map<String,Object> value=new LinkedHashMap<>(); value.put("title",title); value.put("policyTarget",target.isBlank() ? null : target); topics.add(value);
+        }
+        settings.put("topics",topics);
         settings.put("rounds",rounds.isBlank() ? config.get("defaultRounds") : Integer.parseInt(rounds));
         settings.put("members",members); settings.put("agentModelPreset",preset); settings.put("evaluatorModelPreset",judge);
         return settings;
@@ -137,5 +190,6 @@ public final class Main {
         return response.body();
     }
     private static String runPath(String id) { return "/api/debates/"+java.net.URLEncoder.encode(id,StandardCharsets.UTF_8); }
+    private static String encode(String value) { return java.net.URLEncoder.encode(value,StandardCharsets.UTF_8); }
     private static void requireArgs(String[] args,int count) { if (args.length<count) throw new IllegalArgumentException("Missing command argument"); }
 }

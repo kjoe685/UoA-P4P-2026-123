@@ -15,7 +15,7 @@ public final class ApiHandler implements HttpHandler {
     public ApiHandler(DebateApplication application) { this.application=application; }
     @Override public void handle(HttpExchange exchange) throws IOException {
         try { route(exchange); }
-        catch (NoSuchElementException e) { sendJson(exchange,404,Map.of("error","No saved sitting with that id")); }
+        catch (NoSuchElementException e) { sendJson(exchange,404,Map.of("error","No saved item with that id or name")); }
         catch (IllegalArgumentException e) { sendJson(exchange,400,Map.of("error",e.getMessage()==null ? "Invalid settings" : e.getMessage())); }
         catch (IllegalStateException e) { sendJson(exchange,409,Map.of("error","Operation unavailable. Check run status, configuration and storage.")); }
         catch (RuntimeException e) { sendJson(exchange,500,Map.of("error","The operation failed. Check the server and configuration.")); }
@@ -26,6 +26,34 @@ public final class ApiHandler implements HttpHandler {
         String[] parts=exchange.getRequestURI().getPath().replaceAll("/+$","").split("/");
         if (parts.length==3 && parts[2].equals("config")) {
             require(method,"GET"); sendJson(exchange,200,config()); return;
+        }
+        if (parts.length==3 && parts[2].equals("settings")) {
+            require(method,"GET"); sendJson(exchange,200,application.settings().names()); return;
+        }
+        if (parts.length==4 && parts[2].equals("settings")) {
+            if (method.equals("GET")) sendJson(exchange,200,RunSpec.resolve(application.settings().read(parts[3]),application.configuration().config()).settings());
+            else {
+                require(method,"POST"); sendJson(exchange,200,application.settings().save(parts[3],body(exchange),application.configuration().config()));
+            }
+            return;
+        }
+        if (parts.length==3 && parts[2].equals("assets")) {
+            if (method.equals("GET")) {
+                String query=exchange.getRequestURI().getRawQuery();
+                if (query==null) sendJson(exchange,200,application.assets().paths());
+                else {
+                    if (!query.startsWith("path=")) throw new IllegalArgumentException("Use path for asset selection");
+                    String name=java.net.URLDecoder.decode(query.substring(5),StandardCharsets.UTF_8);
+                    sendJson(exchange,200,Map.of("path",name,"text",application.assets().read(name)));
+                }
+            } else {
+                require(method,"POST"); var value=body(exchange);
+                if (!Set.of("path","text","save").containsAll(value.keySet()) || !(value.get("path") instanceof String name)
+                        || !(value.get("text") instanceof String text) || !(value.get("save") instanceof Boolean save))
+                    throw new IllegalArgumentException("Provide asset path, text and save boolean");
+                application.assets().update(name,text,save); sendJson(exchange,200,Map.of("saved",save,"valid",true));
+            }
+            return;
         }
         if (parts.length==3 && parts[2].equals("debates")) {
             if (method.equals("GET")) {
@@ -63,14 +91,12 @@ public final class ApiHandler implements HttpHandler {
     }
     private Map<String,Object> config() {
         EngineConfig settings=application.configuration().config();
-        boolean key=engine.openAi.OpenAIKeyReader.configured();
         List<Map<String,Object>> parties=new ArrayList<>();
         settings.parties().entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach(entry -> {
             var profile=entry.getValue(); parties.add(Map.of("id",entry.getKey().name(),"name",profile.displayName(),"ideology",profile.ideology()));
         });
         Map<String,Object> result=new LinkedHashMap<>();
-        result.put("apiKeyConfigured",key);
-        result.put("apiKeyProblem",key ? null : "Set OPENAI_API_KEY or keys/openAi/OpenAI_Key.txt for OpenAI.");
+        result.put("credentialHelp","Cloud providers need their own API key. Ollama needs a running local server and an installed model. See docs/configuration.md.");
         result.put("defaultProvider",settings.agentModel().provider()); result.put("defaultTopic",settings.defaultTopic());
         result.put("defaultRounds",settings.defaultRounds()); result.put("maxRounds",10); result.put("maxTopics",10);
         result.put("parties",parties);

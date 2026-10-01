@@ -47,6 +47,18 @@ class RecoveryTest {
             assertFalse(Json.write(store.transcript(run.id())).contains("UNCOMMITTED_SENTINEL"));
         }
     }
+    @Test void corruptPresentationCacheIsRebuiltFromCommittedPublicEvidence() throws Exception {
+        TestFixtures.copyResources(root); var store=new RunStore(root.resolve("runs")); String id;
+        try (var app=new DebateApplication(root,store,model -> request -> RunLifecycleTest.completed("Retained evidence"))) {
+            var run=app.start(TestFixtures.settings()); RunLifecycleTest.finish(run); id=run.id();
+        }
+        store.saveView(id,List.of("{BROKEN_JSON"));
+        try (var restored=new DebateApplication(root,store,model -> { throw new AssertionError("Recovery must not construct providers"); })) {
+            var run=restored.find(id); String events=String.join("",run.awaitEvents(0,1));
+            assertTrue(events.contains("Retained evidence")); assertTrue(events.contains("\"type\":\"sitting\""));
+            assertEquals(Transcript.Outcome.COMPLETE,run.transcript().outcome());
+        }
+    }
     @Test void fractionalRoundsUnknownModelsAndPrivateImportFieldsAreRejected() throws Exception {
         var snapshot=TestFixtures.copyResources(root);
         Map<String,Object> body=new HashMap<>(TestFixtures.settings()); body.put("rounds",1.5);

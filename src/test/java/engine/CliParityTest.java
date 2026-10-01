@@ -26,6 +26,16 @@ class CliParityTest {
                 var cli=new Main(base,new Scanner(""),output);
                 Path settings=root.resolve("settings.json");
                 Files.writeString(settings,Json.write(Map.of("topics",List.of("Housing"),"rounds",1,"members",List.of(Map.of("party","LABOUR")),"agentModelPreset","demo")));
+                cli.command(new String[]{"settings","save","baseline",settings.toString()}); bytes.reset();
+                cli.command(new String[]{"settings","list"}); assertTrue(bytes.toString().contains("baseline")); bytes.reset();
+                cli.command(new String[]{"settings","show","baseline"}); assertTrue(bytes.toString().contains("Housing")); bytes.reset();
+                cli.command(new String[]{"assets","list"}); assertTrue(bytes.toString().contains("prompts/BasePrompt.txt")); bytes.reset();
+                Path edited=root.resolve("edited.txt"); String basePrompt=Files.readString(root.resolve("prompts/BasePrompt.txt"));
+                Files.writeString(edited,basePrompt+"\nCLI_EDIT_SENTINEL");
+                cli.command(new String[]{"assets","validate","prompts/BasePrompt.txt",edited.toString()});
+                assertEquals(basePrompt,app.assets().read("prompts/BasePrompt.txt"));
+                cli.command(new String[]{"assets","save","prompts/BasePrompt.txt",edited.toString()});
+                assertTrue(app.assets().read("prompts/BasePrompt.txt").contains("CLI_EDIT_SENTINEL")); bytes.reset();
                 cli.command(new String[]{"start",settings.toString()});
                 String id=(String)((Map<?,?>)Json.parse(bytes.toString())).get("id"); bytes.reset();
                 cli.command(new String[]{"watch",id});
@@ -39,10 +49,12 @@ class CliParityTest {
                 assertFalse(Files.readString(transcript).contains("strategy"));
                 cli.command(new String[]{"import",transcript.toString()});
                 assertEquals(2,app.runs().size());
-                String guided="1\n\n\nTransport\n1\nLABOUR\n\n\n2\n0\n";
+                String guided="1\n\n\nTransport\n1\nLABOUR\n\n\n\n2\n0\n";
                 new Main(base,new Scanner(guided),output).menu();
                 assertEquals(3,app.runs().size());
                 assertTrue(app.runs().stream().anyMatch(run -> run.topics().get(0).title().equals("Transport")));
+                new Main(base,new Scanner("9\nbaseline\n\n10\nprompts/BasePrompt.txt\n\n11\nbaseline\n\n0\n"),output).menu();
+                assertEquals(4,app.runs().size());
                 Files.writeString(settings,"{\"rounds\":1.5,\"members\":[{\"party\":\"LABOUR\"}]}");
                 assertThrows(IllegalStateException.class,() -> cli.command(new String[]{"start",settings.toString()}));
             } finally { server.stop(0); ((ExecutorService)server.getExecutor()).shutdownNow(); }

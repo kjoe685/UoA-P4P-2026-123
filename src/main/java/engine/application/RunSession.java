@@ -56,7 +56,13 @@ public final class RunSession implements EngineOutput {
         Transcript transcript=store.transcript(id);
         PrivateSetup setup=store.setup(id);
         List<String> view;
-        try { view=store.view(id); }
+        try {
+            view=store.view(id);
+            if (view.isEmpty() || !(Json.parse(view.get(0)) instanceof Map<?,?> first) || !"sitting".equals(first.get("type")))
+                throw new IllegalArgumentException("Saved view has no setup event");
+            for (String json:view) if (!(Json.parse(json) instanceof Map<?,?> event) || !(event.get("type") instanceof String))
+                throw new IllegalArgumentException("Invalid view event");
+        }
         catch (IllegalStateException | IllegalArgumentException e) { view=rebuildView(transcript,setup); }
         return new RunSession(transcript,setup,view,store);
     }

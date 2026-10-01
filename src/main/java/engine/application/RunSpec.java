@@ -11,11 +11,14 @@ public record RunSpec(List<Topic> topics, int rounds, List<Member> members, Stri
     public record Member(Party party, AdversarialStrategy strategy, String modelPreset) { }
     public RunSpec { topics=List.copyOf(topics); members=List.copyOf(members); }
     public static RunSpec resolve(Map<String,Object> body, EngineConfig config) {
+        if (!Set.of("topics","rounds","members","agentModelPreset","evaluatorModelPreset","provider").containsAll(body.keySet()))
+            throw new IllegalArgumentException("Unknown sitting setting; credentials do not belong in settings");
         List<Topic> topics=new ArrayList<>();
         for (Object item:list(body,"topics")) {
             String title, target=null;
             if (item instanceof String text) title=text;
             else if (item instanceof Map<?,?> value && value.get("title") instanceof String text) {
+                if (!Set.of("title","policyTarget").containsAll(value.keySet())) throw new IllegalArgumentException("Unknown topic setting");
                 title=text; Object rawTarget=value.get("policyTarget");
                 if (rawTarget != null && !(rawTarget instanceof String)) throw new IllegalArgumentException("Policy target must be text");
                 target=(String) rawTarget;
@@ -41,6 +44,7 @@ public record RunSpec(List<Topic> topics, int rounds, List<Member> members, Stri
         Set<Party> seen=EnumSet.noneOf(Party.class); List<Member> members=new ArrayList<>();
         for (Object item:list(body,"members")) {
             if (!(item instanceof Map<?,?> raw)) throw new IllegalArgumentException("Each member must be an object");
+            if (!Set.of("party","strategy","modelPreset").containsAll(raw.keySet())) throw new IllegalArgumentException("Unknown member setting");
             Party party=enumValue(Party.class,raw.get("party"),"party");
             AdversarialStrategy strategy=raw.get("strategy")==null ? AdversarialStrategy.NONE
                     : enumValue(AdversarialStrategy.class,raw.get("strategy"),"strategy");
@@ -55,6 +59,18 @@ public record RunSpec(List<Topic> topics, int rounds, List<Member> members, Stri
         }
         if (members.isEmpty()) throw new IllegalArgumentException("Select at least one party");
         return new RunSpec(topics,number.intValue(),members,preset,judge);
+    }
+    public Map<String,Object> settings() {
+        Map<String,Object> result=new LinkedHashMap<>();
+        result.put("topics",topics.stream().map(topic -> {
+            Map<String,Object> item=new LinkedHashMap<>(); item.put("title",topic.title()); item.put("policyTarget",topic.policyTarget()); return item;
+        }).toList());
+        result.put("rounds",rounds); result.put("agentModelPreset",agentModelPreset); result.put("evaluatorModelPreset",evaluatorModelPreset);
+        result.put("members",members.stream().map(member -> {
+            Map<String,Object> item=new LinkedHashMap<>(); item.put("party",member.party().name()); item.put("strategy",member.strategy().name());
+            if (!member.modelPreset().equals(agentModelPreset)) item.put("modelPreset",member.modelPreset()); return item;
+        }).toList());
+        return result;
     }
     private static void requirePreset(EngineConfig config,String preset) {
         if (!config.models().containsKey(preset)) throw new IllegalArgumentException("Unknown model preset");
