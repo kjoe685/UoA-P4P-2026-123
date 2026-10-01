@@ -20,7 +20,9 @@ Anthropic, Gemini, Grok and local Ollama adapters are also integrated. Select a 
 
 Save and load reusable settings in setup. **Advanced configuration** edits model/profile/interruptions JSON, prompts and grounding; validation precedes each save. Existing sittings retain their frozen resources.
 
-For optional local lexical sentiment, click **Set up local VADER**, follow its job, open a saved sitting and click **Analyze with VADER**. Setup obtains managed Python and locked dependencies; analysis makes no cloud calls. Reports retain sentence evidence, separate scores and provenance. See the [local analysis guide](nlp/README.md). Cardiff, DeBERTa and LLM rubrics continue in the [primary plan](docs/implementation-plan.md).
+For optional local sentiment and stance, set up VADER, Cardiff or DeBERTa in **Local analysis**, follow its job, open a saved sitting, select methods and click **Analyze selected methods**. Setup obtains managed Python, locked CPU dependencies and explicitly requested pinned model files. Cached analysis runs offline. Reports retain sentence evidence, uncertainty, separate scores and provenance. Stance requires a policy proposition for the topic. See the [local analysis guide](nlp/README.md).
+
+**Evaluate LLM rubric** assesses five separate metrics using the sitting's saved evaluator preset or an independent override. Cloud evaluation uses provider credit; Ollama runs locally. Rubrics, prompts and budgets are editable through advanced configuration. The deterministic demonstration cannot judge debate quality. See the [LLM evaluation guide](evaluation/README.md).
 
 ## Terminal and development
 

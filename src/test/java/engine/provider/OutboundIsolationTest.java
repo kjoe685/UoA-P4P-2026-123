@@ -14,6 +14,29 @@ import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 class OutboundIsolationTest {
+    @org.junit.jupiter.api.io.TempDir java.nio.file.Path root;
+    @Test void blindEvaluatorWireContainsOnlyPublicEvidenceEvenWhenAdapterWasUsedByAnAgent() throws Exception {
+        engine.TestFixtures.copyResources(root); var resources=engine.evaluation.llm.LlmEvaluationResources.load(root);
+        var source=engine.application.LlmEvaluationTest.evidence(); var payloads=new ArrayList<String>();
+        var server=HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(),0),0);
+        server.createContext("/",exchange -> {
+            String payload=new String(exchange.getRequestBody().readAllBytes(),StandardCharsets.UTF_8); payloads.add(payload);
+            String content=payloads.size()==1 ? "Public agent words" : Json.write(engine.application.LlmEvaluationTest.answer("topic-1",source.events(),source.roster(),resources.rubric()));
+            byte[] response=Json.write(Map.of("model","gpt-4o-mini","choices",List.of(Map.of("finish_reason","stop","message",Map.of("content",content))))).getBytes(StandardCharsets.UTF_8);
+            exchange.sendResponseHeaders(200,response.length); exchange.getResponseBody().write(response); exchange.close();
+        }); server.start();
+        try {
+            var provider=new OpenAIChatManager("KEY_SENTINEL",HttpClient.newHttpClient(),URI.create("http://localhost:"+server.getAddress().getPort()));
+            var model=new ModelConfig("openai","gpt-4o-mini",1d,null,4096,5);
+            new Agent(source.roster().get(0),AdversarialStrategy.STRAW_MAN,provider,"PRIVATE_SETUP_SENTINEL HIDDEN_TREATMENT_SENTINEL",List.of("PRIVATE_GROUNDING_SENTINEL"),model).speak(List.of(),"Opening");
+            var report=new engine.evaluation.LLMEvaluator(provider,model,resources).evaluate(source);
+            assertEquals(engine.evaluation.EvaluationStatus.OK,report.topics().get(0).status()); assertEquals(2,payloads.size());
+            assertTrue(payloads.get(0).contains("PRIVATE_SETUP_SENTINEL"));
+            for (String forbidden:List.of("PRIVATE_SETUP_SENTINEL","HIDDEN_TREATMENT_SENTINEL","PRIVATE_GROUNDING_SENTINEL","KEY_SENTINEL","STRAW_MAN")) assertFalse(payloads.get(1).contains(forbidden));
+            assertTrue(payloads.get(1).contains("turn-10")); assertTrue(payloads.get(1).contains("Order!"));
+            assertFalse(Json.write(report).contains("SENTINEL"));
+        } finally { server.stop(0); }
+    }
     @Test void sharedStatelessAdapterCannotLeakAnotherRecipientsPrivateSetup() throws Exception {
         List<Map<?,?>> payloads=new ArrayList<>();
         var server=HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(),0),0);

@@ -165,6 +165,9 @@ async function initSetup(suppliedSettings = null) {
   setup.agentModelPreset = config.models[saved.agentModelPreset] ? saved.agentModelPreset : config.agentModelPreset;
   setup.evaluatorModelPreset = config.models[saved.evaluatorModelPreset] ? saved.evaluatorModelPreset : config.evaluatorModelPreset;
   setup.policyTargets = Array.isArray(saved.policyTargets) ? saved.policyTargets : [];
+  const evaluatorOverride=$('#analysis-llm-model').value;
+  $('#analysis-llm-model').replaceChildren(el('option',{text:"Sitting's saved evaluator",attrs:{value:''}}),
+    ...Object.entries(config.models).filter(([,model])=>model.provider!=='demo').map(([id,model])=>el('option',{text:`${id} · ${model.provider}`,attrs:{value:id,selected:evaluatorOverride===id}})));
   for (const [selector, key] of [['#agent-model', 'agentModelPreset'], ['#evaluator-model', 'evaluatorModelPreset']]) {
     $(selector).replaceChildren(...Object.entries(config.models).map(([id, model]) => el('option', {
       text: model.provider === 'demo' ? 'Deterministic demonstration · no model calls' : `${id} · ${model.provider}`,
@@ -465,7 +468,7 @@ async function updateAsset(save) {
     if ($('#asset-text').dataset.path !== $('#asset-path').value) throw new Error('Load the selected asset before editing.');
     await api('/api/assets', { method: 'POST', body: { path: $('#asset-path').value, text: $('#asset-text').value, save } });
     if (save) await initSetup();
-    const future = path === 'nlp/config/models.json' || path === 'config/local-evaluation.json'
+    const future = path === 'nlp/config/models.json' || path.includes('evaluation') || path.startsWith('prompts/Evaluator')
       ? 'New analyses use this revision; active jobs retain captured settings.' : 'New sittings use this revision.';
     $('#asset-status').textContent = save ? `Saved validated contents. ${future}` : 'Contents are valid. Nothing saved yet.';
   } catch (error) { $('#asset-status').textContent = error.message; }
@@ -983,6 +986,18 @@ async function openReport(id) {
     $('#analysis-status').textContent=job.progress;
     if (!result) { $('#analysis-report').replaceChildren(); return; }
     const contents=[el('h3',{text:`${job.kind} · ${job.state.toLowerCase()}`})];
+    if (result.assessments) {
+      const assessment=result.assessments;
+      contents.push(el('p',{text:`Evaluator: ${assessment.model.provider} / ${assessment.model.model}. Rubric: ${assessment.rubric.version}. Scores remain separate; rhetorical tactics measures disruption.`}));
+      for (const topic of assessment.topics) {
+        const section=el('details',{},el('summary',{text:`${topic.topicId} · ${topic.status}${topic.error ? ` · ${topic.error}` : ''}`}));
+        for (const participant of topic.assessment?.participants || []) {
+          section.append(el('h4',{text:participant.participantId}));
+          for (const metric of participant.metrics) section.append(el('p',{text:`${metric.metricId}: ${metric.score==null ? metric.status : metric.score} — ${metric.explanation} Evidence: ${metric.evidenceTurnIds.join(', ') || 'none'}.`}));
+        }
+        contents.push(section);
+      }
+    }
     if (result.methods) for (const method of result.methods) {
       const section=el('details',{},el('summary',{text:`${method.methodId} · ${method.status}${method.error ? ` · ${method.error}` : ''}`}));
       contents.push(section);
@@ -1004,6 +1019,15 @@ function wireEvents() {
   $('#setup-deberta').addEventListener('click',()=>setupLocalModel('deberta-stance'));
   $('#refresh-jobs').addEventListener('click',async()=>{await refreshJobs(); await refreshLocalReadiness();});
   $('#evaluate-btn').addEventListener('click',evaluateSitting);
+  $('#evaluate-llm-btn').addEventListener('click',async()=>{
+    if (!sitting) return;
+    try {
+      const preset=$('#analysis-llm-model').value;
+      const {id}=await api(`/api/debates/${encodeURIComponent(sitting.id)}/evaluate-llm`,{method:'POST',body:preset ? {modelPreset:preset} : {}});
+      $('#analysis-status').textContent=`LLM evaluation job ${id} captures public evidence and evaluator settings.`;
+      await refreshJobs();
+    } catch(error) { $('#analysis-status').textContent=error.message; }
+  });
   $('#load-settings').addEventListener('click', loadSettings);
   $('#save-settings').addEventListener('click', saveSettings);
   $('#read-asset').addEventListener('click', readAsset);

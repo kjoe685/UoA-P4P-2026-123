@@ -50,6 +50,9 @@
       <p class="hint">Cardiff reports uncalibrated class scores. It was trained on tweets and needs parliamentary domain validation.</p>
       <p class="hint">DeBERTa compares support, opposition and unrelated wording for each topic's policy proposition. Topics without a proposition report insufficient evidence. Uncertainty can cause abstention. These scores do not establish party identity, hidden intent or reasoning quality.</p>
       <div id="analysis-jobs" class="saved-list"></div>
+      <label for="analysis-llm-model" class="field-label">LLM evaluator override</label>
+      <select id="analysis-llm-model"><option value="">Sitting's saved evaluator</option></select>
+      <p class="hint">Cloud evaluation uses your configured provider credentials. The deterministic demonstration cannot judge debate quality.</p>
       <div id="analysis-report"></div>
       <p id="analysis-status" role="status" class="hint"></p>
     </section>
@@ -140,7 +143,7 @@
           <select id="agent-model"></select>
           <label class="field-label" for="evaluator-model">Evaluator model</label>
           <select id="evaluator-model"></select>
-          <p class="hint">Evaluator choice is saved independently. Evaluation actions are still being integrated.</p>
+          <p class="hint">Evaluator choice is saved independently. LLM evaluation reports five rubric metrics separately and may use paid cloud calls when selected.</p>
           <p class="hint">The demonstration uses fixed sample speeches and cannot test model behaviour.</p>
         </fieldset>
 
@@ -186,6 +189,8 @@
           <button type="button" id="export-btn" class="btn btn-ghost">Download transcript</button>
           <button type="button" id="export-json-btn" class="btn btn-ghost">Download JSON</button>
           <button type="button" id="evaluate-btn" class="btn btn-ghost">Analyze selected methods</button>
+          <button type="button" id="evaluate-llm-btn" class="btn btn-ghost">Evaluate LLM rubric</button>
+          <p class="hint">LLM evaluation uses this sitting's saved evaluator preset unless an override is selected in the analysis panel.</p>
         </div>
         <div id="transcript-scroller" class="transcript-scroller">
           <div id="transcript" class="transcript" aria-live="polite" aria-relevant="additions"></div>

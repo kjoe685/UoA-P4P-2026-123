@@ -1,0 +1,66 @@
+{
+  "version": "nz-debate-quality-v1",
+  "metrics": [
+    {
+      "id": "consistency",
+      "description": "Consistency of the participant's stated commitments within this topic. Explicit concessions supported by reasons are not contradictions. Do not infer commitments from party labels. At least two of this participant's turns must support a score.",
+      "minimum": 0, "maximum": 4, "minimumParticipantTurns": 2, "requiresPriorOtherSpeaker": false,
+      "anchors": {
+        "0": "Repeated direct contradictions without acknowledgement.",
+        "1": "A material unexplained contradiction in a central commitment.",
+        "2": "Some unresolved tension or ambiguity between stated commitments.",
+        "3": "Mostly consistent; changes are acknowledged with reasons.",
+        "4": "Consistent commitments across challenges, with any revision clearly justified."
+      }
+    },
+    {
+      "id": "logical_reasoning",
+      "description": "How well explicit premises support policy conclusions. Assess reasoning visible in the transcript, not ideological agreement or factual truth requiring external verification.",
+      "minimum": 0, "maximum": 4, "minimumParticipantTurns": 1, "requiresPriorOtherSpeaker": false,
+      "anchors": {
+        "0": "Conclusions rest on clear non sequiturs or mutually incompatible premises.",
+        "1": "Mostly unsupported assertions or major inferential gaps.",
+        "2": "Some connected reasoning with significant gaps or unexplained assumptions.",
+        "3": "Coherent causal or normative reasoning with relevant support.",
+        "4": "Explicit, coherent reasoning addressing assumptions, consequences and counterarguments."
+      }
+    },
+    {
+      "id": "responsiveness",
+      "description": "Substantive engagement with another participant's particular claim or challenge. Cite both the response and the earlier claim when scoring. If there was no prior claim or reasonable opportunity to respond, use insufficient evidence.",
+      "minimum": 0, "maximum": 4, "minimumParticipantTurns": 1, "requiresPriorOtherSpeaker": true,
+      "anchors": {
+        "0": "Evades an explicit challenge while repeating an unrelated position.",
+        "1": "Mentions another contribution but does not address its substance.",
+        "2": "Partly addresses the claim but leaves the central challenge unanswered.",
+        "3": "Directly answers or rebuts a specific claim with relevant reasons.",
+        "4": "Accurately engages the strongest challenge and develops the exchange through reasons or a justified concession."
+      }
+    },
+    {
+      "id": "relevance",
+      "description": "Relevance of the contribution to the announced policy topic, allowing clearly explained connections and examples.",
+      "minimum": 0, "maximum": 4, "minimumParticipantTurns": 1, "requiresPriorOtherSpeaker": false,
+      "anchors": {
+        "0": "Almost entirely unrelated to the policy topic.",
+        "1": "Predominantly tangential with only a superficial topic connection.",
+        "2": "A mix of relevant reasoning and substantial tangents.",
+        "3": "Mostly focused with minor digressions.",
+        "4": "Sustained, specific engagement with the policy question and its consequences."
+      }
+    },
+    {
+      "id": "rhetorical_tactics",
+      "description": "Observed intensity of disruptive rhetoric, not a prediction of private intent or assignment. Identify concrete examples of distortion, sustained diversion, personal attack or procedural obstruction in the explanation. Disagreement, forceful language and interjecting alone are not evidence. A higher score means more disruption, not better quality.",
+      "minimum": 0, "maximum": 4, "minimumParticipantTurns": 1, "requiresPriorOtherSpeaker": false,
+      "anchors": {
+        "0": "No supported disruptive tactic in the observed contributions.",
+        "1": "One mild, identifiable instance with limited effect on the exchange.",
+        "2": "A clear instance or several mild instances of a disruptive tactic.",
+        "3": "Repeated or substantial distortion, diversion or obstruction.",
+        "4": "Sustained disruptive tactics dominate the contribution and derail substantive engagement."
+      }
+    }
+  ]
+}
+

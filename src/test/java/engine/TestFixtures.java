@@ -8,7 +8,7 @@ import java.util.Map;
 public final class TestFixtures {
     private TestFixtures() { }
     public static ConfigurationSnapshot copyResources(Path root) throws IOException {
-        for (String directory:new String[]{"config","prompts","data/hansard","nlp/config"}) {
+        for (String directory:new String[]{"config","prompts","data/hansard","nlp/config","evaluation"}) {
             try (var files=Files.walk(Path.of(directory))) {
                 for (var source:files.filter(Files::isRegularFile).toList()) {
                     Path destination=root.resolve(source); Files.createDirectories(destination.getParent()); Files.copy(source,destination);

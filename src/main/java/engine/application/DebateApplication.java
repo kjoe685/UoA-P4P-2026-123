@@ -20,6 +20,7 @@ public final class DebateApplication implements AutoCloseable {
     private final JobService background;
     private final ManagedNlp nlp;
     private final LocalEvaluationService evaluation;
+    private final LlmEvaluationService llmEvaluation;
     private final Function<ModelConfig,ChatManager> providers;
     private final Map<String,RunSession> sessions=new ConcurrentHashMap<>();
     private final ThreadPoolExecutor jobs;
@@ -31,6 +32,7 @@ public final class DebateApplication implements AutoCloseable {
         this.root=root; this.store=store; this.providers=providers;
         this.assets=new AssetService(root); this.settings=new SettingsService(root.resolve("runs/settings"));
         this.background=new JobService(root.resolve("runs/jobs")); this.nlp=new ManagedNlp(root);
+        this.llmEvaluation=new LlmEvaluationService(root,background,providers);
         this.evaluation=new LocalEvaluationService(root,background,(config,settings) -> {
             if (analysisClients!=null) return analysisClients.apply(config);
             nlp.ensureRunning(config,settings); return new engine.evaluation.local.HttpNlpClient(config.endpoint(),java.time.Duration.ofSeconds(config.timeoutSeconds()));
@@ -72,6 +74,20 @@ public final class DebateApplication implements AutoCloseable {
         });
     }
     public BackgroundJob evaluate(String id,Map<String,Object> body) { return evaluation.start(find(id).transcript(),body); }
+    public BackgroundJob evaluateLlm(String id,Map<String,Object> body) {
+        if (!Set.of("modelPreset").containsAll(body.keySet())) throw new IllegalArgumentException("Unknown LLM evaluation setting");
+        var session=find(id); String preset=store.setup(id).settings().evaluatorModelPreset();
+        if (body.containsKey("modelPreset")) {
+            if (!(body.get("modelPreset") instanceof String value)) throw new IllegalArgumentException("Choose an evaluator model preset");
+            preset=value;
+        }
+        EngineConfig current;
+        try { current=Json.read(java.nio.file.Files.readString(root.resolve("config/engine.json")),EngineConfig.class); }
+        catch (java.io.IOException e) { throw new IllegalArgumentException("Cannot read model presets"); }
+        var model=current.models().get(preset);
+        if (model==null) throw new IllegalArgumentException("Unknown evaluator model preset");
+        return llmEvaluation.start(session.transcript(),model);
+    }
     public synchronized RunSession start(Map<String,Object> body) {
         if (jobs.getActiveCount()+jobs.getQueue().size()>=6) throw new IllegalStateException("Debate job limit reached");
         var snapshot=configuration(); var spec=RunSpec.resolve(settings.resolve(body),snapshot.config());

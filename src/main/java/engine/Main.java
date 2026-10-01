@@ -57,6 +57,9 @@ public final class Main {
                 output.println(post(runPath(args[1])+"/evaluate",Json.write(settings)));
             }
             case "jobs" -> output.println(get("/api/jobs"));
+            case "evaluate-llm" -> {
+                requireArgs(args,2); output.println(post(runPath(args[1])+"/evaluate-llm",Json.write(args.length>2 ? Map.of("modelPreset",args[2]) : Map.of())));
+            }
             case "job" -> { requireArgs(args,2); output.println(get("/api/jobs/"+encode(args[1]))); }
             case "cancel-job" -> { requireArgs(args,2); output.println(post("/api/jobs/"+encode(args[1])+"/cancel","{}")); }
             case "report" -> {
@@ -98,11 +101,15 @@ public final class Main {
     }
     void menu() throws Exception {
         while (true) {
-            output.println("\n1 Start sitting\n2 Saved sittings\n3 Watch sitting\n4 Chair ruling\n5 Adjourn\n6 Export JSON\n7 Export text\n8 Import transcript\n9 Saved settings\n10 Advanced assets\n11 Start from saved settings\n12 Local evaluation setup\n13 Evaluate sitting\n14 Analysis jobs/reports\n0 Exit");
+            output.println("\n1 Start sitting\n2 Saved sittings\n3 Watch sitting\n4 Chair ruling\n5 Adjourn\n6 Export JSON\n7 Export text\n8 Import transcript\n9 Saved settings\n10 Advanced assets\n11 Start from saved settings\n12 Local evaluation setup\n13 Evaluate sitting\n14 Analysis jobs/reports\n15 LLM rubric evaluation\n0 Exit");
             String choice=ask("Choice: ");
             if (choice.equals("0") || choice.isEmpty() && !input.hasNextLine()) return;
             try {
                 switch (choice) {
+                    case "15" -> {
+                        String id=ask("Sitting id: "), preset=ask("Evaluator model preset (blank = sitting's saved choice; cloud evaluation uses configured credentials): ");
+                        output.println(post(runPath(id)+"/evaluate-llm",Json.write(preset.isBlank() ? Map.of() : Map.of("modelPreset",preset))));
+                    }
                     case "12" -> {
                         output.println(get("/api/local-readiness"));
                         String selected=ask("Type setup for VADER dependencies, or cardiff-sentiment / deberta-stance for CPU dependencies and pinned weights (blank = return): ");

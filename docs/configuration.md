@@ -50,7 +50,7 @@ run.cmd cli assets validate prompts/BasePrompt.txt edited-base.txt
 run.cmd cli assets save prompts/BasePrompt.txt edited-base.txt
 ```
 
-Unix uses `sh run.sh cli` with the same arguments. Read the listed asset before editing; preserve required placeholders. The editor includes `config/engine.json`, prompt templates and `data/hansard/excerpts.json`. LLM rubrics arrive with T07 and will join this shared service.
+Unix uses `sh run.sh cli` with the same arguments. Read the listed asset before editing; preserve required placeholders. The editor includes `config/engine.json`, prompt templates, `data/hansard/excerpts.json`, local-analysis configuration and LLM rubric/configuration/prompts. Guided choice15 and `cli evaluate-llm RUN_ID [PRESET]` submit blind rubric jobs. See the [LLM evaluation guide](../evaluation/README.md) for budgets, separate metrics and evidence validation.
 
 Each `runs/<UUID>/` contains `setup.json` (private frozen configuration and resolved prompts), `transcript.json` (schema 2 public evidence), and `view.json` (owner presentation/progress events). Only the public transcript and derived public text are exported. Imported public transcripts get new storage IDs and unknown private assignments. Do not publish the private run directory.
 

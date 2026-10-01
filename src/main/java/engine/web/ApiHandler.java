@@ -105,6 +105,7 @@ public final class ApiHandler implements HttpHandler {
             var session=application.find(parts[3]);
             switch (parts[4]) {
                 case "evaluate" -> { require(method,"POST"); sendJson(exchange,202,Map.of("id",application.evaluate(session.id(),body(exchange)).id())); return; }
+                case "evaluate-llm" -> { require(method,"POST"); sendJson(exchange,202,Map.of("id",application.evaluateLlm(session.id(),body(exchange)).id())); return; }
                 case "events" -> { require(method,"GET"); stream(exchange,session); return; }
                 case "transcript" -> { require(method,"GET"); downloadHeader(exchange,session.id()+".json"); sendJson(exchange,200,session.transcript()); return; }
                 case "export" -> { require(method,"GET"); downloadHeader(exchange,session.id()+".txt"); sendText(exchange,application.textExport(session.id())); return; }

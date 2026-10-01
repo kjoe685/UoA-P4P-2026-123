@@ -15,6 +15,26 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class CliParityTest {
     @TempDir Path root;
+    @Test void llmRubricCommandsMenuAndReportsShareTheApplication() throws Exception {
+        TestFixtures.copyResources(root); var resources=engine.evaluation.llm.LlmEvaluationResources.load(root);
+        try (var app=new DebateApplication(root,new RunStore(root.resolve("runs")),model -> request -> LlmEvaluationTest.fake(request,resources.rubric()))) {
+            var run=app.importTranscript(LlmEvaluationTest.evidence()); var server=WebServer.start(0,app);
+            try {
+                String base="http://localhost:"+server.getAddress().getPort(); var bytes=new ByteArrayOutputStream();
+                var output=new PrintStream(bytes,true,java.nio.charset.StandardCharsets.UTF_8); var cli=new Main(base,new Scanner(""),output);
+                cli.command(new String[]{"evaluate-llm",run.id(),"gpt-4o-mini"});
+                String jobId=(String)((Map<?,?>)Json.parse(bytes.toString())).get("id");
+                long until=System.currentTimeMillis()+10000; while (!app.background().find(jobId).terminal() && System.currentTimeMillis()<until) Thread.sleep(10);
+                assertEquals(BackgroundJob.State.COMPLETE,app.background().find(jobId).state());
+                Path report=root.resolve("llm-report.json"); cli.command(new String[]{"report",jobId,report.toString()});
+                var result=Json.read(Files.readString(report),engine.evaluation.llm.LlmReport.class);
+                assertEquals(5,result.assessments().rubric().metrics().size()); assertEquals("gpt-4o-mini",result.assessments().model().model());
+                new Main(base,new Scanner("15\n"+run.id()+"\ngpt-4o-mini\n0\n"),output).menu();
+                assertEquals(2,app.background().list().size());
+                assertThrows(IllegalStateException.class,() -> cli.command(new String[]{"evaluate-llm",run.id(),"demo"}));
+            } finally { server.stop(0); ((ExecutorService)server.getExecutor()).shutdownNow(); }
+        }
+    }
     @Test void commandsAndGuidedMenuUseSameValidationPersistenceAndExportsAsBrowser() throws Exception {
         TestFixtures.copyResources(root);
         try (var app=new DebateApplication(root,new RunStore(root.resolve("runs")),model -> new DemoChatManager())) {
