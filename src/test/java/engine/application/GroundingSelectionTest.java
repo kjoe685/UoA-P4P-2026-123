@@ -3,6 +3,7 @@ package engine.application;
 import engine.TestFixtures;
 import engine.agent.Party;
 import engine.demo.DemoChatManager;
+import engine.chat.ChatRequest;
 import engine.transcript.*;
 import engine.utils.*;
 import org.junit.jupiter.api.Test;
@@ -10,10 +11,53 @@ import org.junit.jupiter.api.io.TempDir;
 import java.nio.file.*;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.regex.Pattern;
 import static org.junit.jupiter.api.Assertions.*;
 
 class GroundingSelectionTest {
     @TempDir Path root;
+    @Test void allReviewedExcerptsReachOnlyTheirOwnAgentWithoutHistoricalIdentitiesOrCitationMetadata() throws Exception {
+        var snapshot=TestFixtures.copyResources(root); var store=new RunStore(root.resolve("runs"));
+        List<ChatRequest> requests=new CopyOnWriteArrayList<>();
+        var records=new ArrayList<Map<String,Object>>();
+        for (Party party:Party.values()) records.addAll(snapshot.excerpts().select(party,-1));
+        assertEquals(500,records.size());
+        var selection=(Map<?,?>)snapshot.excerpts().provenance().get("selection");
+        assertEquals("verbatim-complete-generic-sentences-v2",selection.get("excerptPolicy"));
+        try (var app=new DebateApplication(root,store,model -> request -> {
+            requests.add(request); return RunLifecycleTest.completed("A public argument about housing.");
+        })) {
+            var members=Arrays.stream(Party.values()).map(party -> Map.of("party",party.name())).toList();
+            var run=app.start(Map.of("topics",List.of("Housing"),"rounds",1,"agentModelPreset","demo",
+                    "groundingCount",-1,"members",members));
+            RunLifecycleTest.finish(run); var setup=store.setup(run.id());
+            for (Party party:Party.values()) {
+                String prompt=setup.resolvedPrompts().get(party.name().toLowerCase(Locale.ROOT));
+                assertTrue(requests.stream().anyMatch(request -> request.systemInstructions().equals(prompt)),"No captured request for "+party);
+                assertTrue(prompt.contains("not evidence of current party policy"));
+                for (String text:snapshot.excerpts().getExcerpts(party)) {
+                    assertTrue(prompt.contains(text));
+                    assertTrue(Character.isUpperCase(text.codePointAt(0)),text);
+                    assertTrue(text.matches("(?s).*[.!?][”\"')\\]]*$"),text);
+                }
+                for (Party other:Party.values()) if (other!=party)
+                    for (String text:snapshot.excerpts().getExcerpts(other)) assertFalse(prompt.contains(text));
+                for (var record:records) {
+                    String name=(String)record.get("speaker");
+                    assertFalse(Pattern.compile(Pattern.quote(name),Pattern.CASE_INSENSITIVE|Pattern.UNICODE_CASE).matcher(prompt).find(),name);
+                }
+                for (String field:List.of("sourceRow","fullTextSha256","charStart","charEnd")) assertFalse(prompt.contains(field));
+            }
+            String privateSelection=setup.sourceContents().get("selection/hansard.json");
+            assertTrue(privateSelection.contains("JACINDA ARDERN"));
+            assertTrue(privateSelection.contains("sourceRow"));
+            String publicJson=Json.write(run.transcript()), publicText=app.textExport(run.id());
+            for (String field:List.of("fullTextSha256","sourceRow","selection/hansard.json","JACINDA ARDERN")) {
+                assertFalse(publicJson.contains(field)); assertFalse(publicText.contains(field));
+            }
+        }
+    }
     @Test void zeroAndOverridesFreezeOnlyChosenOwnExcerptsAndRejectImpossibleCountsBeforeProviders() throws Exception {
         var snapshot=TestFixtures.copyResources(root); var calls=new AtomicInteger(); var store=new RunStore(root.resolve("runs"));
         try (var app=new DebateApplication(root,store,model -> { calls.incrementAndGet(); return new DemoChatManager(); })) {

@@ -168,6 +168,8 @@ that an adversarial agent's output is in fact off-topic, a straw man, or procedu
 
 ## Hansard Grounding
 
+This section describes the original proof of concept. The current [grounding guide](grounding.md) and [excerpt audit](hansard-audit.md) describe the expanded, reviewed corpus and source pipeline. The generic-archetype ethics guidance below still applies.
+
 Each party persona's prompt is grounded with a handful of **real, verbatim excerpts** from actual
 NZ House of Representatives sittings, not LLM-invented stereotypes. The source is:
 

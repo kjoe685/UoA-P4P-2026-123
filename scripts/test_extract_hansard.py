@@ -1,4 +1,4 @@
-"""Offline checks for the narrow source reader and verbatim clipping policy."""
+"""Offline checks for the narrow source reader, grounding review and exact source spans."""
 import importlib.util
 from io import BytesIO
 from pathlib import Path
@@ -64,6 +64,82 @@ class ExtractionTest(unittest.TestCase):
             path.write_bytes(header())
             with self.assertRaisesRegex(ValueError, "size"):
                 module.verified(path)
+
+    def test_replaces_identity_and_procedure_with_an_unchanged_internal_sentence_block(self):
+        prefix = "As Minister of Housing, I announced a programme in my electorate. "
+        safe = "Public housing supports families while stable funding enables councils to plan services for communities. " * 4
+        suffix = "My colleague David Seymour spoke next."
+        speech = prefix + safe + suffix
+        start, end, text = module.excerpt(speech, review=module.GroundingReview(["DAVID SEYMOUR"]))
+        self.assertEqual(text, safe.rstrip())
+        self.assertEqual(speech[start:end], text)
+        self.assertEqual(start, len(prefix))
+        self.assertFalse(module.GroundingReview(["DAVID SEYMOUR"]).findings(text))
+
+    def test_cannot_select_a_cut_off_tail_or_the_next_speakers_oral_question(self):
+        complete = "Public housing supports families while stable funding enables councils to plan services for communities. " * 4
+        tail = "Question No. 3—Housing 3. ANOTHER MEMBER (National) to the Minister: " + complete
+        start, end, text = module.excerpt(complete + tail)
+        self.assertEqual(text, complete.rstrip())
+        self.assertLess(end, len(complete))
+        self.assertEqual(module.excerpt("An unfinished argument " * 50), (0, 0, ""))
+        self.assertEqual(module.excerpt("I raise a point of order. " * 40), (0, 0, ""))
+        self.assertEqual(module.excerpt(complete + "Bill read a third time. " + complete)[2], complete.rstrip())
+
+    def test_named_aliases_unicode_quotes_personal_history_and_embedded_labels_are_flagged(self):
+        review = module.GroundingReview(["SIMON O’CONNOR", "JACINDA ARDERN", "DAVID SEYMOUR"])
+        for text in ["Jacinda Ardern made a statement.", "Ardern made a statement.", "David disagreed.",
+                     "Simon O'Connor made a statement.", "Minister Mark spoke.", "Dr Poutasi spoke.",
+                     "I went to school in that electorate.", "My dad had a car.",
+                     "Anahila Kanongata’a-Suisuiki: Another speaker takes over.",
+                     "This passage ends with an unfinished claim—", "This quotation is “left open.",
+                     "This title has a bracket) missing.", "Here are song lyrics.",
+                     "—because it does not actually do that.", "This is based on my experience running health facilities.",
+                     "I actually went out on a fishing boat.", "I had to drive him to hospital.",
+                     "Dad drove and Mum sat in the front.", "The policy mirrors Hugo Chávez.", "Mark, you did a good job."]:
+            with self.subTest(text=text):
+                self.assertTrue(review.findings(text))
+        self.assertFalse(review.findings("Mr Speaker, historical rhetoric supports a clear argument about housing policy."))
+        self.assertFalse(review.findings("Mark my words: the Bill will support communities in May."))
+
+    def test_sentence_boundaries_do_not_treat_honorifics_or_question_numbers_as_sentences(self):
+        text = "Dr Poutasi commented on question No. 3. Public services need investment."
+        self.assertEqual([text[start:end] for start,end in module.sentence_spans(text)],
+                         ["Dr Poutasi commented on question No. 3.", "Public services need investment."])
+
+    def test_source_audit_detects_false_attribution_spans_hashes_and_chair_rows(self):
+        from types import SimpleNamespace
+        from contextlib import redirect_stdout
+        from io import StringIO
+        import copy
+        audit_spec = importlib.util.spec_from_file_location("audit_hansard", Path(__file__).with_name("audit-hansard.py"))
+        auditor = importlib.util.module_from_spec(audit_spec)
+        audit_spec.loader.exec_module(auditor)
+        parties = list(module.PARTIES)
+        texts = [(f"The {party} position supports investment in stable housing and reliable public services. "
+                  "Transparent funding lets local communities plan improvements while Parliament scrutinises costs and benefits. ") * 3
+                 for party in parties]
+        columns = {name: SimpleNamespace(value=value) for name,value in {
+            "party": parties, "speaker": ["FICTIONAL MEMBER " + str(i) for i in range(5)],
+            "chair": [0] * 5, "date": ["2019-07-24"] * 5, "text": texts,
+            "agenda": ["Housing"] * 5, "speechnumber": [1] * 5,
+            "parliament": ["NZ-House_of_Representatives"] * 5, "iso3country": ["NZL"] * 5}.items()}
+        with redirect_stdout(StringIO()):
+            corpus = module.extract(columns, 1)
+        review = module.GroundingReview(columns["speaker"].value)
+        self.assertTrue(all(entry["status"] == "pass" for entry in auditor.audit(corpus, columns, review)))
+        for field,bad,issue in [("speaker","WRONG MEMBER","speaker"), ("date","2019-07-23","date"),
+                                ("textSha256","0"*64,"textSha256"), ("charStart",2,"source_span")]:
+            with self.subTest(field=field):
+                changed = copy.deepcopy(corpus)
+                changed["Labour"][0][field] = bad
+                self.assertIn(issue, auditor.audit(changed, columns, review)[0]["sourceIssues"])
+        columns["chair"].value[0] = 1
+        self.assertIn("source_party_or_chair", auditor.audit(corpus, columns, review)[0]["sourceIssues"])
+        changed = copy.deepcopy(corpus)
+        changed["_corpus"]["source"]["sha256"] = "0"*64
+        with self.assertRaisesRegex(ValueError,"manifest"):
+            auditor.audit(changed, columns, review)
 
     def test_pilot_candidates_are_verbatim_unlabelled_and_exclude_grounding_speeches(self):
         from types import SimpleNamespace

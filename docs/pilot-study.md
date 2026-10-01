@@ -22,6 +22,8 @@ run.cmd cli pilot show PREPARED_PILOT_ID review.json
 
 Preparation excludes source speeches used in the **currently installed** grounding corpus. It shuffles eligible items with the saved seed, selects 200, then shuffles their distinct source-debate IDs and assigns the first quarter of debates to calibration and the rest to held-out review. Both groups are nonempty and no source debate crosses them. Item counts can be uneven because entire debates stay together. A prepared file records the input dataset hash, seed, exclusion-set hash and selection-policy version. Labels and reviewer fields remain blank, including when preparing from a previously reviewed source. Fewer than 200 eligible distinct items is an error; no data is duplicated to reach the minimum.
 
+After a grounding corpus replacement, recheck earlier pilot files against the installed source-speech exclusions. The [2026-10-02 excerpt audit](hansard-audit.md) replaced 104 source speeches; the old `target/genuine-review-pilot.json` has 19 current overlaps. Import/evaluation rejects current grounding overlap. Its replacement `target/genuine-review-pilot-current-grounding.json` has 200 blank review items, zero grounding speech/hash overlap and disjoint source-debate groups. It is an ignored local artifact, ready to import and curate; the old owner pilot and historical files/labels were preserved.
+
 ## Review and import
 
 Schema version 1 requires `evidenceType`, `source` and `rows`; `preparation` is optional. A short unreviewed illustration is:

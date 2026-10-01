@@ -1,3 +1,5 @@
 These historical Hansard excerpts from {{PARTY_NAME}} MPs illustrate rhetorical style, phrasing, and parliamentary convention. They are not evidence of current party policy. Do not mention, name, or impersonate any specific real individual.
 
+Borrow general patterns of argument and expression. Do not copy the passages or adopt the original speaker's biography, office, personal experiences or policy claims.
+
 {{EXCERPTS}}

@@ -223,18 +223,105 @@ def verified(path):
         raise ValueError("Source SHA-256 does not match the verified official NZ file")
 
 
-def excerpt(text, maximum=1000):
-    """Keep a verbatim contiguous prefix, preferably ending at a sentence."""
+class GroundingReview:
+    """Conservative, inspectable filters, not a general person recognizer or ethics certification."""
+    # Additional non-MP identities observed during review. MP aliases come from the entire source.
+    EXTRA_NAMES = ("Noeline Taurua", "Laura Langman", "Ruth Gotlieb", "Jamal Fiso", "Peter Gluckman",
+                   "John Messara", "Kate Sheppard", "Tana Umaga", "Donald Trump", "Theresa May",
+                   "Karen Poutasi", "Kevin Snee", "Tony Randerson", "Alwyn Poole", "Karen Poole",
+                   "Anahila Kanongata’a-Suisuiki", "Casey Kōpua", "Ronald Reagan", "Dorian Devers",
+                   "Beth Houlbrooke", "Elsdon Best", "Hugo Chávez", "William Shakespeare", "Thomas Thorp")
+    IDENTITY = re.compile(
+        r"\b(?:my (?:electorate|constituency|home|family|wife|husband|daughter|son|children|father|mother|"
+        r"background|career|colleagues?|friends?|bill|member[’']s bill|first speech|maiden speech|dad|mum|"
+        r"memories|childhood|life|office|experience|staff|role|street)|my own constituents|"
+        r"my (?:\w+ )?siblings|my \d+ (?:months|years)|"
+        r"I (?:am|was|have been|used to be|grew up|worked|lived|met|visited|introduced|represent|"
+        r"served|studied|attended|chaired|gave birth)|I(?:[’']ve| have| had)? (?:announced|released|launched|"
+        r"spent|been|heard|experienced|saw|went|got|took|received|walked|sat|remember|recall)|"
+        r"I (?:had|have had) (?:the )?(?:privilege|honour|opportunity)|"
+        r"I (?:actually |personally |recently |previously |once )?(?:went|visited|drove|travelled)|"
+        r"I (?:had|have) to drive|"
+        r"I[’']m|as (?:a |an |the )?(?:(?:Assistant|Deputy|Prime) )?(?:Minister|Speaker)|as a member of|"
+        r"member (?:for|from) [A-Z][\w’-]+|myself|in my role|my time as|Dad|Mum|I have fond memories|Tourette[’']s)\b", re.I)
+    PROCEDURAL = re.compile(
+        r"\b(?:point of order|I (?:seek|move|rise)|take (?:a|this) call|leave to|withdraw|"
+        r"personal explanation|maiden speech|valedictory|table (?:a|the) (?:document|paper))\b", re.I)
+    EXCHANGE = re.compile(r"(?i:\bQuestion No\.?\s*\d|\b(?:SPEAKER|CHAIRPERSON|CLERK)\s*:|"
+                          r"\bBill read a (?:first|second|third) time|\b(?:Debate|House|Sitting) (?:adjourned|suspended)|"
+                          r"\b(?:Question|Motion|Amendment) (?:put|agreed|lost))|"
+                          r"\b[A-Z][A-Z -]{3,}\s*\([^)]{1,100}\)\s*(?:to\b|:)|"
+                          r"\b[A-Z][\w’'-]+(?: [A-Z][\w’'-]+){1,4}:")
+    HONORIFIC = re.compile(r"\b(?:Mr|Mrs|Ms|Miss|Dr|Hon|Sir|Dame)\.?\s+"
+                           r"(?!(?:Speaker|Chair|Chairperson|Assistant|Deputy|Minister)\b)[A-Z][\w’'-]+|"
+                           r"\bMinister [A-Z][\w’'-]+")
+    CEREMONIAL = re.compile(r"\b(?:song|lyrics|singing|birthday|congratulat\w*|anniversary|maiden|valedictory)\b", re.I)
+    NAMED_COMPARISON = re.compile(r"\b(?:Trumpian|Shakespearean)\b", re.I)
+    AMBIGUOUS_NAME = re.compile(r"\b(?:Mark|Grant|Bill|Will|May),\s*(?:you|he|she|I)\b|"
+                                r"\b(?:Mark|Grant|Bill|Will|May) (?:said|says|did)\b")
+
+    def __init__(self, speakers=()):
+        names = {name for name in speakers if name and len(name.split()) >= 2
+                 and not re.search(r"SPEAKER|CHAIR|PRESIDENT|CLERK", name)} | set(self.EXTRA_NAMES)
+        variants = {re.sub("[’']", "[’']", re.escape(name)) for name in names}
+        self.full_names = re.compile(r"(?<!\w)(?:" + "|".join(sorted(variants)) + r")(?!\w)", re.I)
+        # Capitalized surname references and familiar first-name references are filtered conservatively.
+        aliases = {part.title() for name in names for part in (name.split()[0], name.split()[-1]) if len(part) > 2}
+        aliases -= {"Bill", "Will", "Mark", "Grant", "New", "May"}  # common nouns/month; full names still checked
+        self.aliases = re.compile(r"(?<!\w)(?:" + "|".join(re.escape(name) for name in sorted(aliases)) + r")(?!\w)")
+
+    def findings(self, text):
+        flags = {}
+        for label, pattern in (("named_person", self.full_names), ("person_alias", self.aliases),
+                               ("named_title", self.HONORIFIC), ("personal_identity", self.IDENTITY),
+                               ("procedural", self.PROCEDURAL), ("embedded_exchange", self.EXCHANGE),
+                               ("ceremonial_or_lyrics", self.CEREMONIAL), ("named_comparison", self.NAMED_COMPARISON),
+                               ("ambiguous_name_context", self.AMBIGUOUS_NAME)):
+            matches = [match.group() for match in pattern.finditer(text)]
+            if matches:
+                flags[label] = sorted(set(matches))
+        if not re.search(r'[.!?][”\"\')\]]*$', text) or text.endswith("..."):
+            flags["incomplete_end"] = [text[-80:]]
+        if not text or not text[0].isupper():
+            flags["incomplete_start"] = [text[:80]]
+        if text.count("(") != text.count(")") or text.count("[") != text.count("]") or text.count("“") != text.count("”") or text.count('"') % 2:
+            flags["unbalanced_delimiters"] = []
+        return flags
+
+
+def sentence_spans(text):
+    """Source code-point spans; do not split abbreviations, numbered questions or initials."""
     start = len(text) - len(text.lstrip())
-    stop = min(len(text.rstrip()), start + maximum)
-    if stop < len(text.rstrip()):
-        endings = list(re.finditer(r"[.!?](?:\s|$)", text[start:stop]))
-        if endings and endings[-1].end() >= 250:
-            stop = start + endings[-1].end()
-        else:
-            stop = text.rfind(" ", start, stop)
-    value = text[start:stop].rstrip()
-    return start, start + len(value), value
+    for match in re.finditer(r'[.!?][”\"\')\]]*(?=\s|$)', text):
+        prefix = text[start:match.start()]
+        if match.group().startswith(".") and re.search(r"\b(?:Mr|Mrs|Ms|Dr|Hon|Rt|No|St|Prof|[A-Z])$", prefix):
+            continue
+        end = match.end()
+        if end > start:
+            yield start, end
+        start = end
+        while start < len(text) and text[start].isspace():
+            start += 1
+
+
+def excerpt(text, maximum=1000, review=None):
+    """Earliest suitable contiguous block of complete sentences; leave the source unchanged."""
+    review = review or GroundingReview()
+    # ParlSpeech sometimes appends the next oral question to a response. Never use that tail.
+    exchange = review.EXCHANGE.search(text)
+    body = text[:exchange.start()] if exchange else text
+    spans = list(sentence_spans(body))
+    for index, (start, _) in enumerate(spans):
+        chosen = None
+        for _, end in spans[index:]:
+            if end - start > maximum:
+                break
+            value = text[start:end]
+            if len(value) >= 250 and len(value.split()) >= 45 and not review.findings(value):
+                chosen = (start, end, value)
+        if chosen:
+            return chosen
+    return 0, 0, ""
 
 
 def extract(columns, count):
@@ -242,9 +329,11 @@ def extract(columns, count):
     # Keep 40x desired rows to allow duplicate/short-text filtering, fail if scarce.
     candidates = {party: [] for party in PARTIES}
     labels = set()
+    speakers = set()
     for row in range(len(columns["party"].value)):
         party = columns["party"].value[row]
         labels.add(party)
+        speakers.add(columns["speaker"].value[row])
         if party not in candidates or columns["chair"].value[row] != 0:
             continue
         date = columns["date"].value[row]
@@ -259,6 +348,7 @@ def extract(columns, count):
     print("Party labels:", sorted(str(label) for label in labels), flush=True)
     result = {}
     seen = set()
+    review = GroundingReview(speakers)
     for party, display in PARTIES.items():
         records = []
         for date, negative_row in sorted(candidates[party], reverse=True):
@@ -267,7 +357,7 @@ def extract(columns, count):
             speaker = columns["speaker"].value[row]
             if not text or not speaker:
                 continue
-            start, end, value = excerpt(text)
+            start, end, value = excerpt(text, review=review)
             normal = " ".join(unicodedata.normalize("NFKC", value).split()).lower()
             if len(value) < 250 or len(value.split()) < 45 or normal in seen:
                 continue
@@ -297,7 +387,7 @@ def extract(columns, count):
                       "candidateMultiplier": 40, "maxCharacters": 1000, "minCharacters": 250,
                       "minWords": 45, "chairExcluded": True,
                       "deduplication": "nfkc-whitespace-lowercase-v1",
-                      "excerptPolicy": "verbatim-prefix-prefer-sentence-v1",
+                      "excerptPolicy": "verbatim-complete-generic-sentences-v2",
                       "script": "scripts/extract-hansard.py"}}
     return result
 
