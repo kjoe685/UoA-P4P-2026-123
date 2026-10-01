@@ -3,6 +3,7 @@ package engine;
 import engine.agent.AdversarialStrategy;
 import engine.agent.Agent;
 import engine.agent.Party;
+import engine.demo.DemoChatManager;
 import engine.debate.DebateManager;
 import engine.io.ConsoleEngineOutput;
 import engine.io.EngineOutput;
@@ -28,12 +29,16 @@ public class Main {
         Scanner scanner = new Scanner(System.in);
         FileTextReader fileTextReader = new FileTextReader();
 
-        String apiKey;
-        try {
-            apiKey = OpenAIKeyReader.read(fileTextReader);
-        } catch (IllegalStateException e) {
-            System.out.println(e.getMessage());
-            return;
+        System.out.print("Generation: demo (no model calls) or openai (blank = demo): ");
+        boolean demo = !scanner.nextLine().trim().equalsIgnoreCase("openai");
+        String apiKey = "";
+        if (!demo) {
+            try {
+                apiKey = OpenAIKeyReader.read(fileTextReader);
+            } catch (IllegalStateException e) {
+                System.out.println(e.getMessage());
+                return;
+            }
         }
 
         System.out.println("=== AI-Based Virtual Parliament ===");
@@ -66,7 +71,7 @@ public class Main {
 
             String agentName = party.getDisplayName() + " MP";
             String systemPrompt = promptManager.assemblePersonaPrompt(agentName, party, strategy, topics.get(0));
-            OpenAIChatManager chatManager = new OpenAIChatManager(apiKey);
+            ChatManager chatManager = demo ? new DemoChatManager() : new OpenAIChatManager(apiKey);
             agents.add(new Agent(agentName, party, strategy, chatManager, systemPrompt));
         }
 

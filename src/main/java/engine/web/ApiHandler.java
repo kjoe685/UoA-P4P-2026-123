@@ -3,6 +3,7 @@ package engine.web;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import engine.ChatManager;
+import engine.demo.DemoChatManager;
 import engine.agent.AdversarialStrategy;
 import engine.agent.Agent;
 import engine.agent.Party;
@@ -65,7 +66,7 @@ public class ApiHandler implements HttpHandler {
             sendJson(exchange, e.status, "{\"error\":" + DebateSession.quote(e.getMessage()) + "}");
         } catch (RuntimeException e) {
             e.printStackTrace();
-            sendJson(exchange, 500, "{\"error\":" + DebateSession.quote("Internal server error: " + e) + "}");
+            sendJson(exchange, 500, "{\"error\":\"The operation failed. Check the server and configuration.\"}");
         } finally {
             exchange.close();
         }
@@ -123,7 +124,7 @@ public class ApiHandler implements HttpHandler {
         }
 
         StringBuilder json = new StringBuilder("{");
-        json.append("\"apiKeyConfigured\":").append(apiKeyProblem == null)
+        json.append("\"defaultProvider\":\"demo\",\"apiKeyConfigured\":").append(apiKeyProblem == null)
                 .append(",\"apiKeyProblem\":").append(DebateSession.quote(apiKeyProblem))
                 .append(",\"defaultTopic\":").append(DebateSession.quote(DEFAULT_TOPIC))
                 .append(",\"defaultRounds\":").append(DEFAULT_ROUNDS)
@@ -199,11 +200,18 @@ public class ApiHandler implements HttpHandler {
             throw new BadRequestException(400, "Select at least one party to take their seats");
         }
 
-        String apiKey;
-        try {
-            apiKey = OpenAIKeyReader.read(fileTextReader);
-        } catch (IllegalStateException e) {
-            throw new BadRequestException(400, e.getMessage());
+        Object providerValue = body.getOrDefault("provider", "demo");
+        if (!providerValue.equals("demo") && !providerValue.equals("openai")) {
+            throw new BadRequestException(400, "Choose demo or openai");
+        }
+        boolean demo = providerValue.equals("demo");
+        String apiKey = "";
+        if (!demo) {
+            try {
+                apiKey = OpenAIKeyReader.read(fileTextReader);
+            } catch (IllegalStateException e) {
+                throw new BadRequestException(400, e.getMessage());
+            }
         }
 
         PromptManager promptManager = new PromptManager(fileTextReader);
@@ -212,7 +220,7 @@ public class ApiHandler implements HttpHandler {
             Party party = parties.get(i);
             String agentName = party.getDisplayName() + " MP";
             String systemPrompt = promptManager.assemblePersonaPrompt(agentName, party, strategies.get(i), topics.get(0));
-            agents.add(new Agent(agentName, party, strategies.get(i), chatManagerFactory.apply(apiKey), systemPrompt));
+            agents.add(new Agent(agentName, party, strategies.get(i), demo ? new DemoChatManager() : chatManagerFactory.apply(apiKey), systemPrompt));
         }
 
         DebateSession session = new DebateSession(UUID.randomUUID().toString(), agents, topics, rounds);

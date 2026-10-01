@@ -69,6 +69,10 @@ public class WebServer {
         System.out.println("=== AI-Based Virtual Parliament: web frontend ===");
         System.out.println("The House is open at http://localhost:" + server.getAddress().getPort());
         System.out.println("Press Ctrl+C to stop the server.");
+        if (Boolean.getBoolean("parliament.openBrowser") && java.awt.Desktop.isDesktopSupported()) {
+            try { java.awt.Desktop.getDesktop().browse(java.net.URI.create("http://localhost:" + server.getAddress().getPort())); }
+            catch (IOException | UnsupportedOperationException e) { System.out.println("Open the address above in your browser."); }
+        }
     }
 
     /**

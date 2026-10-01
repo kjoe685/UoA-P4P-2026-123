@@ -74,6 +74,7 @@ public class DebateManager {
 
                     output.speakerCalled(speaker, false);
                     String statement = speaker.speak(cue);
+                    if (stopRequested || Thread.currentThread().isInterrupted()) return;
                     output.displayMessage(speaker, statement, false);
                     broadcast(speaker, statement);
 
@@ -134,6 +135,7 @@ public class DebateManager {
             if (Math.random() < chance) {
                 output.speakerCalled(candidate, true);
                 String interjection = candidate.speak(INTERJECTION_CUE);
+                if (stopRequested || Thread.currentThread().isInterrupted()) return;
                 output.displayMessage(candidate, interjection, true);
                 broadcast(candidate, interjection);
                 return;

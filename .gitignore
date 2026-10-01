@@ -31,3 +31,15 @@ replay_pid*
 
 # Claude Code
 .claude/
+
+# Local builds, runtime downloads, private runs and all credential locations
+/target/
+/out/
+/.runtime/
+/.maven-cache/
+/runs/
+/keys/OpenAI_Key.txt
+/keys/**/*_Key.txt
+/nlp/.venv/
+/nlp/.cache/
+__pycache__/

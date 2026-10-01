@@ -112,7 +112,7 @@ public class DebateSession implements EngineOutput {
                 // Adjourning interrupts the in-flight API call, which surfaces here as an exception.
                 outcome = "adjourned";
             } else {
-                record("{\"type\":\"error\",\"message\":" + quote(describe(e)) + "}");
+                record("{\"type\":\"error\",\"message\":\"Generation failed. Check provider configuration and retry.\"}");
                 outcome = "error";
             }
         }

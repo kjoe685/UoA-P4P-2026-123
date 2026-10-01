@@ -160,10 +160,12 @@ async function initSetup() {
   }
 
   if (!config.apiKeyConfigured) {
-    showConfigNotice(false, 'No OpenAI API key is set up yet.', config.apiKeyProblem);
+    showConfigNotice(false, 'The demonstration is ready. OpenAI needs an API key.', config.apiKeyProblem);
   }
 
   const saved = readStore(localStorage, SETUP_STORAGE_KEY) || {};
+  setup.provider = saved.provider === 'openai' ? 'openai' : 'demo';
+  $('#provider').value = setup.provider;
   setup.topics = Array.isArray(saved.topics) && saved.topics.length ? saved.topics : [config.defaultTopic];
   setup.rounds = clampRounds(saved.rounds ?? config.defaultRounds);
   for (const party of config.parties) {
@@ -373,7 +375,7 @@ async function convene(event) {
   try {
     const { id } = await api('/api/debates', {
       method: 'POST',
-      body: { topics: cleanTopics(), rounds: setup.rounds, members },
+      body: { topics: cleanTopics(), rounds: setup.rounds, members, provider: setup.provider },
     });
     openSitting(id);
   } catch (error) {
@@ -815,6 +817,7 @@ function downloadTranscript() {
    ========================================================================= */
 
 function wireEvents() {
+  $('#provider').addEventListener('change', (event) => { setup.provider = event.target.value; saveSetup(); });
   $('#setup-form').addEventListener('submit', convene);
   $('#add-topic').addEventListener('click', () => {
     addTopic($('#new-topic').value);

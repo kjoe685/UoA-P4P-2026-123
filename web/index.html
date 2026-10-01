@@ -83,6 +83,12 @@
             <p class="hint">rounds per item. In each round, every member speaks once.</p>
           </div>
           <p id="sitting-summary" class="summary"></p>
+          <label for="provider">Generation</label>
+          <select id="provider">
+            <option value="demo">Deterministic demonstration · no model calls</option>
+            <option value="openai">OpenAI · uses your API key</option>
+          </select>
+          <p class="hint">The demonstration uses fixed sample speeches and cannot test model behaviour.</p>
         </fieldset>
 
         <div class="setup-actions">
