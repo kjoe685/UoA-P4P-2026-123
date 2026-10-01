@@ -54,6 +54,8 @@ Unix uses `sh run.sh cli` with the same arguments. Read the listed asset before 
 
 Each `runs/<UUID>/` contains `setup.json` (private frozen configuration and resolved prompts), `transcript.json` (schema 2 public evidence), and `view.json` (owner presentation/progress events). Only the public transcript and derived public text are exported. Imported public transcripts get new storage IDs and unknown private assignments. Do not publish the private run directory.
 
+Grounding quantities use `groundingCount` globally and an optional member override. `-1` means all available; `0` means none. The backend rejects infeasible counts before provider construction and freezes the selected text/metadata privately. The bundled corpus remains small pending T08b expansion. See [grounding quantities and provenance](grounding.md).
+
 Public transcript validation rejects unknown fields, missing roster members, invalid topic/evidence references and duplicate IDs. A running imported transcript is saved as interrupted. On restart, recover committed evidence that was not yet streamed; never restart generations automatically. Storage writes use a forced temporary file and atomic replacement when supported, before publishing completed speech.
 
 The local scheduler permits two running and four waiting sittings. HTTP/SSE adapters and terminal controls call the same application service. Public hosting and identity/access control remain future work; this server binds to loopback.

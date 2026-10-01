@@ -18,7 +18,13 @@ public class RunStore {
     public void saveTranscript(Transcript transcript) { write(directory(transcript.runId()).resolve("transcript.json"),transcript); }
     public void saveView(String id,List<String> events) { write(directory(id).resolve("view.json"),events); }
     public Transcript transcript(String id) { return Json.read(read(directory(id).resolve("transcript.json")),Transcript.class); }
-    public PrivateSetup setup(String id) { return Json.read(read(directory(id).resolve("setup.json")),PrivateSetup.class); }
+    @SuppressWarnings("unchecked") public PrivateSetup setup(String id) {
+        var value=(Map<String,Object>)Json.parse(read(directory(id).resolve("setup.json")));
+        var settings=(Map<String,Object>)value.get("settings");
+        settings.putIfAbsent("groundingCount",-1);
+        for (Object raw:(List<?>)settings.get("members")) ((Map<String,Object>)raw).putIfAbsent("groundingCount",null);
+        return Json.read(Json.write(value),PrivateSetup.class);
+    }
     public List<String> view(String id) {
         Object raw=Json.parse(read(directory(id).resolve("view.json")));
         if (!(raw instanceof List<?> entries) || entries.stream().anyMatch(item -> !(item instanceof String)))

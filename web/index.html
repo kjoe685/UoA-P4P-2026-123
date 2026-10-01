@@ -144,6 +144,9 @@
           <label class="field-label" for="evaluator-model">Evaluator model</label>
           <select id="evaluator-model"></select>
           <p class="hint">Evaluator choice is saved independently. LLM evaluation reports five rubric metrics separately and may use paid cloud calls when selected.</p>
+          <label for="grounding-count" class="field-label">Grounding excerpts per party</label>
+          <input id="grounding-count" type="number" min="-1" max="1000" step="1" value="-1">
+          <p class="hint">Use -1 for all available excerpts or 0 for none. Per-party overrides are available above. Selection follows corpus order. The bundled corpus is still a small sample; requests exceeding it are rejected before generation.</p>
           <p class="hint">The demonstration uses fixed sample speeches and cannot test model behaviour.</p>
         </fieldset>
 

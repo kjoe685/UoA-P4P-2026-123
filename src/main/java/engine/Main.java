@@ -211,6 +211,12 @@ public final class Main {
         settings.put("topics",topics);
         settings.put("rounds",rounds.isBlank() ? config.get("defaultRounds") : Integer.parseInt(rounds));
         settings.put("members",members); settings.put("agentModelPreset",preset); settings.put("evaluatorModelPreset",judge);
+        String grounding=ask("Grounding excerpts per party (-1 = all, 0 = none; blank = all): ");
+        settings.put("groundingCount",grounding.isBlank() ? -1 : Integer.parseInt(grounding));
+        for (var member:members) {
+            String override=ask(member.get("party")+" grounding override (blank = shared): ");
+            if (!override.isBlank()) member.put("groundingCount",Integer.parseInt(override));
+        }
         return settings;
     }
     private String ask(String prompt) { output.print(prompt); return input.hasNextLine() ? input.nextLine().trim() : ""; }

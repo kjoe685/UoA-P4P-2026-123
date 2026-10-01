@@ -6,14 +6,14 @@
 - Branch: `codex/dual-interface-integration`, created from refreshed `origin/main` at `a99269c`.
 - Recovered primary plan from previous chat `01a0f6c1-32c6-7a33-bf8c-6ad9fee837e5`; that chat ended in Plan mode without writing changes.
 - Preserved secondary plan from `9cbcb12`. Evaluation reference: `c41c4c2`, file-level reuse only.
-- T01–T05 committed; T06a VADER `42abca1`, T06b Cardiff `fd9fcb7`, T06c DeBERTa `b8f013d`. T07 LLM rubric verified and ready for checkpoint. Expanded grounding follows.
+- T01–T07 committed; T07 LLM rubric `3c59438`. T08a grounding quantities verified and ready for checkpoint. T08b expanded genuine corpus/import follows.
 - Existing untracked `UoA-P4P-2026-123.iml` belongs to the user; preserve it.
 
 ## Active task
 
-**T07 — LLM rubric evaluation (REQ-09, 14, 21–22, 27–30, 35–41, 53–55, 57).**
+**T08a — Grounding quantities and legacy compatibility (REQ-43, 53–55, 57).**
 
-Outcome: blind evaluator resources, strict stable-ID evidence/chronology, five independent metrics, bounded repair/budgets, frozen durable jobs and browser/CLI/menu report controls. Dependency: `b8f013d`. Java49 pass; synthetic browser workflow and actual HTTP private-context exclusion pass. No paid/live evaluator calls or accuracy claims. Screenshot parliament-llm-fixture-report.png. Next commit then T08 grounding. Detailed dated history below is retained for recovery.
+Outcome: zero/global/per-party quantity controls, deterministic selection, private selection provenance, pre-provider infeasibility rejection and old-run replay migration without rewriting files. Dependency: `3c59438`. Java51 pass and browser save/start verified shared0/Labour1/National0. Corrected number input events after browser caught a save timing issue. Next commit then T08b genuine corpus expansion/import. Detailed dated history below is retained for recovery.
 
 T06a in progress: managed uv 0.12.16 with official SHA-256 verified, managed Python 3.12.14 + locked lightweight dependencies installed locally. Python 13 passed / 3 transformer tests skipped; Java 38 passed. Added durable bounded setup/evaluation jobs, restart/cancellation retention, string-ID schema 2 NLP projection, Unicode/evidence validation, independent method reports and CLI/menu/browser operations. Final managed-service browser QA and docs remain before commit. Test server session 32604 still old T05 JAR; replace it. No paid calls or transformer weights.
 
@@ -44,7 +44,8 @@ Verification: Maven verify passes 2 tests (HTTP demo/chair/replay and cancellati
 | T06b Cardiff | Complete | Java40/Python17, real offline79-item inference, editor/restart/partial-failure acceptance |
 | T06c DeBERTa | Complete | Java41/Python17, real three-method79-item inference, stable targets and missing-target insufficiency |
 | T07 LLM rubric | Complete | Java49; actual mock HTTP privacy; synthetic browser/CLI/menu; repair/budget/evidence/cancellation/restart |
-| T08–T10 | Pending | See primary plan |
+| T08a quantities | Complete | Java51; zero/overrides/private selection; legacy replay and browser save/start |
+| T08b–T10 | Pending | Genuine corpus expansion/import, behavior/pilot tools, final delivery acceptance |
 
 ## Recovery procedure
 
@@ -67,3 +68,9 @@ T06c verified: explicit DeBERTa setup8255cd93-e7b1-4f77-8cc9-9ba05ce32e19 comple
 T07 active (REQ-09,14,21–22,27–30,35–41,53–55,57), dependency b8f013d. Adapt rubric/config/prompts and core evaluator from c41c4c2 at file level to schema2 stable IDs; shared durable jobs and interfaces. Acceptance: fake-provider blind input/privacy, five metric coverage/evidence/chronology, bounded repair and budgets, cancellation/partial/restart, editable frozen resources. No paid QA calls. Next inspect source contracts then implement core/job integration.
 
 T07 verified: 49 Java tests pass, Python17 unchangedpass. Separate5metrics, schema2topic/turnIDs, chronology/evidence/coverage, bounded1repair and call/input/response/token budgets. Frozenresources, per-topicpartialcommit, cancellation/restart and providerfailure retention verified. ActualmockHTTP proves privatelyconfiguredagent state doesnot enterblindwire via sharedadapter. CLI/menu/API parity tests and browserfakeserver58347 port18088 pass; screenshotparliament-llm-fixture-report.png. Browserfakejob uses syntheticfixture labels; no paidcalls. RealQAserver94952 remains idle18087. Commitnext then T08.
+
+T08a active (REQ-43,53–55,57), dependency3c59438. Implement zero/global/per-party grounding quantity, deterministic selection, pre-generation infeasibility rejection, private frozen selection and backward compatibility with saved private setup. REQ42 expanded genuine corpus/import remains T08b. Next inspect corpus metadata/schema and add controls plus legacy-restart tests. No source text invention.
+
+T08a Java51 pass. Browser exposed numeric input change timing: filled quantity controls showed0/1 but saved defaults. Corrected to input events; recheck savedsetup/actualprivate selection beforecommit. Latestserver10187 port18087. Genuine corpus source verified via officialDataverseAPI: file3758791 Corp_NZHoR_V2.rds,1002250606bytes,MD5 9fd5ed34476b1a428ba16079b955d8fc. No datasetdownload yet; careful memory-aware extraction needed for T08b.
+
+T08a verified: Java51 pass. Browser corrected input events then saved grounding-zero-with-labour-one and started d1dce138-223e-49fa-b506-ab06dccecabb withshared0/Labour1/National0 confirmed inprivate selection metadata. Oldschema replay test passes withoutsetuprewrite/providercreation. Screenshotparliament-grounding-counts.png. User .iml preserved. T08b sourcefile1GB notdownloaded; no expansionclaim. Commitnext.

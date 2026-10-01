@@ -92,17 +92,24 @@ public final class DebateApplication implements AutoCloseable {
         if (jobs.getActiveCount()+jobs.getQueue().size()>=6) throw new IllegalStateException("Debate job limit reached");
         var snapshot=configuration(); var spec=RunSpec.resolve(settings.resolve(body),snapshot.config());
         var prompts=new PromptManager(snapshot);
+        Map<String,Object> selectedGrounding=new LinkedHashMap<>();
+        // Validate every quantity before constructing providers or scheduling generation.
+        for (var member:spec.members()) selectedGrounding.put(member.party().name(),snapshot.excerpts().select(member.party(),member.groundingCount()==null ? spec.groundingCount() : member.groundingCount()));
         List<Agent> agents=new ArrayList<>(); Map<String,String> resolved=new LinkedHashMap<>();
         for (var member:spec.members()) {
             var profile=snapshot.config().parties().get(member.party());
             var identity=new Participant(member.party().name().toLowerCase(Locale.ROOT),profile.displayName()+" MP",member.party(),profile.displayName());
-            var grounding=snapshot.excerpts().getExcerpts(member.party());
+            @SuppressWarnings("unchecked") var chosen=(List<Map<String,Object>>)selectedGrounding.get(member.party().name());
+            var grounding=chosen.stream().map(entry -> (String)entry.get("text")).toList();
             String prompt=prompts.assemblePersonaPrompt(identity.name(),profile,member.strategy(),grounding);
             resolved.put(identity.id(),prompt);
             var model=snapshot.config().models().get(member.modelPreset());
             agents.add(new Agent(identity,member.strategy(),providers.apply(model),prompt,grounding,model));
         }
-        var setup=new PrivateSetup(spec,snapshot.config(),snapshot.sourceContents(),snapshot.sourceHashes(),resolved);
+        Map<String,String> contents=new LinkedHashMap<>(snapshot.sourceContents()), hashes=new LinkedHashMap<>(snapshot.sourceHashes());
+        String selection=Json.writeCanonical(Map.of("policy","first-N-in-corpus-order-v1","corpusSha256",snapshot.sourceHashes().get("data/hansard/excerpts.json"),"parties",selectedGrounding));
+        contents.put("selection/hansard.json",selection); hashes.put("selection/hansard.json",Hashes.sha256(selection));
+        var setup=new PrivateSetup(spec,snapshot.config(),contents,hashes,resolved);
         var session=new RunSession(UUID.randomUUID().toString(),agents,snapshot,setup,store);
         sessions.put(session.id(),session);
         try { jobs.execute(session::run); }

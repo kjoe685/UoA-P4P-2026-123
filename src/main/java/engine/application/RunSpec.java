@@ -7,11 +7,16 @@ import java.util.*;
 
 /** One validated settings contract, shared by both interfaces. No credentials. */
 public record RunSpec(List<Topic> topics, int rounds, List<Member> members, String agentModelPreset,
-                      String evaluatorModelPreset) {
-    public record Member(Party party, AdversarialStrategy strategy, String modelPreset) { }
+                      String evaluatorModelPreset,int groundingCount) {
+    public RunSpec(List<Topic> topics,int rounds,List<Member> members,String agentModelPreset,String evaluatorModelPreset) {
+        this(topics,rounds,members,agentModelPreset,evaluatorModelPreset,-1);
+    }
+    public record Member(Party party, AdversarialStrategy strategy, String modelPreset,Integer groundingCount) {
+        public Member(Party party,AdversarialStrategy strategy,String modelPreset) { this(party,strategy,modelPreset,null); }
+    }
     public RunSpec { topics=List.copyOf(topics); members=List.copyOf(members); }
     public static RunSpec resolve(Map<String,Object> body, EngineConfig config) {
-        if (!Set.of("topics","rounds","members","agentModelPreset","evaluatorModelPreset","provider").containsAll(body.keySet()))
+        if (!Set.of("topics","rounds","members","agentModelPreset","evaluatorModelPreset","provider","groundingCount").containsAll(body.keySet()))
             throw new IllegalArgumentException("Unknown sitting setting; credentials do not belong in settings");
         List<Topic> topics=new ArrayList<>();
         for (Object item:list(body,"topics")) {
@@ -44,7 +49,7 @@ public record RunSpec(List<Topic> topics, int rounds, List<Member> members, Stri
         Set<Party> seen=EnumSet.noneOf(Party.class); List<Member> members=new ArrayList<>();
         for (Object item:list(body,"members")) {
             if (!(item instanceof Map<?,?> raw)) throw new IllegalArgumentException("Each member must be an object");
-            if (!Set.of("party","strategy","modelPreset").containsAll(raw.keySet())) throw new IllegalArgumentException("Unknown member setting");
+            if (!Set.of("party","strategy","modelPreset","groundingCount").containsAll(raw.keySet())) throw new IllegalArgumentException("Unknown member setting");
             Party party=enumValue(Party.class,raw.get("party"),"party");
             AdversarialStrategy strategy=raw.get("strategy")==null ? AdversarialStrategy.NONE
                     : enumValue(AdversarialStrategy.class,raw.get("strategy"),"strategy");
@@ -55,22 +60,28 @@ public record RunSpec(List<Topic> topics, int rounds, List<Member> members, Stri
                 modelPreset=(String)modelValue;
             }
             requirePreset(config,modelPreset);
-            members.add(new Member(party,strategy,modelPreset));
+            members.add(new Member(party,strategy,modelPreset,raw.get("groundingCount")==null ? null : count(raw.get("groundingCount"))));
         }
         if (members.isEmpty()) throw new IllegalArgumentException("Select at least one party");
-        return new RunSpec(topics,number.intValue(),members,preset,judge);
+        return new RunSpec(topics,number.intValue(),members,preset,judge,count(body.getOrDefault("groundingCount",-1)));
     }
     public Map<String,Object> settings() {
         Map<String,Object> result=new LinkedHashMap<>();
         result.put("topics",topics.stream().map(topic -> {
             Map<String,Object> item=new LinkedHashMap<>(); item.put("title",topic.title()); item.put("policyTarget",topic.policyTarget()); return item;
         }).toList());
-        result.put("rounds",rounds); result.put("agentModelPreset",agentModelPreset); result.put("evaluatorModelPreset",evaluatorModelPreset);
+        result.put("rounds",rounds); result.put("agentModelPreset",agentModelPreset); result.put("evaluatorModelPreset",evaluatorModelPreset); result.put("groundingCount",groundingCount);
         result.put("members",members.stream().map(member -> {
             Map<String,Object> item=new LinkedHashMap<>(); item.put("party",member.party().name()); item.put("strategy",member.strategy().name());
-            if (!member.modelPreset().equals(agentModelPreset)) item.put("modelPreset",member.modelPreset()); return item;
+            if (!member.modelPreset().equals(agentModelPreset)) item.put("modelPreset",member.modelPreset());
+            if (member.groundingCount()!=null) item.put("groundingCount",member.groundingCount()); return item;
         }).toList());
         return result;
+    }
+    private static int count(Object raw) {
+        if (!(raw instanceof Number value) || value.doubleValue()!=value.intValue() || value.intValue()< -1 || value.intValue()>1000)
+            throw new IllegalArgumentException("Grounding count must be -1 (all) or an integer from 0 to 1000");
+        return value.intValue();
     }
     private static void requirePreset(EngineConfig config,String preset) {
         if (!config.models().containsKey(preset)) throw new IllegalArgumentException("Unknown model preset");

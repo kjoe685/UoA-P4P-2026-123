@@ -165,6 +165,8 @@ async function initSetup(suppliedSettings = null) {
   setup.agentModelPreset = config.models[saved.agentModelPreset] ? saved.agentModelPreset : config.agentModelPreset;
   setup.evaluatorModelPreset = config.models[saved.evaluatorModelPreset] ? saved.evaluatorModelPreset : config.evaluatorModelPreset;
   setup.policyTargets = Array.isArray(saved.policyTargets) ? saved.policyTargets : [];
+  setup.groundingCount = Number.isInteger(saved.groundingCount) ? saved.groundingCount : -1;
+  $('#grounding-count').value=setup.groundingCount;
   const evaluatorOverride=$('#analysis-llm-model').value;
   $('#analysis-llm-model').replaceChildren(el('option',{text:"Sitting's saved evaluator",attrs:{value:''}}),
     ...Object.entries(config.models).filter(([,model])=>model.provider!=='demo').map(([id,model])=>el('option',{text:`${id} · ${model.provider}`,attrs:{value:id,selected:evaluatorOverride===id}})));
@@ -183,6 +185,7 @@ async function initSetup(suppliedSettings = null) {
       included: savedMember ? savedMember.included !== false : true,
       strategy: strategyIsKnown ? savedMember.strategy : 'NONE',
       modelPreset: config.models[savedMember?.modelPreset] ? savedMember.modelPreset : '',
+      groundingCount: Number.isInteger(savedMember?.groundingCount) ? savedMember.groundingCount : null,
     };
   }
 
@@ -310,6 +313,9 @@ function renderParties() {
       seatBadge(party.id),
       el('span', { className: 'party-name', text: party.name })),
     el('p', { className: 'party-ideology', text: capitalise(party.ideology) }),
+    el('label',{className:'field-label',text:`Grounding count override (${party.groundingAvailable} available)`,attrs:{for:`grounding-${party.id}`}}),
+    el('input',{attrs:{id:`grounding-${party.id}`,type:'number',min:-1,max:1000,step:1,value:member.groundingCount ?? '',placeholder:'Shared count',disabled:!member.included},
+      on:{input:event=>{ member.groundingCount=event.target.value==='' ? null : Number(event.target.value); saveSetup(); }}}),
     el('div', {},
       el('label', { className: 'field-label', text: 'Model override', attrs: { for: `model-${party.id}` } }),
       el('select', { attrs: { id: `model-${party.id}`, disabled: !member.included },
@@ -370,7 +376,8 @@ function selectedMembers() {
   return config.parties
     .filter((party) => setup.members[party.id].included)
     .map((party) => ({ party: party.id, strategy: setup.members[party.id].strategy,
-      ...(setup.members[party.id].modelPreset ? { modelPreset: setup.members[party.id].modelPreset } : {}) }));
+      ...(setup.members[party.id].modelPreset ? { modelPreset: setup.members[party.id].modelPreset } : {}),
+      ...(setup.members[party.id].groundingCount!=null ? {groundingCount:setup.members[party.id].groundingCount} : {}) }));
 }
 
 function cleanTopics() {
@@ -417,7 +424,7 @@ async function convene(event) {
 
 function currentSettings() {
   return { topics: setup.topics.map((title, index) => ({ title: title.trim(), policyTarget: setup.policyTargets[index] || null })).filter(topic => topic.title),
-    rounds: setup.rounds, members: selectedMembers(), agentModelPreset: setup.agentModelPreset, evaluatorModelPreset: setup.evaluatorModelPreset };
+    rounds: setup.rounds, members: selectedMembers(), agentModelPreset: setup.agentModelPreset, evaluatorModelPreset: setup.evaluatorModelPreset, groundingCount:setup.groundingCount };
 }
 
 async function refreshSettings() {
@@ -435,7 +442,7 @@ async function loadSettings() {
       rounds: saved.rounds, agentModelPreset: saved.agentModelPreset, evaluatorModelPreset: saved.evaluatorModelPreset, members: {} };
     for (const party of config.parties) {
       const member = saved.members.find(item => item.party === party.id);
-      values.members[party.id] = { included: !!member, strategy: member?.strategy || 'NONE', modelPreset: member?.modelPreset || '' };
+      values.members[party.id] = { included: !!member, strategy: member?.strategy || 'NONE', modelPreset: member?.modelPreset || '', groundingCount:member?.groundingCount ?? null };
     }
     writeStore(localStorage, SETUP_STORAGE_KEY, values);
     await initSetup(values);
@@ -1034,6 +1041,7 @@ function wireEvents() {
   $('#validate-asset').addEventListener('click', () => updateAsset(false));
   $('#save-asset').addEventListener('click', () => updateAsset(true));
   $('#agent-model').addEventListener('change', event => { setup.agentModelPreset = event.target.value; saveSetup(); });
+  $('#grounding-count').addEventListener('input',event=>{ setup.groundingCount=Number(event.target.value); saveSetup(); });
   $('#evaluator-model').addEventListener('change', event => { setup.evaluatorModelPreset = event.target.value; saveSetup(); });
   $('#refresh-runs').addEventListener('click', refreshSavedRuns);
   $('#import-transcript').addEventListener('change', importTranscript);

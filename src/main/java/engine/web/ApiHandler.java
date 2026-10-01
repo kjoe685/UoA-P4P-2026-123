@@ -122,10 +122,10 @@ public final class ApiHandler implements HttpHandler {
         sendJson(exchange,404,Map.of("error","Unknown API endpoint"));
     }
     private Map<String,Object> config() {
-        EngineConfig settings=application.configuration().config();
+        var snapshot=application.configuration(); EngineConfig settings=snapshot.config();
         List<Map<String,Object>> parties=new ArrayList<>();
         settings.parties().entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach(entry -> {
-            var profile=entry.getValue(); parties.add(Map.of("id",entry.getKey().name(),"name",profile.displayName(),"ideology",profile.ideology()));
+            var profile=entry.getValue(); parties.add(Map.of("id",entry.getKey().name(),"name",profile.displayName(),"ideology",profile.ideology(),"groundingAvailable",snapshot.excerpts().getExcerpts(entry.getKey()).size()));
         });
         Map<String,Object> result=new LinkedHashMap<>();
         result.put("credentialHelp","Cloud providers need their own API key. Ollama needs a running local server and an installed model. See docs/configuration.md.");
