@@ -6,14 +6,14 @@
 - Branch: `codex/dual-interface-integration`, created from refreshed `origin/main` at `a99269c`.
 - Recovered primary plan from previous chat `01a0f6c1-32c6-7a33-bf8c-6ad9fee837e5`; that chat ended in Plan mode without writing changes.
 - Preserved secondary plan from `9cbcb12`. Evaluation reference: `c41c4c2`, file-level reuse only.
-- T01–T05 committed; T06a VADER committed `42abca1`. T06b Cardiff verified and ready for its checkpoint. T06c DeBERTa follows.
+- T01–T05 committed; T06a VADER `42abca1`, T06b Cardiff `fd9fcb7`. T06c DeBERTa verified and ready for checkpoint. T07 LLM rubric follows.
 - Existing untracked `UoA-P4P-2026-123.iml` belongs to the user; preserve it.
 
 ## Active task
 
-**T06b — Cardiff sentiment setup/readiness (REQ-27–34, 49–50, 53–56, 57).**
+**T06c — DeBERTa stance acceptance (REQ-27–34, 53–57).**
 
-Outcome: explicit pinned Cardiff setup, truthful package/cache/loaded readiness, separate offline method reports, frozen analysis settings and validated model editor across interfaces. Dependency: T06a `42abca1`. Java40/Python17 pass; real Cardiff79-item smoke, missing-model partial failure, browser editor and restart checks pass. Next commit this checkpoint and implement DeBERTa interface/real inference acceptance. Detailed dated history below is retained for recovery.
+Outcome: explicit DeBERTa setup and method selection across interfaces, stable policy targets, missing-target insufficiency and expandable separate reports. Dependency: `fd9fcb7`. Java41/Python17 pass. Real79-item three-method offline smoke and actual missing-target/VADER mixed result pass. Screenshot parliament-three-method-analysis.png records report/abstention. Next commit and start T07. Detailed dated history below is retained for recovery.
 
 T06a in progress: managed uv 0.12.16 with official SHA-256 verified, managed Python 3.12.14 + locked lightweight dependencies installed locally. Python 13 passed / 3 transformer tests skipped; Java 38 passed. Added durable bounded setup/evaluation jobs, restart/cancellation retention, string-ID schema 2 NLP projection, Unicode/evidence validation, independent method reports and CLI/menu/browser operations. Final managed-service browser QA and docs remain before commit. Test server session 32604 still old T05 JAR; replace it. No paid calls or transformer weights.
 
@@ -42,7 +42,8 @@ Verification: Maven verify passes 2 tests (HTTP demo/chair/replay and cancellati
 | T05 providers/settings | Complete | 33 tests pass, browser save/load/rejection and real JSON download; no live provider verification |
 | T06a VADER/jobs | Complete | 38 Java tests, 13 Python tests/3 optional skips, managed setup/real inference/report restart verified |
 | T06b Cardiff | Complete | Java40/Python17, real offline79-item inference, editor/restart/partial-failure acceptance |
-| T06c–T10 | Pending | See primary plan |
+| T06c DeBERTa | Complete | Java41/Python17, real three-method79-item inference, stable targets and missing-target insufficiency |
+| T07–T10 | Pending | See primary plan |
 
 ## Recovery procedure
 
@@ -57,3 +58,7 @@ T06b uncommitted: explicit model-download/setup jobs, package/cache/loaded readi
 T06b QA underway: Java39 pass; Python17 pass. Latest elevated server session83760 port18087. Browser confirms real missing-Cardiff failure retains successful VADER result and readiness says files missing. Explicit Cardiff setup job123845af-ff17-4df1-b4cd-2f2ba2becb21 running; network download authorized through QA server. Prior missing report f6f309ef-d9f8-4067-9f97-1081c9ba033a saved in target/missing-cardiff-report.json. Next verify download/hash, actual offline Cardiff, shared model-config validation and restart before commit.
 
 T06b verified: 40 Java tests pass, 17 Python tests pass/no skips. Explicit Cardiff setup completed and real offline inference scored 79 contributions/2 batches alongside VADER (job5c935ef2-6ef9-4623-88c7-f09f085e5e39). Exact pinned weights SHA2564d24a3e32a88ed1c4e5b789fc6644e2e767500554e954b27dccf52a8e762cbae. Missing-model partial failure retains VADER. Browser report reopens after restart without service; shared model editor rejects minScore3 and saves original settings. Active-job snapshot regression passes; owned service now starts from frozen job settings. Latest server94952 port18087. Final CLI cache-reuse smoke underway; then commit T06b and start DeBERTa acceptance.
+
+T06c active (REQ-27–34,53–57), dependency fd9fcb7. Expose DeBERTa controls, verify stable topic/proposition routing and missing targets, preserve all three separate scales/provenance. Explicit pinned setup job8255cd93-e7b1-4f77-8cc9-9ba05ce32e19 running on server94952. Next controlled target-validation tests, real offline stance smoke, browser/CLI acceptance and checkpoint.
+
+T06c verified: explicit DeBERTa setup8255cd93-e7b1-4f77-8cc9-9ba05ce32e19 complete, pinned weight SHA256605e40d2020f4c66666db3e98a4bc277b6214565eac95f35c1a5027a93ee0ef0. Job8e144ac7-3bfc-4c60-a3c9-6893fab24bdc all3methodsok79items each. Missing-target job9c25f7d5-c687-4d73-909e-f8c24e8ebefe retains successfulVADER with stanceinsufficient/no_policy_target. Browser method selection/saved-run/report and console check pass. Java41/Python17 pass; restricted temp issue fixed with repository basetemp. No paid calls or accuracy claims. Next T07 file-level LLM adaptation.

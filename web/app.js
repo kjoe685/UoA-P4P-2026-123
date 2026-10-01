@@ -984,10 +984,11 @@ async function openReport(id) {
     if (!result) { $('#analysis-report').replaceChildren(); return; }
     const contents=[el('h3',{text:`${job.kind} · ${job.state.toLowerCase()}`})];
     if (result.methods) for (const method of result.methods) {
-      contents.push(el('h4',{text:`${method.methodId} · ${method.status}${method.error ? ` · ${method.error}` : ''}`}));
+      const section=el('details',{},el('summary',{text:`${method.methodId} · ${method.status}${method.error ? ` · ${method.error}` : ''}`}));
+      contents.push(section);
       for (const batch of method.batches) for (const item of batch.items) {
-        contents.push(el('p',{text:`${item.turnId}${item.targetId ? ` → ${item.targetId}` : ''}: ${item.status}${item.error ? ` · ${item.error}` : ''}`}));
-        for (const chunk of item.chunks) contents.push(el('p',{className:'analysis-chunk',text:`${chunk.text} — ${chunk.label}${chunk.compound!=null ? ` (compound ${chunk.compound})` :
+        section.append(el('p',{text:`${item.turnId}${item.targetId ? ` → ${item.targetId}` : ''}: ${item.status}${item.error ? ` · ${item.error}` : ''}`}));
+        for (const chunk of item.chunks) section.append(el('p',{className:'analysis-chunk',text:`${chunk.text} — ${chunk.label}${chunk.compound!=null ? ` (compound ${chunk.compound})` :
           ` (${Object.entries(chunk.scores).map(([label,score])=>`${label} ${score.toFixed(3)}`).join(', ')}; ${chunk.uncertainty?.abstained ? 'abstained' : 'uncalibrated scores'})`}`}));
       }
     }
@@ -1000,6 +1001,7 @@ async function openReport(id) {
 function wireEvents() {
   $('#setup-local').addEventListener('click',setupLocal);
   $('#setup-cardiff').addEventListener('click',()=>setupLocalModel('cardiff-sentiment'));
+  $('#setup-deberta').addEventListener('click',()=>setupLocalModel('deberta-stance'));
   $('#refresh-jobs').addEventListener('click',async()=>{await refreshJobs(); await refreshLocalReadiness();});
   $('#evaluate-btn').addEventListener('click',evaluateSitting);
   $('#load-settings').addEventListener('click', loadSettings);

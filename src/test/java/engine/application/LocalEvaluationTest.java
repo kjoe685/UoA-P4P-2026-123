@@ -113,6 +113,24 @@ class LocalEvaluationTest {
         }
         assertThrows(IllegalArgumentException.class,() -> new LocalEvaluationConfig(1,URI.create("https://example.org/v1/analyze"),5,1,List.of("vader-sentiment")));
     }
+    @Test void stanceBindsEachItemToItsTopicAndDoesNotGuessMissingPolicyTargets() throws Exception {
+        TestFixtures.copyResources(root); var source=evidence();
+        var transcript=new Transcript(2,source.runId(),1L,2L,source.roster(),List.of(source.topics().get(0),new Topic("topic-2","Other",null)),List.of(
+                source.events().get(2),new PublicEvent("turn-5","topic-2",PublicEvent.Type.SPEECH,source.roster().get(0),"Unrelated wording.")),Transcript.Outcome.COMPLETE);
+        var request=NlpInputMapper.batches(transcript,"deberta-stance",new LocalEvaluationService(root,null,config -> null).configuration()).get(0);
+        assertEquals("topic-1",request.turns().get(0).targets().get(0).id());
+        assertEquals("Build more public housing",request.turns().get(0).targets().get(0).proposition());
+        assertTrue(request.turns().get(1).targets().isEmpty());
+        var provenance=new NlpResponse.Provenance("test","revision","0.2.0","a".repeat(64),"cpu",Map.of(),"uncalibrated scores","punctuation-v1",Map.of());
+        var turn=request.turns().get(0); var scores=Map.of("support",.8,"oppose",.1,"unrelated",.1);
+        var chunk=new NlpResponse.Chunk(0,0,turn.text().codePointCount(0,turn.text().length()),turn.text(),"support",scores,null,
+                new NlpResponse.Uncertainty(.8,.7,-(.8*Math.log(.8)+.2*Math.log(.1))/Math.log(3),false));
+        var item=new NlpResponse.Item(turn.turnId(),"topic-1","ok",null,List.of(chunk),0);
+        var missing=new NlpResponse.Item("turn-5",null,"insufficient_evidence","no_policy_target",List.of(),0);
+        NlpResponseValidator.validate(request,new NlpResponse(2,List.of(new NlpResponse.Method("deberta-stance","ok",null,provenance,List.of(item,missing),0))));
+        var forged=new NlpResponse.Item(turn.turnId(),"topic-2","ok",null,List.of(chunk),0);
+        assertThrows(IllegalStateException.class,() -> NlpResponseValidator.validate(request,new NlpResponse(2,List.of(new NlpResponse.Method("deberta-stance","ok",null,provenance,List.of(forged,missing),0)))));
+    }
     @Test void activeAnalysisKeepsCapturedSettingsAfterEditing() throws Exception {
         TestFixtures.copyResources(root); var configFile=root.resolve("config/local-evaluation.json");
         Files.writeString(configFile,Files.readString(configFile).replace("\"batchSize\":50","\"batchSize\":1"));
