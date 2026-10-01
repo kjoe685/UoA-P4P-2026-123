@@ -439,7 +439,7 @@ async function loadSettings() {
     if (!name) throw new Error('Choose saved settings to load.');
     const saved = await api(`/api/settings/${encodeURIComponent(name)}`);
     const values = { topics: saved.topics.map(topic => topic.title), policyTargets: saved.topics.map(topic => topic.policyTarget || ''),
-      rounds: saved.rounds, agentModelPreset: saved.agentModelPreset, evaluatorModelPreset: saved.evaluatorModelPreset, members: {} };
+      rounds: saved.rounds, agentModelPreset: saved.agentModelPreset, evaluatorModelPreset: saved.evaluatorModelPreset, groundingCount:saved.groundingCount, members: {} };
     for (const party of config.parties) {
       const member = saved.members.find(item => item.party === party.id);
       values.members[party.id] = { included: !!member, strategy: member?.strategy || 'NONE', modelPreset: member?.modelPreset || '', groundingCount:member?.groundingCount ?? null };
@@ -469,12 +469,51 @@ async function readAsset() {
   } catch (error) { $('#asset-status').textContent = error.message; }
 }
 
+let corpusCandidate = null;
+let corpusValidation = null;
+function showCorpusSummary(selector,result) {
+  const table=el('table',{},el('thead',{},el('tr',{},...['Party','Excerpts','Speakers','Date range'].map(text=>el('th',{text})))),
+    el('tbody',{},...result.parties.map(party=>el('tr',{},...[
+      party.name,party.excerpts,party.speakers,`${party.earliestDate} – ${party.latestDate}`].map(text=>el('td',{text}))))));
+  $(selector).replaceChildren(el('p',{text:`${result.totalExcerpts} excerpts across ${result.parties.length} parties.`}),table,
+    el('details',{},el('summary',{text:'Source, selection and validation details'}),el('pre',{text:JSON.stringify(result,null,2)})));
+}
+async function refreshCorpus() {
+  try { showCorpusSummary('#corpus-summary',await api('/api/corpus')); }
+  catch(error) { $('#corpus-status').textContent=error.message; }
+}
+async function selectCorpus(event) {
+  corpusCandidate=null; corpusValidation=null;
+  $('#validate-corpus').disabled=true; $('#import-corpus').disabled=true; $('#corpus-candidate').textContent='';
+  const file=event.target.files[0]; if (!file) return;
+  try {
+    if (file.size>1500000) throw new Error('Choose a corpus JSON file up to 1.5 MB (one million characters).');
+    corpusCandidate=await file.text(); $('#validate-corpus').disabled=false;
+    $('#corpus-status').textContent=`Loaded ${file.name}. Validate before importing.`;
+  } catch(error) { $('#corpus-status').textContent=error.message; }
+}
+async function updateCorpus(save) {
+  const text=corpusCandidate;
+  if (!text || save && !corpusValidation) return;
+  $('#import-corpus').disabled=true; $('#validate-corpus').disabled=true;
+  try {
+    const body={text,save}; if (save) body.expectedSha256=corpusValidation.previousSha256;
+    const result=await api('/api/corpus',{method:'POST',body});
+    if (corpusCandidate!==text) return;
+    showCorpusSummary('#corpus-candidate',result);
+    corpusValidation=save ? null : result;
+    $('#corpus-status').textContent=save ? 'Imported validated corpus. New sittings use this revision.' : 'Candidate is valid. Review its summary before importing.';
+    if (save) { await initSetup(); await refreshCorpus(); }
+  } catch(error) { corpusValidation=null; $('#corpus-status').textContent=error.message; }
+  finally { $('#validate-corpus').disabled=!corpusCandidate; $('#import-corpus').disabled=!corpusValidation; }
+}
+
 async function updateAsset(save) {
   try {
     const path = $('#asset-path').value;
     if ($('#asset-text').dataset.path !== $('#asset-path').value) throw new Error('Load the selected asset before editing.');
     await api('/api/assets', { method: 'POST', body: { path: $('#asset-path').value, text: $('#asset-text').value, save } });
-    if (save) await initSetup();
+    if (save) { await initSetup(); if (path==='data/hansard/excerpts.json') await refreshCorpus(); }
     const future = path === 'nlp/config/models.json' || path.includes('evaluation') || path.startsWith('prompts/Evaluator')
       ? 'New analyses use this revision; active jobs retain captured settings.' : 'New sittings use this revision.';
     $('#asset-status').textContent = save ? `Saved validated contents. ${future}` : 'Contents are valid. Nothing saved yet.';
@@ -1040,6 +1079,10 @@ function wireEvents() {
   $('#read-asset').addEventListener('click', readAsset);
   $('#validate-asset').addEventListener('click', () => updateAsset(false));
   $('#save-asset').addEventListener('click', () => updateAsset(true));
+  $('#refresh-corpus').addEventListener('click',refreshCorpus);
+  $('#corpus-file').addEventListener('change',selectCorpus);
+  $('#validate-corpus').addEventListener('click',()=>updateCorpus(false));
+  $('#import-corpus').addEventListener('click',()=>updateCorpus(true));
   $('#agent-model').addEventListener('change', event => { setup.agentModelPreset = event.target.value; saveSetup(); });
   $('#grounding-count').addEventListener('input',event=>{ setup.groundingCount=Number(event.target.value); saveSetup(); });
   $('#evaluator-model').addEventListener('change', event => { setup.evaluatorModelPreset = event.target.value; saveSetup(); });
@@ -1096,6 +1139,7 @@ async function main() {
     $('#asset-path').replaceChildren(...paths.map(path => el('option', { text: path, attrs: { value: path } })));
   } catch (error) { $('#settings-status').textContent = error.message; }
   await refreshSavedRuns();
+  await refreshCorpus();
   await refreshJobs(); await refreshLocalReadiness();
   setInterval(refreshJobs,3000);
 

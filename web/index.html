@@ -101,6 +101,16 @@
         <button id="validate-asset" type="button" class="btn btn-secondary">Validate contents</button>
         <button id="save-asset" type="button" class="btn btn-secondary">Save validated asset</button>
         <p id="asset-status" class="hint" role="status"></p>
+        <h3>Grounding corpus</h3>
+        <p class="hint">The bundled corpus contains 100 genuine ParlSpeech excerpts for each supported party. Review counts, dates and provenance below. Importing a candidate replaces grounding for new sittings; existing sittings retain their captured excerpts.</p>
+        <button id="refresh-corpus" type="button" class="btn btn-secondary">Refresh corpus summary</button>
+        <div id="corpus-summary" aria-label="Corpus summary"></div>
+        <label for="corpus-file" class="field-label">Candidate corpus JSON file</label>
+        <input id="corpus-file" type="file" accept="application/json,.json">
+        <button id="validate-corpus" type="button" class="btn btn-secondary" disabled>Validate candidate</button>
+        <button id="import-corpus" type="button" class="btn btn-secondary" disabled>Import validated candidate</button>
+        <p id="corpus-status" class="hint" role="status"></p>
+        <div id="corpus-candidate" aria-label="Candidate validation"></div>
       </details>
 
       <form id="setup-form" class="setup-grid" novalidate>
@@ -146,7 +156,7 @@
           <p class="hint">Evaluator choice is saved independently. LLM evaluation reports five rubric metrics separately and may use paid cloud calls when selected.</p>
           <label for="grounding-count" class="field-label">Grounding excerpts per party</label>
           <input id="grounding-count" type="number" min="-1" max="1000" step="1" value="-1">
-          <p class="hint">Use -1 for all available excerpts or 0 for none. Per-party overrides are available above. Selection follows corpus order. The bundled corpus is still a small sample; requests exceeding it are rejected before generation.</p>
+          <p class="hint">Use -1 for all available excerpts or 0 for none. Per-party overrides are available above. Selection follows corpus order. The bundled corpus has 100 excerpts per party; larger requests are rejected before generation. Higher counts add more text to each agent's prompt.</p>
           <p class="hint">The demonstration uses fixed sample speeches and cannot test model behaviour.</p>
         </fieldset>
 

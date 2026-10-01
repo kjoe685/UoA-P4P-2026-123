@@ -6,14 +6,14 @@
 - Branch: `codex/dual-interface-integration`, created from refreshed `origin/main` at `a99269c`.
 - Recovered primary plan from previous chat `01a0f6c1-32c6-7a33-bf8c-6ad9fee837e5`; that chat ended in Plan mode without writing changes.
 - Preserved secondary plan from `9cbcb12`. Evaluation reference: `c41c4c2`, file-level reuse only.
-- T01–T07 committed; T07 LLM rubric `3c59438`. T08a grounding quantities verified and ready for checkpoint. T08b expanded genuine corpus/import follows.
+- T01–T08a committed; T08b source preparation `d7af82d`. T08b extraction/import verified below and ready for local checkpoint; T09 behaviour/pilot tools follows.
 - Existing untracked `UoA-P4P-2026-123.iml` belongs to the user; preserve it.
 
 ## Active task
 
-**T08a — Grounding quantities and legacy compatibility (REQ-43, 53–55, 57).**
+**T08b — Genuine corpus extraction and shared import (REQ-42–43, 53–57).**
 
-Outcome: zero/global/per-party quantity controls, deterministic selection, private selection provenance, pre-provider infeasibility rejection and old-run replay migration without rewriting files. Dependency: `3c59438`. Java51 pass and browser save/start verified shared0/Labour1/National0. Corrected number input events after browser caught a save timing issue. Next commit then T08b genuine corpus expansion/import. Detailed dated history below is retained for recovery.
+Outcome: 500 genuine excerpts (100 each for five supported parties), source-row/date/speaker/agenda/full-speech hash/exact excerpt span, deterministic bounded extraction, global deduplication, strict validated atomic import/status shared by browser/menu/commands, private frozen corpus provenance. Dependency: `d7af82d`. Java54 and extractor5 pass; candidate reproduced byte-for-byte and imported through shared CLI/API and browser. Named-settings grounding-count loading fixed and browser verified zero remains zero. Screenshot `parliament-corpus-import.png` in current automation visualization directory. Next commit T08b, then record T09 behaviour/pilot acceptance before implementation. No paid calls or research-validity claims. Detailed dated history below is retained for recovery.
 
 T06a in progress: managed uv 0.12.16 with official SHA-256 verified, managed Python 3.12.14 + locked lightweight dependencies installed locally. Python 13 passed / 3 transformer tests skipped; Java 38 passed. Added durable bounded setup/evaluation jobs, restart/cancellation retention, string-ID schema 2 NLP projection, Unicode/evidence validation, independent method reports and CLI/menu/browser operations. Final managed-service browser QA and docs remain before commit. Test server session 32604 still old T05 JAR; replace it. No paid calls or transformer weights.
 
@@ -45,7 +45,8 @@ Verification: Maven verify passes 2 tests (HTTP demo/chair/replay and cancellati
 | T06c DeBERTa | Complete | Java41/Python17, real three-method79-item inference, stable targets and missing-target insufficiency |
 | T07 LLM rubric | Complete | Java49; actual mock HTTP privacy; synthetic browser/CLI/menu; repair/budget/evidence/cancellation/restart |
 | T08a quantities | Complete | Java51; zero/overrides/private selection; legacy replay and browser save/start |
-| T08b–T10 | Pending | Genuine corpus expansion/import, behavior/pilot tools, final delivery acceptance |
+| T08b corpus/import | Verified | Java54/extractor5, 500 genuine excerpts, identical repeated extraction, shared CLI/menu/API/browser import, frozen private resources |
+| T09–T10 | Pending | Behaviour/pilot tools and final delivery acceptance; human research review remains pending |
 
 ## Recovery procedure
 
@@ -90,3 +91,9 @@ Usage checkpoint 2026-10-02T03:39:33.2312154+13:00:99% primary usage consumed. L
 }. Scriptdownload-hansard.ps1 WIP until full verification; no genuine expansion/import performed. Nextfinishchecksum/cache reuse then memory-aware extraction/metadata/dedup/import interfaces. Useriml preserved. No pushes/paidcalls.
 
 T08b source preparation verified 2026-10-02T03:40:38.6349544+13:00: official1,002,250,606byte NZRDS downloaded, size/officialMD5 verified; SHA256 e796a474362a013355ffe3dce3d7adcb8e38e99be18b601622ae6b48fa71c373. Repeat downloadhelper reused verifiedcache. Datasetversion1.0/CC0-1.0 verified viaofficialAPI. All download/QAprocesses finished/stopped. This is source preparation only: expanded excerpts, extraction/dedup/import and interface parity remainpending. NativeUnix/resume interruption acceptance of thishelper remainspending. Next memory-aware extraction then corpus validation beforeanyassetsreplacement.
+
+T08b extraction/import active (REQ-42–43, 53–57), dependency d7af82d. Recovered prior automation chats; no unfinished code edits, only user's untracked .iml. Implement bounded genuine ParlSpeech NZ extraction with reproducible source/row metadata, deduplication and corpus validation; shared backend import/status operations with browser, menu and commands. Acceptance: official pinned source extraction, substantially expanded excerpts for all six parties, invalid/duplicate corpus rejection without asset changes, frozen active-run resources and private provenance, fake-provider interface parity and Java regression suite. Next inspect RDS structure and source documentation, then extract to a reviewable candidate before replacing assets. No paid model calls; source provenance does not establish research representativeness or model accuracy.
+
+T08b WIP: dependency-free narrow XDR reader indexed the verified 925766-row NZ file without loading its text vector; candidate has 100 excerpts for each of five supported parties. Official API reconfirmed version1/CC0-1.0 and pinned size. Shared corpus service/API/commands/menu/browser preview-import added; strict metadata/hash/dedup/span/count validation and private selection provenance now implemented. Found and corrected browser named-settings load losing shared grounding count. Java51 baseline passed with old corpus; extractor5 offline tests and Node syntax pass. Initial Maven invocation failed without managed MAVEN_USER_HOME, then managed wrapper passed. Next import latest candidate through backend, add corpus/frozen-resource/interface regressions, verify reproducibility and browser flow. No paid calls.
+
+T08b verified 2026-10-02: Java54 pass, extractor5 pass, Node syntax pass. Official file SHA256 verified before every extraction; repeated default candidates and installed corpus are identical SHA256 cac8861595cdd7effc9ad2b82f655836904ba5f6c96b909eca1e7e1c1a29402e (596415 bytes). Five parties/100 each, source dates2018-2019; biased recent-date subset explicitly documented. CLI real import, menu/API tests, browser chooser/preview/import and named-settingszero loading pass. Snapshot/importconflict/hash/span/dedup/secretmetadata rejection tests pass. Screenshot parliament-corpus-import.png. Server64681 remains idle18087; no paidcalls. Next checkpointT08b thenT09 targeted rebuttals/concessions and pilot tools.

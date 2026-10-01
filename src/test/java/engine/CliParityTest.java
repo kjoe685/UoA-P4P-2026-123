@@ -15,6 +15,27 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class CliParityTest {
     @TempDir Path root;
+    @Test void corpusCommandsAndMenuValidateBeforeAtomicImportThroughSharedApi() throws Exception {
+        TestFixtures.copyResources(root);
+        try (var app=new DebateApplication(root,new RunStore(root.resolve("runs")),model -> { fail("Corpus operations must not create providers"); return null; })) {
+            var server=WebServer.start(0,app);
+            try {
+                String base="http://localhost:"+server.getAddress().getPort(); var bytes=new ByteArrayOutputStream(); var output=new PrintStream(bytes);
+                var cli=new Main(base,new Scanner(""),output); Path candidate=root.resolve("candidate.json");
+                var corpus=(Map<?,?>)Json.parse(app.assets().read(CorpusService.PATH)); Collections.swap((List<?>)corpus.get("Labour"),0,1);
+                Files.writeString(candidate,Json.write(corpus)); String before=(String)app.corpus().status().get("sha256");
+                cli.command(new String[]{"corpus","status"}); assertTrue(bytes.toString().contains("500")); bytes.reset();
+                cli.command(new String[]{"corpus","validate",candidate.toString()}); assertTrue(bytes.toString().contains("\"saved\":false"));
+                assertEquals(before,app.corpus().status().get("sha256")); bytes.reset();
+                cli.command(new String[]{"corpus","import",candidate.toString()}); assertTrue(bytes.toString().contains("\"saved\":true"));
+                assertNotEquals(before,app.corpus().status().get("sha256"));
+                Files.writeString(candidate,Json.write(corpus));
+                new Main(base,new Scanner("16\n"+candidate+"\nimport\n0\n"),output).menu();
+                assertEquals(Files.readString(candidate),app.assets().read(CorpusService.PATH));
+                Files.writeString(candidate,"{}"); assertThrows(IllegalStateException.class,() -> cli.command(new String[]{"corpus","import",candidate.toString()}));
+            } finally { server.stop(0); ((ExecutorService)server.getExecutor()).shutdownNow(); }
+        }
+    }
     @Test void llmRubricCommandsMenuAndReportsShareTheApplication() throws Exception {
         TestFixtures.copyResources(root); var resources=engine.evaluation.llm.LlmEvaluationResources.load(root);
         try (var app=new DebateApplication(root,new RunStore(root.resolve("runs")),model -> request -> LlmEvaluationTest.fake(request,resources.rubric()))) {

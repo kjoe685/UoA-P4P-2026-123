@@ -2,3 +2,4 @@
 *.sh text eol=lf
 mvnw text eol=lf
 *.cmd text eol=crlf
+data/hansard/excerpts.json text eol=lf

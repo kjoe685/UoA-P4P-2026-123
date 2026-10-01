@@ -16,6 +16,7 @@ public final class DebateApplication implements AutoCloseable {
     private final Path root;
     private final RunStore store;
     private final AssetService assets;
+    private final CorpusService corpus;
     private final SettingsService settings;
     private final JobService background;
     private final ManagedNlp nlp;
@@ -31,6 +32,7 @@ public final class DebateApplication implements AutoCloseable {
                              Function<engine.evaluation.local.LocalEvaluationConfig,engine.evaluation.local.NlpClient> analysisClients) {
         this.root=root; this.store=store; this.providers=providers;
         this.assets=new AssetService(root); this.settings=new SettingsService(root.resolve("runs/settings"));
+        this.corpus=new CorpusService(assets);
         this.background=new JobService(root.resolve("runs/jobs")); this.nlp=new ManagedNlp(root);
         this.llmEvaluation=new LlmEvaluationService(root,background,providers);
         this.evaluation=new LocalEvaluationService(root,background,(config,settings) -> {
@@ -50,6 +52,7 @@ public final class DebateApplication implements AutoCloseable {
     }
     public ConfigurationSnapshot configuration() { return ConfigurationSnapshot.load(root); }
     public AssetService assets() { return assets; }
+    public CorpusService corpus() { return corpus; }
     public SettingsService settings() { return settings; }
     public JobService background() { return background; }
     public Map<String,Object> localReadiness() { return nlp.readiness(evaluation.configuration()); }
@@ -107,7 +110,8 @@ public final class DebateApplication implements AutoCloseable {
             agents.add(new Agent(identity,member.strategy(),providers.apply(model),prompt,grounding,model));
         }
         Map<String,String> contents=new LinkedHashMap<>(snapshot.sourceContents()), hashes=new LinkedHashMap<>(snapshot.sourceHashes());
-        String selection=Json.writeCanonical(Map.of("policy","first-N-in-corpus-order-v1","corpusSha256",snapshot.sourceHashes().get("data/hansard/excerpts.json"),"parties",selectedGrounding));
+        String selection=Json.writeCanonical(Map.of("policy","first-N-in-corpus-order-v1","corpusSha256",snapshot.sourceHashes().get("data/hansard/excerpts.json"),
+                "corpusProvenance",snapshot.excerpts().provenance(),"parties",selectedGrounding));
         contents.put("selection/hansard.json",selection); hashes.put("selection/hansard.json",Hashes.sha256(selection));
         var setup=new PrivateSetup(spec,snapshot.config(),contents,hashes,resolved);
         var session=new RunSession(UUID.randomUUID().toString(),agents,snapshot,setup,store);

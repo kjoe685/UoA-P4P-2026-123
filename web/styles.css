@@ -872,3 +872,6 @@ textarea { resize: vertical; min-height: 72px; }
 #analysis-report { max-height: 560px; overflow: auto; }
 #analysis-report pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }
 .analysis-chunk { padding: 8px; border-left: 3px solid var(--green); }
+#corpus-summary table, #corpus-candidate table { width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 13px; }
+#corpus-summary th, #corpus-summary td, #corpus-candidate th, #corpus-candidate td { text-align: left; padding: 6px; border-bottom: 1px solid var(--rule); }
+#corpus-summary pre, #corpus-candidate pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 320px; overflow: auto; font-size: 12px; }

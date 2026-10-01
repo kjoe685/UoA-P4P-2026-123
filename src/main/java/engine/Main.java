@@ -43,6 +43,19 @@ public final class Main {
     public void command(String[] args) throws Exception {
         switch (args[0]) {
             case "config" -> output.println(get("/api/config"));
+            case "corpus" -> {
+                requireArgs(args,2);
+                switch (args[1]) {
+                    case "status" -> output.println(get("/api/corpus"));
+                    case "validate", "import" -> {
+                        requireArgs(args,3); String text=Files.readString(Path.of(args[2]));
+                        var validation=(Map<?,?>)Json.parse(post("/api/corpus",Json.write(Map.of("text",text,"save",false))));
+                        if (args[1].equals("validate")) output.println(Json.write(validation));
+                        else output.println(post("/api/corpus",Json.write(Map.of("text",text,"save",true,"expectedSha256",validation.get("previousSha256")))));
+                    }
+                    default -> throw new IllegalArgumentException("corpus status | validate FILE | import FILE");
+                }
+            }
             case "local" -> {
                 requireArgs(args,2);
                 switch (args[1]) {
@@ -96,16 +109,25 @@ public final class Main {
                 requireArgs(args,2); String text=get(runPath(args[1])+(args[0].equals("transcript") ? "/transcript" : "/export"));
                 if (args.length>2) Files.writeString(Path.of(args[2]),text,StandardCharsets.UTF_8); else output.println(text);
             }
-            default -> throw new IllegalArgumentException("Commands: config, settings, assets, local status/setup, evaluate ID [METHODS], jobs, job ID, cancel-job ID, report ID [FILE], runs, start SETTINGS.json, import TRANSCRIPT.json, watch ID, ruling ID TEXT, cancel ID, transcript ID [FILE], export ID [FILE]");
+            default -> throw new IllegalArgumentException("Commands: config, settings, assets, corpus status/validate/import, local status/setup, evaluate ID [METHODS], jobs, job ID, cancel-job ID, report ID [FILE], runs, start SETTINGS.json, import TRANSCRIPT.json, watch ID, ruling ID TEXT, cancel ID, transcript ID [FILE], export ID [FILE]");
         }
     }
     void menu() throws Exception {
         while (true) {
-            output.println("\n1 Start sitting\n2 Saved sittings\n3 Watch sitting\n4 Chair ruling\n5 Adjourn\n6 Export JSON\n7 Export text\n8 Import transcript\n9 Saved settings\n10 Advanced assets\n11 Start from saved settings\n12 Local evaluation setup\n13 Evaluate sitting\n14 Analysis jobs/reports\n15 LLM rubric evaluation\n0 Exit");
+            output.println("\n1 Start sitting\n2 Saved sittings\n3 Watch sitting\n4 Chair ruling\n5 Adjourn\n6 Export JSON\n7 Export text\n8 Import transcript\n9 Saved settings\n10 Advanced assets\n11 Start from saved settings\n12 Local evaluation setup\n13 Evaluate sitting\n14 Analysis jobs/reports\n15 LLM rubric evaluation\n16 Grounding corpus\n0 Exit");
             String choice=ask("Choice: ");
             if (choice.equals("0") || choice.isEmpty() && !input.hasNextLine()) return;
             try {
                 switch (choice) {
+                    case "16" -> {
+                        output.println(get("/api/corpus")); String file=ask("Candidate corpus JSON file (blank = return): ");
+                        if (file.isBlank()) break;
+                        String text=Files.readString(Path.of(file));
+                        var validated=(Map<?,?>)Json.parse(post("/api/corpus",Json.write(Map.of("text",text,"save",false))));
+                        output.println(Json.write(validated));
+                        if (ask("Import this validated corpus for new sittings? Type import: ").equals("import"))
+                            output.println(post("/api/corpus",Json.write(Map.of("text",text,"save",true,"expectedSha256",validated.get("previousSha256")))));
+                    }
                     case "15" -> {
                         String id=ask("Sitting id: "), preset=ask("Evaluator model preset (blank = sitting's saved choice; cloud evaluation uses configured credentials): ");
                         output.println(post(runPath(id)+"/evaluate-llm",Json.write(preset.isBlank() ? Map.of() : Map.of("modelPreset",preset))));

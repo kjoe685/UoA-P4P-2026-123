@@ -32,7 +32,9 @@ class GroundingSelectionTest {
             for (Object invalid:List.of(-2,1.5,"1")) {
                 settings.put("groundingCount",invalid); assertThrows(IllegalArgumentException.class,() -> app.start(settings));
             }
-            app.assets().update("data/hansard/excerpts.json",app.assets().read("data/hansard/excerpts.json").replace(first,"EDITED_CORPUS_SENTINEL"),true);
+            var updated=(Map<?,?>)Json.parse(app.assets().read("data/hansard/excerpts.json"));
+            Collections.swap((List<?>)updated.get("Labour"),0,1);
+            app.assets().update("data/hansard/excerpts.json",Json.write(updated),true);
             assertEquals(selected,store.setup(run.id()).sourceContents().get("selection/hansard.json"));
         }
     }
