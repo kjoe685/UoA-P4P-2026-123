@@ -2,6 +2,10 @@ param([string]$Mode = 'web', [Parameter(ValueFromRemainingArguments = $true)][st
 $ErrorActionPreference = 'Stop'
 try {
     Set-Location -LiteralPath $PSScriptRoot
+    # Java's terminal contract is UTF-8, including redirected guided-menu input.
+    $OutputEncoding = New-Object System.Text.UTF8Encoding $false
+    [Console]::InputEncoding = $OutputEncoding
+    [Console]::OutputEncoding = $OutputEncoding
     . (Join-Path $PSScriptRoot 'scripts/runtime.ps1')
     $env:JAVA_HOME = Get-ParliamentJava -ProjectRoot $PSScriptRoot
     $env:PATH = (Join-Path $env:JAVA_HOME 'bin') + ';' + $env:PATH

@@ -89,20 +89,27 @@ if (-not (Test-Path -Path $MAVEN_M2_PATH)) {
 }
 
 $MAVEN_WRAPPER_DISTS = $null
-if ((Get-Item $MAVEN_M2_PATH).Target[0] -eq $null) {
+$mavenUserDirectory = Get-Item -LiteralPath $MAVEN_M2_PATH
+if (!$mavenUserDirectory.Target) {
   $MAVEN_WRAPPER_DISTS = "$MAVEN_M2_PATH/wrapper/dists"
 } else {
-  $MAVEN_WRAPPER_DISTS = (Get-Item $MAVEN_M2_PATH).Target[0] + "/wrapper/dists"
+  $MAVEN_WRAPPER_DISTS = $mavenUserDirectory.Target[0] + "/wrapper/dists"
 }
 
 $MAVEN_HOME_PARENT = "$MAVEN_WRAPPER_DISTS/$distributionUrlNameMain"
 $MAVEN_HOME_NAME = ([System.Security.Cryptography.SHA256]::Create().ComputeHash([byte[]][char[]]$distributionUrl) | ForEach-Object {$_.ToString("x2")}) -join ''
 $MAVEN_HOME = "$MAVEN_HOME_PARENT/$MAVEN_HOME_NAME"
 
-if (Test-Path -Path "$MAVEN_HOME" -PathType Container) {
+if (Test-Path -LiteralPath "$MAVEN_HOME/bin/$MVN_CMD" -PathType Leaf) {
   Write-Verbose "found existing MAVEN_HOME at $MAVEN_HOME"
   Write-Output "MVN_CMD=$MAVEN_HOME/bin/$MVN_CMD"
   exit $?
+}
+if (Test-Path -LiteralPath $MAVEN_HOME) {
+  $resolvedMavenHome = (Resolve-Path -LiteralPath $MAVEN_HOME).Path
+  $resolvedMavenParent = (Resolve-Path -LiteralPath $MAVEN_HOME_PARENT).Path
+  if ((Split-Path -Parent $resolvedMavenHome) -ne $resolvedMavenParent) { Write-Error 'Incomplete Maven directory is outside the wrapper cache' }
+  Move-Item -LiteralPath $resolvedMavenHome -Destination ($resolvedMavenHome + '.incomplete-' + [Guid]::NewGuid().ToString('N'))
 }
 
 if (! $distributionUrlNameMain -or ($distributionUrlName -eq $distributionUrlNameMain)) {
@@ -112,10 +119,17 @@ if (! $distributionUrlNameMain -or ($distributionUrlName -eq $distributionUrlNam
 # prepare tmp dir
 $TMP_DOWNLOAD_DIR_HOLDER = New-TemporaryFile
 $TMP_DOWNLOAD_DIR = New-Item -Itemtype Directory -Path "$TMP_DOWNLOAD_DIR_HOLDER.dir"
+$expectedTemporaryDirectory = $TMP_DOWNLOAD_DIR.FullName
 $TMP_DOWNLOAD_DIR_HOLDER.Delete() | Out-Null
+function Remove-WrapperTemporaryDirectory {
+  if (Test-Path -LiteralPath $expectedTemporaryDirectory) {
+    if ((Resolve-Path -LiteralPath $expectedTemporaryDirectory).Path -ne $expectedTemporaryDirectory) { throw 'Wrapper temporary cleanup target changed' }
+    Remove-Item -LiteralPath $expectedTemporaryDirectory -Recurse -Force | Out-Null
+  }
+}
 trap {
   if ($TMP_DOWNLOAD_DIR.Exists) {
-    try { Remove-Item $TMP_DOWNLOAD_DIR -Recurse -Force | Out-Null }
+    try { Remove-WrapperTemporaryDirectory }
     catch { Write-Warning "Cannot remove $TMP_DOWNLOAD_DIR" }
   }
 }
@@ -182,7 +196,7 @@ try {
     Write-Error "fail to move MAVEN_HOME"
   }
 } finally {
-  try { Remove-Item $TMP_DOWNLOAD_DIR -Recurse -Force | Out-Null }
+  try { Remove-WrapperTemporaryDirectory }
   catch { Write-Warning "Cannot remove $TMP_DOWNLOAD_DIR" }
 }
 

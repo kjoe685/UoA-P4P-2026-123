@@ -15,6 +15,18 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class CliParityTest {
     @TempDir Path root;
+    @Test void missingImportFileReturnsToMenuAndAllowsTheNextOperation() throws Exception {
+        TestFixtures.copyResources(root);
+        try (var app=new DebateApplication(root,new RunStore(root.resolve("runs")),model -> { fail("Missing file cannot construct providers"); return null; })) {
+            var server=WebServer.start(0,app);
+            try {
+                var bytes=new ByteArrayOutputStream(); var output=new PrintStream(bytes);
+                var menu=new Main("http://localhost:"+server.getAddress().getPort(),new Scanner("8\n"+root.resolve("missing.json")+"\n16\n\n0\n"),output);
+                menu.menu(); assertTrue(bytes.toString().contains("Could not read or write the selected file"));
+                assertTrue(bytes.toString().contains("\"totalExcerpts\":500")); assertTrue(app.runs().isEmpty());
+            } finally { server.stop(0); ((ExecutorService)server.getExecutor()).shutdownNow(); }
+        }
+    }
     @Test void pilotImportsExportsPreparationAndReportsHaveCommandMenuParity() throws Exception {
         TestFixtures.copyResources(root);
         try (var app=new DebateApplication(root,new RunStore(root.resolve("runs")),model -> null,config -> request -> new engine.evaluation.local.NlpResponse(2,List.of(

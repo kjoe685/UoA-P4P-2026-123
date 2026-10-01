@@ -12,6 +12,8 @@ Leave the launcher window open while using the app. Stop it with Ctrl+C. Subsequ
 
 On Linux/macOS, run `sh run.sh` from the extracted folder. This launcher supports x64 and ARM64 and requires standard shell utilities plus curl or wget, tar and a SHA-256 utility. Native Unix verification is still pending; see the [progress tracker](docs/implementation-progress.md).
 
+Windows ZIP startup has been checked on this host with only built-in tools on PATH, including a folder with spaces, build reuse and interrupted-cache recovery. A pristine Windows installation and native Unix remain separate acceptance checks. The [interface matrix](docs/interface-parity.md) maps browser controls to guided and scriptable commands.
+
 ## Generate a real debate
 
 For OpenAI, set `OPENAI_API_KEY` or copy `keys/openAi/OpenAI_Key_TEMPLATE.txt` to `keys/openAi/OpenAI_Key.txt`, put your key in that file, and select an OpenAI **Agent model** in setup. The key stays on the server and is ignored by Git. Real generation spends provider credit. `gpt-5-nano` and `gpt-4o-mini` are retained presets; live availability has not been checked in this implementation.

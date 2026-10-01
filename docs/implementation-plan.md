@@ -86,7 +86,7 @@ Carry the existing requirement inventory into the primary plan, preserving IDs a
 
 The immediate change is a **documentation-only local commit**, including navigation links from the README. Application implementation follows the documented sequence.
 
-**Current status:** no new branch, files or commit have been created because Plan mode remains active.
+**Planning-time status:** this plan was originally agreed before the branch and implementation were created. The [progress tracker](implementation-progress.md) now records the current branch, verified checkpoints and remaining acceptance checks.
 
 ## Branch rules and reference sources
 

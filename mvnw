@@ -151,9 +151,13 @@ exec_maven() {
   exec "$MAVEN_HOME/bin/$MVN_CMD" "$@" || die "cannot exec $MAVEN_HOME/bin/$MVN_CMD"
 }
 
-if [ -d "$MAVEN_HOME" ]; then
+if [ -x "$MAVEN_HOME/bin/$MVN_CMD" ]; then
   verbose "found existing MAVEN_HOME at $MAVEN_HOME"
   exec_maven "$@"
+fi
+if [ -e "$MAVEN_HOME" ]; then
+  incomplete=$(mktemp -d "${MAVEN_HOME}.incomplete.XXXXXX")
+  mv -- "$MAVEN_HOME" "$incomplete/distribution"
 fi
 
 case "${distributionUrl-}" in

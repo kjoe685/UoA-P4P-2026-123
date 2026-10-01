@@ -30,7 +30,7 @@ if [ "${java_major:-0}" -lt 17 ]; then
     *) echo 'Unsupported managed Java platform. Install a Java 17+ JDK.' >&2; exit 1 ;;
   esac
   jdk_root="$runtime_root/jdk-17.0.20.1+1"
-  if [ ! -x "$jdk_root/bin/java" ]; then
+  if [ ! -x "$jdk_root/bin/java" ] || [ ! -x "$jdk_root/bin/javac" ]; then
     archive="$runtime_root/jdk-17.0.20.1+1.tar.gz"
     if [ ! -f "$archive" ] || ! verify_sha "$checksum" "$archive"; then
       echo 'Downloading pinned Java 17 (first launch only)...'
@@ -42,6 +42,10 @@ if [ "${java_major:-0}" -lt 17 ]; then
     tar -xzf "$archive" -C "$staging"
     extracted=$(find "$staging" -type f -path '*/bin/javac' | head -n 1)
     [ -n "$extracted" ] || { echo 'Downloaded archive contains no JDK.' >&2; exit 1; }
+    if [ -e "$jdk_root" ]; then
+      incomplete=$(mktemp -d "$runtime_root/java-incomplete.XXXXXX")
+      mv "$jdk_root" "$incomplete/jdk"
+    fi
     mv "$(dirname "$(dirname "$extracted")")" "$jdk_root"
   fi
   JAVA_HOME="$jdk_root"; export JAVA_HOME

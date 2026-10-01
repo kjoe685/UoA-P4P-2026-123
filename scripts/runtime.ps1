@@ -3,7 +3,7 @@ function Get-ParliamentJava {
     param([string]$ProjectRoot)
     $managedRoot = Join-Path $ProjectRoot '.runtime/jdk-17.0.20.1+1'
     $managedJava = Join-Path $managedRoot 'bin/java.exe'
-    if (Test-Path -LiteralPath $managedJava) { return $managedRoot }
+    if ((Test-Path -LiteralPath $managedJava -PathType Leaf) -and (Test-Path -LiteralPath (Join-Path $managedRoot 'bin/javac.exe') -PathType Leaf)) { return $managedRoot }
     if ($env:PARLIAMENT_MANAGED_JAVA -ne '1') {
         $javaCommand = Get-Command java -ErrorAction SilentlyContinue
         $javacCommand = Get-Command javac -ErrorAction SilentlyContinue
@@ -32,6 +32,13 @@ function Get-ParliamentJava {
     Expand-Archive -LiteralPath $archive -DestinationPath $staging
     $jdkDirectory = Get-ChildItem -LiteralPath $staging -Directory | Where-Object { Test-Path -LiteralPath (Join-Path $_.FullName 'bin/javac.exe') } | Select-Object -First 1
     if (!$jdkDirectory) { throw 'The downloaded Java archive contains no JDK.' }
+    if (Test-Path -LiteralPath $managedRoot) {
+        # An interrupted installation must not turn a second extraction into a nested JDK.
+        $resolvedRuntime = (Resolve-Path -LiteralPath $runtimeRoot).Path
+        $resolvedManaged = (Resolve-Path -LiteralPath $managedRoot).Path
+        if ((Split-Path -Parent $resolvedManaged) -ne $resolvedRuntime) { throw 'Managed Java directory is outside the local runtime.' }
+        Move-Item -LiteralPath $resolvedManaged -Destination (Join-Path $resolvedRuntime ('java-incomplete-' + [Guid]::NewGuid().ToString('N')))
+    }
     Move-Item -LiteralPath $jdkDirectory.FullName -Destination $managedRoot
     return $managedRoot
 }

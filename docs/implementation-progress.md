@@ -6,16 +6,28 @@
 - Branch: `codex/dual-interface-integration`, created from refreshed `origin/main` at `a99269c`.
 - Recovered primary plan from previous chat `01a0f6c1-32c6-7a33-bf8c-6ad9fee837e5`; that chat ended in Plan mode without writing changes.
 - Preserved secondary plan from `9cbcb12`. Evaluation reference: `c41c4c2`, file-level reuse only.
-- T01–T09a committed; latest `ff2afcf`. T09b pilot tools verified below and ready for checkpoint.
+- T01–T10 software checkpoints committed locally; latest title `T10: verify cold Windows ZIP delivery and recover interrupted runtimes` (see Git log for hash). External platform/human acceptance remains below.
 - Existing untracked `UoA-P4P-2026-123.iml` belongs to the user; preserve it.
 
 ## Active task
 
-**T09b — Pilot preparation/import/report tools (REQ-14, 27–34, 53–55, 57).**
+**T10 — Local delivery verified; external acceptance remains (REQ-15, 45–50, 53–58).**
 
-Outcome: strict unreviewed/human-reviewed/synthetic imports, seeded 200-item preparation with grounding speech exclusion and disjoint source debates, durable per-method/split reports and browser/menu/commands. Dependency: `ff2afcf`. Java63/extractor6 pass; actual mock HTTP600 requests establish label/reviewer/source isolation and sentiment/stance routing. Genuine candidate240 sentences prepared200 (12 calibration/188 held-out, no gold/reviewer/grounding overlap); browser preparation and refusal to score unreviewed data pass. Synthetic browser import/evaluation/report passes with persistent software-only label. File-picker automation stalled25 minutes despite timeout; avoid repeating that harness operation. Next local T09b commit, then record T10 interface/ZIP/path/interrupted-setup acceptance. Human behavioural review, human pilot labels, native Unix and pristine-OS acceptance remain pending; no paid calls.
+Dependency: `e4019cb`. Cold ZIP target/delivery-847bcf3da71d43b1be92f3e341ca9bb5 passes: fresh checksum-verified Java/Maven and dependency downloads, Windows PowerShell5.1 with built-in-only PATH, no .git/optional dependencies, space-containing path, Java64 tests, credential-free demo, real run.cmd command, UTF8 guided topic including ā/emoji, menu-owned backend shutdown, repeat build reuse, saved evidence after restart, incomplete Java/Maven cache recovery and stale partial rejection. Corpus extractor6/Node syntax and Unix shell syntax checks pass; existing Python17 evidence retained. Final root Maven verify also passes64 and refreshes the JAR. All owned QA servers stopped. See docs/interface-parity.md and docs/pilot-study.md. Next independent platform/human acceptance as listed below; local checkpoint saved with T10 title. No paid calls, push, or human-accuracy claims.
+
+## Outstanding external acceptance
+
+- Native Linux/macOS and a pristine Windows installation: WSL is absent on this host. The successful cold ZIP checks isolate PATH/tools/files on the current Windows host; they do not establish another OS or clean-OS behaviour.
+- Genuine human behavioural review for REQ-16–19 and real labels/adjudication for the 200-item pilot. Software cues, review preparation and scoring are implemented; synthetic scores never establish research accuracy. Latest genuine prepared file is ignored target/genuine-review-pilot.json; prepared pilot2224fde6-83eb-455c-9e5c-aba790e4723e in local runs/pilots. Keep labels blank until real review and curate propositions/context/sampling before research use.
+- Account-specific cloud and local Ollama availability/model behaviour remain unverified. Routine tests use fake providers and no paid calls. Public university hosting/authentication remains future scope under REQ-58.
+
+No half-finished code remains after the T10 commit. Preserve the unrelated .iml. One exploratory ZIP RecoveryTest had a transient ERROR that did not reproduce in six focused repeats or later full ZIP checks; the original failure logs remain in target/delivery-23fea5f924854757b21e2ce56afe387f. Investigate if it recurs; do not suppress tests or infer a cause from this run.
 
 ## Earlier checkpoint notes (historical)
+
+T10 diagnostic update: first clean ZIP downloaded pinned190817615-byte Java/Maven/dependencies but had one transient RecoveryTest ERROR; six focused repeats (24 checks) passed, root cause unreproduced. Corrected harness Windows compression assembly and negative optional-readiness property. Root Java64 passes. Second ZIP full64 passes; harness then waited on 2-second localhost health probes, while explicit127.0.0.1 responds0.3s. Stopped that harness; server18089JavaPID7948 still requires owned cleanup. Use explicitloopback/5-second readiness in harness. WindowsJava17 default Cp1252 confirmed: guided stdin needs explicitUTF8 plus console encoding; extend ZIP smoke with actual UTF8 piped menu and backend ownership, then final acceptance. NativeUnix/pristineOS/humanlabels remain external.
+
+T10 WIP: ZIP harness first failed because Windows PowerShell5.1 needs System.IO.Compression loaded explicitly; corrected. Official JDK download now runs in isolated target/delivery-23fea5f924854757b21e2ce56afe387f on exec46399. Bootstrap review found incomplete existing JDK root can nest the recovered extraction; Windows/Unix now preserve incomplete roots aside and require java+javac. Maven wrapper null link Target handling corrected. Guided file I/O currently escapes the menu and closes its owned backend; fix with actionable recoverable menu error, verify a missing import then a valid operation. Next finish ZIP/bootstrap smoke, CLI recovery test and parity matrix. No paid calls.
 
 T06a in progress: managed uv 0.12.16 with official SHA-256 verified, managed Python 3.12.14 + locked lightweight dependencies installed locally. Python 13 passed / 3 transformer tests skipped; Java 38 passed. Added durable bounded setup/evaluation jobs, restart/cancellation retention, string-ID schema 2 NLP projection, Unicode/evidence validation, independent method reports and CLI/menu/browser operations. Final managed-service browser QA and docs remain before commit. Test server session 32604 still old T05 JAR; replace it. No paid calls or transformer weights.
 
@@ -38,9 +50,9 @@ Verification: Maven verify passes 2 tests (HTTP demo/chair/replay and cancellati
 | Task | State | Evidence |
 |---|---|---|
 | T01 documentation/recovery | Complete | Primary decisions recovered; branch refreshed and created; reference branches preserved |
-| T02 build/bootstrap/baseline | Implemented; platform acceptance partial | 2 tests pass; managed downloads/checksums and built-in-only Windows PATH pass; native Unix/pristine OS pending |
+| T02 build/bootstrap/baseline | Windows isolated acceptance verified; external platforms pending | Cold ZIP/fresh pinned downloads/built-in-only PATH/space path/UTF8/repeat/interrupted caches pass; native Unix/pristine OS pending |
 | T03 privacy/configuration | Implemented | Outbound HTTP sentinels, immutable snapshots, strict public/private contracts; 12-test suite passes |
-| T04 runtime/persistence/parity | Implemented; download UX acceptance partial | Shared application, bounded jobs, persistence/recovery/import/export; commands/menu/API tests and browser replay pass |
+| T04 runtime/persistence/parity | Implemented | Shared application, bounded jobs, persistence/recovery/import/export; commands/menu/API tests, browser replay and native JSON download pass |
 | T05 providers/settings | Complete | 33 tests pass, browser save/load/rejection and real JSON download; no live provider verification |
 | T06a VADER/jobs | Complete | 38 Java tests, 13 Python tests/3 optional skips, managed setup/real inference/report restart verified |
 | T06b Cardiff | Complete | Java40/Python17, real offline79-item inference, editor/restart/partial-failure acceptance |
@@ -50,7 +62,7 @@ Verification: Maven verify passes 2 tests (HTTP demo/chair/replay and cancellati
 | T08b corpus/import | Verified | Java54/extractor5, 500 genuine excerpts, identical repeated extraction, shared CLI/menu/API/browser import, frozen private resources |
 | T09a targeted cues | Software verified; human review pending | Java56, current-topic/public-ID targets, own position history and actual mock HTTP privacy |
 | T09b pilot tools | Software verified; human labels pending | Java63/extractor6; genuine blank preparation, mock classifier privacy600 requests, browser preparation/refusal/synthetic reports |
-| T10 delivery | Pending | Interface matrix, ZIP/path/interrupted setup and final documentation; native Unix/pristine OS unavailable on this host |
+| T10 delivery | Software/isolated Windows verified; external platforms pending | Java64 cold ZIP, no tools on PATH, real CLI/menu UTF8 and ownership, caches/restart/repeat; final matrix/documentation |
 
 ## Recovery procedure
 
@@ -111,3 +123,5 @@ T09b active (REQ-14, 27–34, 53–55, 57; primary stage9 research tools), depen
 T09b WIP: strict PilotDataset/PilotService storage, 200-item seeded preparation/exclusion/disjoint debate splits, shared classifiers with frozen settings and per-item durable reports, classifier single-unit failures, per-method/split metrics, API/CLI/menu/browser controls implemented. Existing Java56 suite passed after backend additions; new pilot tests running (fake source/labels only). Remaining: finish new tests, interface parity/single-unit failure tests, genuine unlabelled source candidate helper, browser import/report smoke and documentation. No humanreview or paidcalls.
 
 T09b verified: Java63/extractor6/Node syntax/diff checks pass. Per-method classifier wire excludes gold/reviewer/source and sentiment excludes policy targets; stance receives explicit target only. Missing methods preserve successful VADER; multi-chunk units count failures; cancellation/restart retain committed items without rerunning. Real pinned source extraction produced240 blank candidate sentences; API/CLI/browser preparation produced identical200 review items,12calibration/188held-out with disjoint source groups, no labels/reviewer or grounding speech overlap. Browser synthetic import/scoring/report and unreviewed scoring refusal pass; screenshots parliament-pilot-fixture.png and parliament-pilot-unreviewed.png. Native filechooser harness unexpectedly blocked25minutes after successful upload; avoid another upload through that harness. Genuine labels and research accuracy remain unestablished. No evaluation history in HEAD; no paid calls. Next T10 Windows isolated ZIP/space path/repeat/interrupted setup and interface matrix.
+
+T10 verified 2026-10-02T09:49:20+13:00: final cold ZIP result PASS, cachedJavaArchive=false/resumedFixture=false/menuOwnership=PASS. Official pinned Java190817615bytes/Maven/dependencies freshly downloaded; isolated Windows PowerShell5.1 built-in PATH plus space path; complete64-test build. Actual run.cmd and UTF8 redirected guided input preserve ā/emoji; owned menu releases8080, first/repeat/recovery servers stop, public evidence survivesrestart and unchangedbuildisreused. Incomplete Java/Maven cache roots are preserved beside verified replacement; stale .part neverexecuted. Rootfinalverify64pass, extractor6/Node/PowerShell/Unixsyntaxpass. Earlier exploratoryfailurelogs retained and six focused recovery repeats pass; no unsupported rootcause claim. Interface/pilot/developer docs updated and planning-time status clarified. Owned18087/18088servers stopped; no partialcode aftercheckpoint, .iml preserved, no push/paidcalls/evaluationhistory. External nativeUnix/pristineOS and humanbehaviour/pilot acceptance next.

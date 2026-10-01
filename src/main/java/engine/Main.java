@@ -22,7 +22,7 @@ public final class Main {
     public static void main(String[] args) throws Exception {
         System.setOut(new PrintStream(System.out,true,StandardCharsets.UTF_8));
         String base=System.getenv().getOrDefault("PARLIAMENT_URL","http://localhost:8080");
-        Main cli=new Main(base,new Scanner(System.in),System.out);
+        Main cli=new Main(base,new Scanner(System.in,StandardCharsets.UTF_8),System.out);
         DebateApplication owned=null; HttpServer server=null;
         try {
             if (args.length==0) {
@@ -218,6 +218,7 @@ public final class Main {
                     default -> output.println("Choose a listed operation.");
                 }
             } catch (IllegalArgumentException | IllegalStateException e) { output.println(e.getMessage()); }
+            catch (IOException e) { output.println("Could not read or write the selected file, or contact the backend. Check the path, permissions and server, then choose an operation again."); }
         }
     }
     @SuppressWarnings("unchecked")
