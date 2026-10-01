@@ -21,6 +21,6 @@ $env:UV_PYTHON_INSTALL_DIR=Join-Path $runtimeRoot 'python'
 $env:UV_PROJECT_ENVIRONMENT=Join-Path $runtimeRoot 'nlp-env'
 $env:UV_MANAGED_PYTHON='true'
 $arguments=@('sync','--project',(Join-Path $projectRoot 'nlp'),'--locked','--no-dev')
-if ($Models) { $arguments+=@('--extra','models') }
+if ($Models -or (Test-Path -LiteralPath (Join-Path $runtimeRoot 'nlp/models.complete'))) { $arguments+=@('--extra','models') }
 & $uv @arguments
 if ($LASTEXITCODE -ne 0) { throw 'Local NLP dependency setup failed' }

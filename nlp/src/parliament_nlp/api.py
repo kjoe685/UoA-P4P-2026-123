@@ -8,7 +8,7 @@ from .schemas import AnalysisRequest, AnalysisResponse
 from .service import AnalysisService
 
 
-def create_app(service: AnalysisService, configuration_sha256: str | None = None) -> FastAPI:
+def create_app(service: AnalysisService, configuration_sha256: str | None = None, readiness=None) -> FastAPI:
     app = FastAPI(title="Parliament local NLP", docs_url=None, redoc_url=None, openapi_url=None)
 
     @app.exception_handler(RequestValidationError)
@@ -20,7 +20,8 @@ def create_app(service: AnalysisService, configuration_sha256: str | None = None
     def health():
         from . import __version__
         return {"status": "ok", "schemaVersion": 2, "service": "parliament-nlp", "implementationVersion": __version__,
-                "configurationSha256": configuration_sha256, "methods": sorted(service.factories)}
+                "configurationSha256": configuration_sha256, "methods": sorted(service.factories),
+                "readiness": readiness() if readiness else {}}
 
     @app.post("/v1/analyze", response_model=AnalysisResponse)
     def analyze(request: AnalysisRequest):

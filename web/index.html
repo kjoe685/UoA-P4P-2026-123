@@ -39,7 +39,13 @@
       <p class="hint">VADER reports lexical sentiment for each sentence. Scores describe wording; they do not establish political stance or argument quality.</p>
       <p id="local-readiness" class="hint" role="status"></p>
       <button id="setup-local" type="button" class="btn btn-secondary">Set up local VADER</button>
-      <p class="hint">Setup downloads managed Python and locked dependencies. Analysis uses the local service. Transformer methods are being integrated separately.</p>
+      <button id="setup-cardiff" type="button" class="btn btn-secondary">Set up Cardiff sentiment</button>
+      <p class="hint">Setup downloads managed Python and locked dependencies. Cardiff also downloads about 500 MB of pinned model files plus CPU libraries. Analysis uses cached files; DeBERTa stance is the next checkpoint.</p>
+      <fieldset class="analysis-methods"><legend>Methods to run separately</legend>
+        <label><input type="checkbox" name="analysis-method" value="vader-sentiment" checked> VADER lexical sentiment</label>
+        <label><input type="checkbox" name="analysis-method" value="cardiff-sentiment"> Cardiff sentiment</label>
+      </fieldset>
+      <p class="hint">Cardiff reports uncalibrated class scores. It was trained on tweets and needs parliamentary domain validation.</p>
       <div id="analysis-jobs" class="saved-list"></div>
       <div id="analysis-report"></div>
       <p id="analysis-status" role="status" class="hint"></p>
@@ -176,7 +182,7 @@
           </div>
           <button type="button" id="export-btn" class="btn btn-ghost">Download transcript</button>
           <button type="button" id="export-json-btn" class="btn btn-ghost">Download JSON</button>
-          <button type="button" id="evaluate-btn" class="btn btn-ghost">Analyze with VADER</button>
+          <button type="button" id="evaluate-btn" class="btn btn-ghost">Analyze selected methods</button>
         </div>
         <div id="transcript-scroller" class="transcript-scroller">
           <div id="transcript" class="transcript" aria-live="polite" aria-relevant="additions"></div>

@@ -25,6 +25,6 @@ UV_CACHE_DIR="$runtime_root/uv-cache"; export UV_CACHE_DIR
 UV_PYTHON_INSTALL_DIR="$runtime_root/python"; export UV_PYTHON_INSTALL_DIR
 UV_PROJECT_ENVIRONMENT="$runtime_root/nlp-env"; export UV_PROJECT_ENVIRONMENT
 UV_MANAGED_PYTHON=true; export UV_MANAGED_PYTHON
-if [ "${1:-}" = models ]; then
+if [ "${1:-}" = models ] || [ -f "$runtime_root/nlp/models.complete" ]; then
   exec "$uv_root/uv" sync --project "$project_root/nlp" --locked --no-dev --extra models
 else exec "$uv_root/uv" sync --project "$project_root/nlp" --locked --no-dev; fi

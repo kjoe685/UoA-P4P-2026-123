@@ -6,14 +6,14 @@
 - Branch: `codex/dual-interface-integration`, created from refreshed `origin/main` at `a99269c`.
 - Recovered primary plan from previous chat `01a0f6c1-32c6-7a33-bf8c-6ad9fee837e5`; that chat ended in Plan mode without writing changes.
 - Preserved secondary plan from `9cbcb12`. Evaluation reference: `c41c4c2`, file-level reuse only.
-- T01 documentation complete (`f7690fc`). T02 build/bootstrap implemented; automated Windows checks pass. T03/T04 privacy, configuration and saved-run workflow committed `48e69e6`. T05 providers/advanced settings verified; T06 local evaluation next.
+- T01–T05 committed; T06a VADER committed `42abca1`. T06b Cardiff verified and ready for its checkpoint. T06c DeBERTa follows.
 - Existing untracked `UoA-P4P-2026-123.iml` belongs to the user; preserve it.
 
 ## Active task
 
-**T06a — VADER and local evaluation runtime (REQ-27–34, 49–50, 53–56, 57).**
+**T06b — Cardiff sentiment setup/readiness (REQ-27–34, 49–50, 53–56, 57).**
 
-Outcome: explicit managed local setup, readiness, durable evaluation jobs and separate VADER reports via browser, guided CLI and commands. Dependencies: T05 checkpoint 0b5a5be. Ported NLP source/lock/tests and wire/validator files are currently uncommitted; adapting schema 2 string evidence IDs and stable topic targets before connecting services. Next implement managed uv setup, job persistence and interface parity; verify real VADER plus mock malformed evidence, Unicode, partial failure, cancellation and restart. Cardiff and DeBERTa remain later checkpoints; no transformer weights downloaded.
+Outcome: explicit pinned Cardiff setup, truthful package/cache/loaded readiness, separate offline method reports, frozen analysis settings and validated model editor across interfaces. Dependency: T06a `42abca1`. Java40/Python17 pass; real Cardiff79-item smoke, missing-model partial failure, browser editor and restart checks pass. Next commit this checkpoint and implement DeBERTa interface/real inference acceptance. Detailed dated history below is retained for recovery.
 
 T06a in progress: managed uv 0.12.16 with official SHA-256 verified, managed Python 3.12.14 + locked lightweight dependencies installed locally. Python 13 passed / 3 transformer tests skipped; Java 38 passed. Added durable bounded setup/evaluation jobs, restart/cancellation retention, string-ID schema 2 NLP projection, Unicode/evidence validation, independent method reports and CLI/menu/browser operations. Final managed-service browser QA and docs remain before commit. Test server session 32604 still old T05 JAR; replace it. No paid calls or transformer weights.
 
@@ -41,10 +41,19 @@ Verification: Maven verify passes 2 tests (HTTP demo/chair/replay and cancellati
 | T04 runtime/persistence/parity | Implemented; download UX acceptance partial | Shared application, bounded jobs, persistence/recovery/import/export; commands/menu/API tests and browser replay pass |
 | T05 providers/settings | Complete | 33 tests pass, browser save/load/rejection and real JSON download; no live provider verification |
 | T06a VADER/jobs | Complete | 38 Java tests, 13 Python tests/3 optional skips, managed setup/real inference/report restart verified |
-| T06b–T10 | Pending | See primary plan |
+| T06b Cardiff | Complete | Java40/Python17, real offline79-item inference, editor/restart/partial-failure acceptance |
+| T06c–T10 | Pending | See primary plan |
 
 ## Recovery procedure
 
 Read this file and primary plan, inspect `git status --short` and recent commits, and reconcile unfinished files before proceeding. Use `git show c41c4c2:<path>` for references; do not switch to the old evaluation branch. Before each checkpoint, verify that `git rev-list origin/main..c41c4c2` contains no ancestor of HEAD. Update this file before lengthy operations and after failures.
 
 Automated software checks, live provider checks and human research review are separate evidence categories. None of the latter two has been performed in this implementation.
+
+T06b active: dependencies 42abca1 VADER/jobs checkpoint. Implement explicit pinned Cardiff download job, preserve optional dependencies during repeated setup, report actual package/cache readiness and selectable methods in all interfaces. Verify tokenizer-aware segmentation/uncertainty with controlled logits, missing-model failures and real offline smoke if download succeeds. Confirmed official revision assets: Cardiff 501045531-byte PyTorch weights, DeBERTa 368871908-byte safetensors. Next patch setup/readiness/interface operations, then install locked optional CPU dependencies and test. No paid calls.
+
+T06b uncommitted: explicit model-download/setup jobs, package/cache/loaded readiness, shared NLP model-config validation/editor, preserved optional deps, method checkboxes/CLI downloads, model revision and entropy validation. Locked CPU dependencies installed (torch2.10.0+cpu, transformers4.57.6); Python17 pass with no skips. Java39-test final run in progress after improving mismatch fixture. Next build/restart elevated QA server for approved official network downloads, verify missing-model partial failure, then explicit Cardiff setup and real offline inference. Current server54833 stillT06a and idle; no weights yet.
+
+T06b QA underway: Java39 pass; Python17 pass. Latest elevated server session83760 port18087. Browser confirms real missing-Cardiff failure retains successful VADER result and readiness says files missing. Explicit Cardiff setup job123845af-ff17-4df1-b4cd-2f2ba2becb21 running; network download authorized through QA server. Prior missing report f6f309ef-d9f8-4067-9f97-1081c9ba033a saved in target/missing-cardiff-report.json. Next verify download/hash, actual offline Cardiff, shared model-config validation and restart before commit.
+
+T06b verified: 40 Java tests pass, 17 Python tests pass/no skips. Explicit Cardiff setup completed and real offline inference scored 79 contributions/2 batches alongside VADER (job5c935ef2-6ef9-4623-88c7-f09f085e5e39). Exact pinned weights SHA2564d24a3e32a88ed1c4e5b789fc6644e2e767500554e954b27dccf52a8e762cbae. Missing-model partial failure retains VADER. Browser report reopens after restart without service; shared model editor rejects minScore3 and saves original settings. Active-job snapshot regression passes; owned service now starts from frozen job settings. Latest server94952 port18087. Final CLI cache-reuse smoke underway; then commit T06b and start DeBERTa acceptance.

@@ -6,7 +6,9 @@ Setup and analysis run as durable jobs. Follow them in the browser's **Local ana
 
 VADER 3.3.2 reports lexical positive/neutral/negative proportions and compound `[-1,1]`. These are not model probabilities, calibrated confidence or a measure of policy stance, party identity or argument quality. The ±0.05 compound cutoffs select labels. Parliamentary language, quotations, negation and sarcasm need genuine domain validation. Automated fixtures do not establish accuracy.
 
-`config/local-evaluation.json` defines the private loopback endpoint, batch size, timeout and selected methods. It is editable through the shared browser/CLI asset service. `nlp/config/models.json` freezes transformer candidate revisions, sentence/token budgets and provisional thresholds for later checkpoints; restarting the service is required after changing it. Cardiff and DeBERTa source adapters have been ported but their setup/weights and full interface acceptance remain pending. No transformer weights have been downloaded by T06a.
+`config/local-evaluation.json` defines the private loopback endpoint, batch size, timeout and selected methods. The shared browser/CLI editor also exposes `nlp/config/models.json`, validated by the installed Python service's schema. Each job captures both files. Editing settings leaves active jobs on their original snapshot; later jobs restart the owned service with their captured revision as needed. An incompatible external service is never stopped.
+
+Select **Set up Cardiff sentiment**, guided choice 12's model download, or `cli local download cardiff-sentiment` to install locked CPU libraries and the pinned public Cardiff weights (about 500 MB). Setup reports dependencies, cached files and loaded models separately. Cardiff runs offline once cached; analysis never downloads missing models. It reports three uncalibrated sentiment scores, maximum score, margin, normalized entropy and provisional abstention. Its tweet training domain does not establish parliamentary accuracy. DeBERTa stance interface acceptance is the next checkpoint.
 
 Wire schema 2 accepts only method IDs and turns with stable string `turnId`, text, and explicit target IDs/propositions. Sentiment requests have no targets. Stance targets route by stable public topic IDs. Identity/party fields, chair events, prompts, private assignments, model settings and credentials do not cross this boundary. Exceptions and validation responses never echo raw input.
 
@@ -17,7 +19,9 @@ From a running backend:
 ```text
 run.cmd cli local status
 run.cmd cli local setup
+run.cmd cli local download cardiff-sentiment
 run.cmd cli evaluate RUN_ID vader-sentiment
+run.cmd cli evaluate RUN_ID vader-sentiment,cardiff-sentiment
 run.cmd cli jobs
 run.cmd cli job JOB_ID
 run.cmd cli report JOB_ID analysis.json
@@ -33,7 +37,7 @@ $env:UV_CACHE_DIR = "$PWD/.runtime/uv-cache"
 $env:UV_PYTHON_INSTALL_DIR = "$PWD/.runtime/python"
 $env:UV_PROJECT_ENVIRONMENT = "$PWD/.runtime/nlp-env"
 $env:UV_MANAGED_PYTHON = 'true'
-./.runtime/uv-0.12.16/uv.exe run --project nlp --locked pytest -p no:cacheprovider
+./.runtime/uv-0.12.16/uv.exe run --project nlp --locked --extra models pytest -p no:cacheprovider
 ```
 
-This installs the locked lightweight development dependencies, with no transformer weights. T06a: 13 Python tests pass and 3 PyTorch-dependent tests skip; Java tests cover HTTP privacy, Unicode, malformed evidence, partial failure, cancellation, restart and CLI parity. Current library deprecation warnings are recorded; they do not fail these checks. The service API health endpoint reports registration and protocol/configuration identity, not loaded model readiness.
+This installs locked CPU development dependencies, without downloading weights. T06b: 17 Python tests pass without skips and 40 Java tests pass. Controlled logits verify splitting/mapping/uncertainty; a real offline Cardiff smoke analyzed 79 contributions alongside VADER. A missing-Cardiff failure retained the successful VADER report. These checks establish functionality, not research accuracy. Library deprecation warnings do not fail the suite. Health reports protocol/configuration identity and dependency/cache/loaded readiness separately.

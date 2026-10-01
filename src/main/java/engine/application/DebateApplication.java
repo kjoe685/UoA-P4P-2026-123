@@ -31,8 +31,9 @@ public final class DebateApplication implements AutoCloseable {
         this.root=root; this.store=store; this.providers=providers;
         this.assets=new AssetService(root); this.settings=new SettingsService(root.resolve("runs/settings"));
         this.background=new JobService(root.resolve("runs/jobs")); this.nlp=new ManagedNlp(root);
-        this.evaluation=new LocalEvaluationService(root,background,analysisClients!=null ? analysisClients : config -> {
-            nlp.ensureRunning(config); return new engine.evaluation.local.HttpNlpClient(config.endpoint(),java.time.Duration.ofSeconds(config.timeoutSeconds()));
+        this.evaluation=new LocalEvaluationService(root,background,(config,settings) -> {
+            if (analysisClients!=null) return analysisClients.apply(config);
+            nlp.ensureRunning(config,settings); return new engine.evaluation.local.HttpNlpClient(config.endpoint(),java.time.Duration.ofSeconds(config.timeoutSeconds()));
         });
         this.jobs=new ThreadPoolExecutor(2,2,0,TimeUnit.SECONDS,new ArrayBlockingQueue<>(4),
                 task -> { Thread thread=new Thread(task,"parliament-job"); thread.setDaemon(true); return thread; });
@@ -56,6 +57,18 @@ public final class DebateApplication implements AutoCloseable {
             context.update("Installing managed Python and locked VADER dependencies",null); nlp.install(context);
             context.checkCancelled(); context.update("Starting local analysis service",null); nlp.ensureRunning(config);
             context.update("VADER dependencies installed; analysis remains explicit",nlp.readiness(config)); return true;
+        });
+    }
+    public BackgroundJob setupLocalModel(String method) {
+        if (!Set.of("cardiff-sentiment","deberta-stance").contains(method)) throw new IllegalArgumentException("Choose a local transformer method");
+        String settings;
+        try { settings=java.nio.file.Files.readString(root.resolve("nlp/config/models.json")); }
+        catch (java.io.IOException e) { throw new IllegalStateException("Cannot read local model settings"); }
+        var config=evaluation.configuration();
+        return background.submit("model-setup",null,Map.of("method",method,"localModelSettings",settings),context -> {
+            nlp.download(context,method,settings); context.checkCancelled();
+            context.update("Starting local service after model setup",null); nlp.ensureRunning(config,settings);
+            context.update("Pinned files cached; models load only for explicit analysis",nlp.readiness(config)); return true;
         });
     }
     public BackgroundJob evaluate(String id,Map<String,Object> body) { return evaluation.start(find(id).transcript(),body); }

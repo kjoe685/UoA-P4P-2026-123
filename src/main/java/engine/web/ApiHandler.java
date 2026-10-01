@@ -34,6 +34,12 @@ public final class ApiHandler implements HttpHandler {
             require(method,"POST"); if (!body(exchange).isEmpty()) throw new IllegalArgumentException("VADER setup needs an empty object");
             sendJson(exchange,202,Map.of("id",application.setupLocalNlp().id())); return;
         }
+        if (parts.length==3 && parts[2].equals("local-model-setup")) {
+            require(method,"POST"); var value=body(exchange);
+            if (!value.keySet().equals(Set.of("method")) || !(value.get("method") instanceof String selected))
+                throw new IllegalArgumentException("Provide a local transformer method ID");
+            sendJson(exchange,202,Map.of("id",application.setupLocalModel(selected).id())); return;
+        }
         if (parts.length==3 && parts[2].equals("jobs")) {
             require(method,"GET"); sendJson(exchange,200,application.background().list().stream().map(job -> {
                 Map<String,Object> summary=new LinkedHashMap<>(); summary.put("id",job.id()); summary.put("kind",job.kind());

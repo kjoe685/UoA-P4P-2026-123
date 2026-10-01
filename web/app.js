@@ -461,10 +461,13 @@ async function readAsset() {
 
 async function updateAsset(save) {
   try {
+    const path = $('#asset-path').value;
     if ($('#asset-text').dataset.path !== $('#asset-path').value) throw new Error('Load the selected asset before editing.');
     await api('/api/assets', { method: 'POST', body: { path: $('#asset-path').value, text: $('#asset-text').value, save } });
     if (save) await initSetup();
-    $('#asset-status').textContent = save ? 'Saved validated contents. New sittings use this revision.' : 'Contents are valid. Nothing saved yet.';
+    const future = path === 'nlp/config/models.json' || path === 'config/local-evaluation.json'
+      ? 'New analyses use this revision; active jobs retain captured settings.' : 'New sittings use this revision.';
+    $('#asset-status').textContent = save ? `Saved validated contents. ${future}` : 'Contents are valid. Nothing saved yet.';
   } catch (error) { $('#asset-status').textContent = error.message; }
 }
 
@@ -945,6 +948,8 @@ async function refreshLocalReadiness() {
     const state=await api('/api/local-readiness');
     $('#local-readiness').textContent=state.running ? 'Local service is running. Methods load when selected.'
       : state.installed ? 'Dependencies installed. Evaluation starts the local service when needed.' : 'Local dependencies are not installed. Set up VADER to begin.';
+    if (state.running && state.service?.readiness) $('#local-readiness').textContent += ' ' + Object.entries(state.service.readiness)
+      .map(([method, details]) => `${method}: ${!details.dependenciesPresent ? 'dependencies missing' : !details.filesCached ? 'files missing' : details.loaded ? 'loaded' : 'files cached, not loaded'}`).join('; ') + '.';
   } catch(error) { $('#local-readiness').textContent=error.message; }
 }
 
@@ -955,10 +960,19 @@ async function setupLocal() {
   } catch(error) { $('#analysis-status').textContent=error.message; }
 }
 
+async function setupLocalModel(method) {
+  try {
+    const {id}=await api('/api/local-model-setup',{method:'POST',body:{method}});
+    $('#analysis-status').textContent=`Model setup job ${id} queued. Downloads remain explicit.`; await refreshJobs();
+  } catch(error) { $('#analysis-status').textContent=error.message; }
+}
+
 async function evaluateSitting() {
   if (!sitting) return;
   try {
-    const {id}=await api(`/api/debates/${encodeURIComponent(sitting.id)}/evaluate`,{method:'POST',body:{methods:['vader-sentiment']}});
+    const methods=Array.from(document.querySelectorAll('input[name="analysis-method"]:checked')).map(input=>input.value);
+    if (!methods.length) throw new Error('Select at least one analysis method.');
+    const {id}=await api(`/api/debates/${encodeURIComponent(sitting.id)}/evaluate`,{method:'POST',body:{methods}});
     $('#analysis-status').textContent=`Analysis job ${id} captures the speeches saved so far.`; await refreshJobs();
   } catch(error) { $('#analysis-status').textContent=error.message; }
 }
@@ -973,7 +987,8 @@ async function openReport(id) {
       contents.push(el('h4',{text:`${method.methodId} · ${method.status}${method.error ? ` · ${method.error}` : ''}`}));
       for (const batch of method.batches) for (const item of batch.items) {
         contents.push(el('p',{text:`${item.turnId}${item.targetId ? ` → ${item.targetId}` : ''}: ${item.status}${item.error ? ` · ${item.error}` : ''}`}));
-        for (const chunk of item.chunks) contents.push(el('p',{className:'analysis-chunk',text:`${chunk.text} — ${chunk.label}${chunk.compound!=null ? ` (compound ${chunk.compound})` : ''}`}));
+        for (const chunk of item.chunks) contents.push(el('p',{className:'analysis-chunk',text:`${chunk.text} — ${chunk.label}${chunk.compound!=null ? ` (compound ${chunk.compound})` :
+          ` (${Object.entries(chunk.scores).map(([label,score])=>`${label} ${score.toFixed(3)}`).join(', ')}; ${chunk.uncertainty?.abstained ? 'abstained' : 'uncalibrated scores'})`}`}));
       }
     }
     contents.push(el('a',{text:'Download analysis JSON',attrs:{href:`/api/jobs/${encodeURIComponent(id)}/report?download=1`,download:`analysis-${id}.json`}}));
@@ -984,6 +999,7 @@ async function openReport(id) {
 
 function wireEvents() {
   $('#setup-local').addEventListener('click',setupLocal);
+  $('#setup-cardiff').addEventListener('click',()=>setupLocalModel('cardiff-sentiment'));
   $('#refresh-jobs').addEventListener('click',async()=>{await refreshJobs(); await refreshLocalReadiness();});
   $('#evaluate-btn').addEventListener('click',evaluateSitting);
   $('#load-settings').addEventListener('click', loadSettings);

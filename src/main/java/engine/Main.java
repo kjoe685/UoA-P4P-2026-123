@@ -48,7 +48,8 @@ public final class Main {
                 switch (args[1]) {
                     case "status" -> output.println(get("/api/local-readiness"));
                     case "setup" -> output.println(post("/api/local-setup","{}"));
-                    default -> throw new IllegalArgumentException("local status | setup");
+                    case "download" -> { requireArgs(args,3); output.println(post("/api/local-model-setup",Json.write(Map.of("method",args[2])))); }
+                    default -> throw new IllegalArgumentException("local status | setup | download METHOD");
                 }
             }
             case "evaluate" -> {
@@ -104,7 +105,9 @@ public final class Main {
                 switch (choice) {
                     case "12" -> {
                         output.println(get("/api/local-readiness"));
-                        if (ask("Type setup to download managed Python and VADER dependencies (blank = return): ").equals("setup")) output.println(post("/api/local-setup","{}"));
+                        String selected=ask("Type setup for VADER dependencies, or cardiff-sentiment / deberta-stance for CPU dependencies and pinned weights (blank = return): ");
+                        if (selected.equals("setup")) output.println(post("/api/local-setup","{}"));
+                        else if (!selected.isBlank()) output.println(post("/api/local-model-setup",Json.write(Map.of("method",selected))));
                     }
                     case "13" -> {
                         String id=ask("Sitting id: "), methods=ask("Method IDs separated by commas (blank = defaults): ");

@@ -77,6 +77,9 @@ public final class NlpResponseValidator {
                         var ordered = chunk.scores().values().stream().sorted(java.util.Comparator.reverseOrder()).toList();
                         require(Math.abs(doubt.maxScore() - ordered.get(0)) < .00001
                                 && Math.abs(doubt.margin() - (ordered.get(0) - ordered.get(1))) < .00001);
+                        double entropy=0;
+                        for (double score:ordered) if (score>0) entropy-=score*Math.log(score)/Math.log(ordered.size());
+                        require(Math.abs(doubt.entropy()-entropy)<.00001);
                         require(doubt.abstained() == "uncertain".equals(chunk.label()));
                         if (!doubt.abstained()) require(Math.abs(chunk.scores().get(chunk.label()) - ordered.get(0)) < .00001);
                     }

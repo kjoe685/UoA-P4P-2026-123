@@ -6,13 +6,17 @@ import engine.utils.*;
 import java.nio.file.*;
 import java.util.*;
 import java.util.function.Function;
+import java.util.function.BiFunction;
 
 /** Freeze public evidence/settings at submission, persist each batch before reporting progress. */
 public final class LocalEvaluationService {
     private final Path root;
     private final JobService jobs;
-    private final Function<LocalEvaluationConfig,NlpClient> clients;
+    private final BiFunction<LocalEvaluationConfig,String,NlpClient> clients;
     public LocalEvaluationService(Path root,JobService jobs,Function<LocalEvaluationConfig,NlpClient> clients) {
+        this(root,jobs,(config,settings) -> clients.apply(config));
+    }
+    public LocalEvaluationService(Path root,JobService jobs,BiFunction<LocalEvaluationConfig,String,NlpClient> clients) {
         this.root=root; this.jobs=jobs; this.clients=clients;
     }
     public LocalEvaluationConfig configuration() {
@@ -42,12 +46,11 @@ public final class LocalEvaluationService {
                 for (NlpRequest request:entry.getValue()) {
                     context.checkCancelled(); NlpResponse.Method result;
                     try {
-                        if (!nlpSettings.equals(Files.readString(root.resolve("nlp/config/models.json"))))
-                            throw new IllegalStateException("Local settings changed since submission");
-                        if (client==null) client=clients.apply(config);
+                        if (client==null) client=clients.apply(config,nlpSettings);
                         var response=client.analyze(request); context.checkCancelled(); NlpResponseValidator.validate(request,response); result=response.methods().get(0);
+                        validateProvenance(result,method,nlpSettings);
                     } catch (java.util.concurrent.CancellationException e) { throw e; }
-                    catch (RuntimeException | java.io.IOException e) {
+                    catch (RuntimeException e) {
                         context.checkCancelled(); result=new NlpResponse.Method(method,"failed","transport_or_response_failed",null,List.of(),0);
                     }
                     batches.add(result);
@@ -63,5 +66,15 @@ public final class LocalEvaluationService {
             }
             return success;
         });
+    }
+    private static void validateProvenance(NlpResponse.Method result,String method,String settings) {
+        var provenance=result.provenance(); if (provenance==null) return;
+        String model="vaderSentiment", revision="3.3.2";
+        if (!method.equals("vader-sentiment")) {
+            var source=(Map<?,?>)Json.parse(settings); var spec=(Map<?,?>)source.get(method.equals("cardiff-sentiment") ? "cardiff" : "deberta");
+            model=(String)spec.get("modelId"); revision=(String)spec.get("revision");
+        }
+        if (!model.equals(provenance.modelId()) || !revision.equals(provenance.revision()))
+            throw new IllegalStateException("Local response provenance does not match requested model");
     }
 }

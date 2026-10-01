@@ -28,9 +28,11 @@ class LocalEvaluationTest {
                 new PublicEvent("turn-4","topic-1",PublicEvent.Type.INTERJECTION,member,"A terrible plan.")),Transcript.Outcome.COMPLETE);
     }
     public static NlpResponse response(NlpRequest request) {
+        boolean vader=request.methods().get(0).equals("vader-sentiment");
         var provenance=new NlpResponse.Provenance("vaderSentiment","3.3.2","0.1.0","a".repeat(64),"cpu",Map.of("vaderSentiment","3.3.2"),"Lexical proportions, not probabilities","punctuation-v1",Map.of());
         var items=request.turns().stream().map(turn -> new NlpResponse.Item(turn.turnId(),null,"ok",null,List.of(
-                new NlpResponse.Chunk(0,0,turn.text().codePointCount(0,turn.text().length()),turn.text(),"positive",Map.of("positive",.9,"neutral",.1,"negative",0.),.8,null)),0)).toList();
+                new NlpResponse.Chunk(0,0,turn.text().codePointCount(0,turn.text().length()),turn.text(),"positive",Map.of("positive",.9,"neutral",.1,"negative",0.),
+                        vader ? .8 : null,vader ? null : new NlpResponse.Uncertainty(.9,.8,-(.9*Math.log(.9)+.1*Math.log(.1))/Math.log(3),false))),0)).toList();
         return new NlpResponse(2,List.of(new NlpResponse.Method(request.methods().get(0),"ok",null,provenance,items,0)));
     }
     static BackgroundJob finish(JobService service,String id) throws Exception {
@@ -110,5 +112,38 @@ class LocalEvaluationTest {
             assertEquals("insufficient_evidence",((LocalReport)job.result()).methods().get(0).status());
         }
         assertThrows(IllegalArgumentException.class,() -> new LocalEvaluationConfig(1,URI.create("https://example.org/v1/analyze"),5,1,List.of("vader-sentiment")));
+    }
+    @Test void activeAnalysisKeepsCapturedSettingsAfterEditing() throws Exception {
+        TestFixtures.copyResources(root); var configFile=root.resolve("config/local-evaluation.json");
+        Files.writeString(configFile,Files.readString(configFile).replace("\"batchSize\":50","\"batchSize\":1"));
+        var settingsFile=root.resolve("nlp/config/models.json"); String captured=Files.readString(settingsFile);
+        CountDownLatch entered=new CountDownLatch(1), release=new CountDownLatch(1); AtomicInteger calls=new AtomicInteger();
+        try (var jobs=new JobService(root.resolve("runs/jobs"))) {
+            var evaluator=new LocalEvaluationService(root,jobs,(config,settings) -> {
+                assertEquals(captured,settings);
+                return request -> {
+                    if (calls.incrementAndGet()==1) {
+                        entered.countDown(); try { release.await(5,TimeUnit.SECONDS); }
+                        catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+                    }
+                    return response(request);
+                };
+            });
+            var job=evaluator.start(evidence(),Map.of()); assertTrue(entered.await(5,TimeUnit.SECONDS));
+            Files.writeString(settingsFile,captured+"\n"); release.countDown();
+            job=finish(jobs,job.id()); assertEquals(BackgroundJob.State.COMPLETE,job.state()); assertEquals(2,calls.get());
+            assertEquals(Hashes.sha256(Json.writeCanonical(Map.of("evaluation",evaluator.configuration(),"localModelSettings",captured))),((LocalReport)job.result()).configurationSha256());
+        }
+    }
+    @Test void mismatchedRevisionFailsItsMethodWithoutDiscardingOtherMethodSuccess() throws Exception {
+        TestFixtures.copyResources(root);
+        try (var jobs=new JobService(root.resolve("runs/jobs"))) {
+            var evaluator=new LocalEvaluationService(root,jobs,config -> request -> response(request));
+            // Fixture returns VADER provenance even for Cardiff: a false model claim must be rejected.
+            var job=finish(jobs,evaluator.start(evidence(),Map.of("methods",List.of("vader-sentiment","cardiff-sentiment"))).id());
+            assertEquals(BackgroundJob.State.FAILED,job.state()); var methods=((LocalReport)job.result()).methods();
+            assertEquals("ok",methods.get(0).status()); assertEquals("failed",methods.get(1).status());
+            assertEquals("vader-sentiment",methods.get(0).methodId()); assertEquals("cardiff-sentiment",methods.get(1).methodId());
+        }
     }
 }
