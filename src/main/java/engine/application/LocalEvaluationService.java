@@ -67,7 +67,7 @@ public final class LocalEvaluationService {
             return success;
         });
     }
-    private static void validateProvenance(NlpResponse.Method result,String method,String settings) {
+    static void validateProvenance(NlpResponse.Method result,String method,String settings) {
         var provenance=result.provenance(); if (provenance==null) return;
         String model="vaderSentiment", revision="3.3.2";
         if (!method.equals("vader-sentiment")) {

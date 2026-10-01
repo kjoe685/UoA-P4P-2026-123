@@ -15,6 +15,28 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class CliParityTest {
     @TempDir Path root;
+    @Test void pilotImportsExportsPreparationAndReportsHaveCommandMenuParity() throws Exception {
+        TestFixtures.copyResources(root);
+        try (var app=new DebateApplication(root,new RunStore(root.resolve("runs")),model -> null,config -> request -> new engine.evaluation.local.NlpResponse(2,List.of(
+                new engine.evaluation.local.NlpResponse.Method(request.methods().get(0),"failed","model_unavailable",null,List.of(),0))))) {
+            var server=WebServer.start(0,app);
+            try {
+                String base="http://localhost:"+server.getAddress().getPort(); var bytes=new ByteArrayOutputStream(); var output=new PrintStream(bytes); var cli=new Main(base,new Scanner(""),output);
+                Path file=root.resolve("reviewed-fixture.json"); Files.writeString(file,Json.write(PilotTest.fixture("synthetic_fixture",200)));
+                cli.command(new String[]{"pilot","import",file.toString()}); String id=(String)((Map<?,?>)Json.parse(bytes.toString())).get("id"); bytes.reset();
+                cli.command(new String[]{"pilot","list"}); assertTrue(bytes.toString().contains(id)); bytes.reset();
+                Path exported=root.resolve("exported-pilot.json"); cli.command(new String[]{"pilot","show",id,exported.toString()}); assertEquals(app.pilots().read(id),Json.read(Files.readString(exported),engine.evaluation.local.PilotDataset.class));
+                cli.command(new String[]{"pilot","evaluate",id,"vader-sentiment"}); String jobId=(String)((Map<?,?>)Json.parse(bytes.toString())).get("id"); bytes.reset();
+                long until=System.currentTimeMillis()+10000; while (!app.background().find(jobId).terminal() && System.currentTimeMillis()<until) Thread.sleep(10);
+                Path report=root.resolve("pilot-report.json"); cli.command(new String[]{"report",jobId,report.toString()}); assertTrue(Files.readString(report).contains("synthetic_fixture"));
+                new Main(base,new Scanner("17\nshow\n"+id+"\n\n0\n"),output).menu();
+                Files.writeString(file,Json.write(PilotTest.fixture("unreviewed",240))); bytes.reset(); cli.command(new String[]{"pilot","import",file.toString()});
+                String candidate=(String)((Map<?,?>)Json.parse(bytes.toString())).get("id"); bytes.reset(); cli.command(new String[]{"pilot","prepare",candidate,"123"});
+                assertTrue(bytes.toString().contains("200")); new Main(base,new Scanner("17\nprepare\n"+candidate+"\n123\n0\n"),output).menu();
+                assertThrows(IllegalStateException.class,() -> cli.command(new String[]{"pilot","evaluate",candidate}));
+            } finally { server.stop(0); ((ExecutorService)server.getExecutor()).shutdownNow(); }
+        }
+    }
     @Test void corpusCommandsAndMenuValidateBeforeAtomicImportThroughSharedApi() throws Exception {
         TestFixtures.copyResources(root);
         try (var app=new DebateApplication(root,new RunStore(root.resolve("runs")),model -> { fail("Corpus operations must not create providers"); return null; })) {

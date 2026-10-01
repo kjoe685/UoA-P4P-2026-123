@@ -6,14 +6,16 @@
 - Branch: `codex/dual-interface-integration`, created from refreshed `origin/main` at `a99269c`.
 - Recovered primary plan from previous chat `01a0f6c1-32c6-7a33-bf8c-6ad9fee837e5`; that chat ended in Plan mode without writing changes.
 - Preserved secondary plan from `9cbcb12`. Evaluation reference: `c41c4c2`, file-level reuse only.
-- T01–T08 committed; T08b extraction/import `b08964c`. T09a targeted cues verified below; T09b pilot tools follows.
+- T01–T09a committed; latest `ff2afcf`. T09b pilot tools verified below and ready for checkpoint.
 - Existing untracked `UoA-P4P-2026-123.iml` belongs to the user; preserve it.
 
 ## Active task
 
-**T09a — Targeted engagement and position continuity (REQ-05–06, 11, 16–19, 53–55, 57).**
+**T09b — Pilot preparation/import/report tools (REQ-14, 27–34, 53–55, 57).**
 
-Outcome: editable engagement cue references the latest other-party current-topic contribution and own opening/recent public positions; explicit public reasons for revisions/concessions; private tactics ask for observable behaviour. Dependency: `b08964c`. Java56 pass, including fixed multi-topic pointers and actual mock HTTP privacy. Initial new-test compile accessor typo and generic-word assertion collision corrected; complete suite rerun. Next commit T09a then record T09b pilot-data import/report acceptance. Live behavioural success and genuine human research review remain pending; no paid calls. Detailed dated history below is retained for recovery.
+Outcome: strict unreviewed/human-reviewed/synthetic imports, seeded 200-item preparation with grounding speech exclusion and disjoint source debates, durable per-method/split reports and browser/menu/commands. Dependency: `ff2afcf`. Java63/extractor6 pass; actual mock HTTP600 requests establish label/reviewer/source isolation and sentiment/stance routing. Genuine candidate240 sentences prepared200 (12 calibration/188 held-out, no gold/reviewer/grounding overlap); browser preparation and refusal to score unreviewed data pass. Synthetic browser import/evaluation/report passes with persistent software-only label. File-picker automation stalled25 minutes despite timeout; avoid repeating that harness operation. Next local T09b commit, then record T10 interface/ZIP/path/interrupted-setup acceptance. Human behavioural review, human pilot labels, native Unix and pristine-OS acceptance remain pending; no paid calls.
+
+## Earlier checkpoint notes (historical)
 
 T06a in progress: managed uv 0.12.16 with official SHA-256 verified, managed Python 3.12.14 + locked lightweight dependencies installed locally. Python 13 passed / 3 transformer tests skipped; Java 38 passed. Added durable bounded setup/evaluation jobs, restart/cancellation retention, string-ID schema 2 NLP projection, Unicode/evidence validation, independent method reports and CLI/menu/browser operations. Final managed-service browser QA and docs remain before commit. Test server session 32604 still old T05 JAR; replace it. No paid calls or transformer weights.
 
@@ -47,7 +49,8 @@ Verification: Maven verify passes 2 tests (HTTP demo/chair/replay and cancellati
 | T08a quantities | Complete | Java51; zero/overrides/private selection; legacy replay and browser save/start |
 | T08b corpus/import | Verified | Java54/extractor5, 500 genuine excerpts, identical repeated extraction, shared CLI/menu/API/browser import, frozen private resources |
 | T09a targeted cues | Software verified; human review pending | Java56, current-topic/public-ID targets, own position history and actual mock HTTP privacy |
-| T09–T10 | Pending | Behaviour/pilot tools and final delivery acceptance; human research review remains pending |
+| T09b pilot tools | Software verified; human labels pending | Java63/extractor6; genuine blank preparation, mock classifier privacy600 requests, browser preparation/refusal/synthetic reports |
+| T10 delivery | Pending | Interface matrix, ZIP/path/interrupted setup and final documentation; native Unix/pristine OS unavailable on this host |
 
 ## Recovery procedure
 
@@ -102,3 +105,9 @@ T08b verified 2026-10-02: Java54 pass, extractor5 pass, Node syntax pass. Offici
 T09a active (REQ-05–06, 11, 16–19, 53–55, 57), dependency b08964c. Add editable recipient-specific engagement cue using stable public IDs: latest other-party contribution on current topic, own opening/recent position history, explicit coherent revision/concession reasons. Preserve hidden assignments and ordinary-agent blindness; cues use public evidence only. Acceptance controlled multi-topic/challenge/repetition/concession/tactic fixture, actual mock outbound isolation, prompt validation/freeze and existing scheduler/cancellation tests. Behavioural success with live models and human review remains pending. Next implement public-ID cue assembly and fixed-scenario tests before T09b pilot-data tools.
 
 T09a verified: Java56 pass. Engagement template and deterministic public-ID targeting/own opening+recent history frozen with snapshots. Mock outbound requests retain recipient isolation and do not announce assignments. Controlled concession fixture verifies wiring only; human/live behaviour acceptance remains pending. Next T09b reviewed pilot import/preparation/report tools with explicit synthetic labels.
+
+T09b active (REQ-14, 27–34, 53–55, 57; primary stage9 research tools), dependency ff2afcf. Adapt reviewed pilot concepts at c41c4c2 file level: strict candidate/reviewed/synthetic dataset import, seeded 200-item preparation with current grounding source-speech exclusion and source-debate-separated splits, durable local analysis reports with separate per-method/split macro-F1/confusion/coverage/failure/abstention/latency. Labels remain blank in preparation; human labels are uploader declarations and synthetic fixtures cannot establish accuracy. Acceptance duplicate/source consistency/split/grounding rejection before inference, blind classifier input excluding reviewer/gold/source identity, single-chunk unit enforcement, partial failures/cancel/restart, commands/menu/browser parity with fake providers only. Next implement shared pilot storage/validation/scoring, then synthetic regression tests and browser import/report QA.
+
+T09b WIP: strict PilotDataset/PilotService storage, 200-item seeded preparation/exclusion/disjoint debate splits, shared classifiers with frozen settings and per-item durable reports, classifier single-unit failures, per-method/split metrics, API/CLI/menu/browser controls implemented. Existing Java56 suite passed after backend additions; new pilot tests running (fake source/labels only). Remaining: finish new tests, interface parity/single-unit failure tests, genuine unlabelled source candidate helper, browser import/report smoke and documentation. No humanreview or paidcalls.
+
+T09b verified: Java63/extractor6/Node syntax/diff checks pass. Per-method classifier wire excludes gold/reviewer/source and sentiment excludes policy targets; stance receives explicit target only. Missing methods preserve successful VADER; multi-chunk units count failures; cancellation/restart retain committed items without rerunning. Real pinned source extraction produced240 blank candidate sentences; API/CLI/browser preparation produced identical200 review items,12calibration/188held-out with disjoint source groups, no labels/reviewer or grounding speech overlap. Browser synthetic import/scoring/report and unreviewed scoring refusal pass; screenshots parliament-pilot-fixture.png and parliament-pilot-unreviewed.png. Native filechooser harness unexpectedly blocked25minutes after successful upload; avoid another upload through that harness. Genuine labels and research accuracy remain unestablished. No evaluation history in HEAD; no paid calls. Next T10 Windows isolated ZIP/space path/repeat/interrupted setup and interface matrix.

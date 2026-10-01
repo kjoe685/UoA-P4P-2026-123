@@ -65,6 +65,28 @@ class ExtractionTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "size"):
                 module.verified(path)
 
+    def test_pilot_candidates_are_verbatim_unlabelled_and_exclude_grounding_speeches(self):
+        from types import SimpleNamespace
+        import hashlib
+        import json
+        texts = [f"Candidate {i} proposes funding for public housing while explaining practical constraints." for i in range(250)]
+        columns = {name: SimpleNamespace(value=value) for name, value in {
+            "date": ["2019-07-24"] * 250, "chair": [0] * 250, "text": texts, "agenda": ["Housing"] * 250}.items()}
+        corpus = {party: [{"sourceRow": 1, "fullTextSha256": hashlib.sha256(texts[0].encode()).hexdigest()}] for party in module.PARTIES.values()}
+        corpus["_corpus"] = {"source": {"sha256": module.EXPECTED_SHA256}}
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "corpus.json"
+            path.write_text(json.dumps(corpus), encoding="utf-8")
+            result = module.pilot_candidates(columns, path, 200, "housing", "Build public housing")
+        self.assertEqual(len(result["rows"]), 200)
+        self.assertEqual(result["evidenceType"], "unreviewed")
+        for row in result["rows"]:
+            self.assertIn(row["text"], texts[1:])
+            self.assertEqual(row["reviewer"], "")
+            self.assertEqual(row["sentiment"], "")
+            self.assertEqual(row["stance"], "")
+            self.assertNotEqual(row["sourceSpeechId"], module.EXPECTED_SHA256 + ":1")
+
 
 if __name__ == "__main__":
     unittest.main()

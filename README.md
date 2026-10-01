@@ -26,6 +26,8 @@ For optional local sentiment and stance, set up VADER, Cardiff or DeBERTa in **L
 
 **Evaluate LLM rubric** assesses five separate metrics using the sitting's saved evaluator preset or an independent override. Cloud evaluation uses provider credit; Ollama runs locally. Rubrics, prompts and budgets are editable through advanced configuration. The deterministic demonstration cannot judge debate quality. See the [LLM evaluation guide](evaluation/README.md).
 
+**Human-review pilots** imports source sentences, prepares 200 unlabelled items with separate source debates, and reports local classifiers against imported human labels. Preparation never invents gold labels or reviewers. Synthetic fixtures are marked as software checks. See the [pilot review guide](docs/pilot-study.md).
+
 ## Terminal and development
 
 Run `run.cmd cli` (Windows) or `sh run.sh cli` (Unix) for the guided menu: start, browse/watch saved sittings, rule, adjourn, import, or export. The menu attaches to localhost:8080, starting a backend if needed. A backend started by the menu stops when you exit. `run.cmd serve` starts a persistent server without opening a browser. A custom port can follow `serve`, for example `run.cmd serve 8081`.

@@ -302,12 +302,68 @@ def extract(columns, count):
     return result
 
 
+def pilot_candidates(columns, corpus_path, count, target_id, proposition):
+    """Verbatim source sentences for later HUMAN review. Never produce gold labels."""
+    if not 200 <= count <= 1000 or not target_id.strip() or not proposition.strip():
+        raise ValueError("Pilot needs 200–1000 candidates and an explicit curator-supplied policy proposition")
+    corpus = json.loads(corpus_path.read_text(encoding="utf-8"))
+    if corpus["_corpus"]["source"]["sha256"] != EXPECTED_SHA256:
+        raise ValueError("Grounding manifest does not identify this pinned source")
+    excluded_rows = {entry["sourceRow"] for party in PARTIES.values() for entry in corpus[party]}
+    excluded_hashes = {entry["fullTextSha256"] for party in PARTIES.values() for entry in corpus[party]}
+    heap = []
+    for row in range(len(columns["date"].value)):
+        if row + 1 in excluded_rows or columns["chair"].value[row] != 0:
+            continue
+        date = columns["date"].value[row]
+        if not date or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", date):
+            continue
+        item = (date, -row)
+        if len(heap) < count * 40:
+            heapq.heappush(heap, item)
+        elif item > heap[0]:
+            heapq.heapreplace(heap, item)
+    rows, seen = [], set()
+    for date, negative_row in sorted(heap, reverse=True):
+        row = -negative_row
+        speech = columns["text"].value[row]
+        if not speech:
+            continue
+        speech_hash = hashlib.sha256(speech.encode("utf-8")).hexdigest()
+        if speech_hash in excluded_hashes:
+            continue
+        for sentence_index, match in enumerate(re.finditer(r".+?(?:[.!?](?=\s|$)|\n+|$)", speech, re.DOTALL)):
+            sentence = match.group().strip()
+            normalized = " ".join(unicodedata.normalize("NFKC", sentence).split()).lower()
+            if not 50 <= len(sentence) <= 500 or not 10 <= len(sentence.split()) <= 80 or sentence[-1] not in ".!?" or normalized in seen:
+                continue
+            seen.add(normalized)
+            agenda = columns["agenda"].value[row] or ""
+            rows.append({"id": f"nz-{row + 1}-s{sentence_index}",
+                         "sourceDebateId": f"NZL:{date}:" + hashlib.sha256(agenda.encode("utf-8")).hexdigest()[:16],
+                         "sourceSpeechId": f"{EXPECTED_SHA256}:{row + 1}", "sourceSpeechSha256": speech_hash,
+                         "text": sentence, "target": {"id": target_id, "proposition": proposition},
+                         "split": "", "sentiment": "", "stance": "", "reviewer": ""})
+            break  # one source sentence per speech; no invented padding
+        if len(rows) == count:
+            break
+    if len(rows) != count:
+        raise ValueError(f"Only {len(rows)} eligible non-grounding source sentences; requested {count}")
+    return {"schemaVersion": 1, "evidenceType": "unreviewed",
+            "source": {"title": "ParlSpeech V2 NZ source sentences (unreviewed)", "doi": "10.7910/DVN/L4OAKN",
+                       "url": "https://dataverse.harvard.edu/api/access/datafile/3758791", "fileSha256": EXPECTED_SHA256}, "rows": rows}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", type=Path, default=Path(".runtime/hansard/Corp_NZHoR_V2.rds"))
     parser.add_argument("--inspect", action="store_true")
     parser.add_argument("--per-party", type=int, default=100)
     parser.add_argument("--output", type=Path, default=Path(".runtime/hansard/excerpts.candidate.json"))
+    parser.add_argument("--pilot-proposition", help="Explicit curator-supplied policy proposition; extracts unreviewed pilot candidates instead")
+    parser.add_argument("--pilot-target-id", default="policy-1")
+    parser.add_argument("--pilot-count", type=int, default=240)
+    parser.add_argument("--grounding", type=Path, default=Path("data/hansard/excerpts.json"))
     args = parser.parse_args()
     verified(args.source)
     with args.source.open("rb") as file:
@@ -316,15 +372,22 @@ def main():
             print(json.dumps({name: {"type": column.kind, "rows": len(column.value)}
                               for name, column in columns.items()}, indent=2))
             return
-        if not 1 <= args.per_party <= 200:
-            raise ValueError("Choose 1–200 excerpts per party")
-        result = extract(columns, args.per_party)
+        if args.pilot_proposition is not None:
+            result = pilot_candidates(columns, args.grounding, args.pilot_count, args.pilot_target_id, args.pilot_proposition)
+            if args.output == Path(".runtime/hansard/excerpts.candidate.json"):
+                args.output = Path(".runtime/hansard/pilot.candidate.json")
+        else:
+            if not 1 <= args.per_party <= 200:
+                raise ValueError("Choose 1–200 excerpts per party")
+            result = extract(columns, args.per_party)
     output = json.dumps(result, ensure_ascii=False, indent=2) + "\n"
     args.output.parent.mkdir(parents=True, exist_ok=True)
     temporary = args.output.with_suffix(args.output.suffix + ".part")
     temporary.write_text(output, encoding="utf-8", newline="\n")
     temporary.replace(args.output)
-    print(f"Candidate written: {args.output} ({len(output.encode('utf-8'))} bytes); application import validates before replacement")
+    print(f"Candidate written: {args.output} ({len(output.encode('utf-8'))} bytes); import remains explicit")
+    if result.get("evidenceType") == "unreviewed":
+        print("No gold labels or reviewers generated. Real human review is required before scoring.")
 
 
 if __name__ == "__main__":

@@ -43,6 +43,17 @@ public final class Main {
     public void command(String[] args) throws Exception {
         switch (args[0]) {
             case "config" -> output.println(get("/api/config"));
+            case "pilot" -> {
+                requireArgs(args,2);
+                switch (args[1]) {
+                    case "list" -> output.println(get("/api/pilots"));
+                    case "import" -> { requireArgs(args,3); output.println(post("/api/pilots",Files.readString(Path.of(args[2])))); }
+                    case "show" -> { requireArgs(args,3); String dataset=get("/api/pilots/"+encode(args[2])); if (args.length>3) Files.writeString(Path.of(args[3]),dataset); else output.println(dataset); }
+                    case "prepare" -> { requireArgs(args,3); output.println(post("/api/pilots/"+encode(args[2])+"/prepare",Json.write(Map.of("seed",args.length>3 ? Long.parseLong(args[3]) : 123)))); }
+                    case "evaluate" -> { requireArgs(args,3); output.println(post("/api/pilots/"+encode(args[2])+"/evaluate",Json.write(args.length>3 ? Map.of("methods",Arrays.asList(args[3].split(","))) : Map.of()))); }
+                    default -> throw new IllegalArgumentException("pilot list | import FILE | show ID [FILE] | prepare ID [SEED] | evaluate ID [METHODS]");
+                }
+            }
             case "corpus" -> {
                 requireArgs(args,2);
                 switch (args[1]) {
@@ -109,16 +120,30 @@ public final class Main {
                 requireArgs(args,2); String text=get(runPath(args[1])+(args[0].equals("transcript") ? "/transcript" : "/export"));
                 if (args.length>2) Files.writeString(Path.of(args[2]),text,StandardCharsets.UTF_8); else output.println(text);
             }
-            default -> throw new IllegalArgumentException("Commands: config, settings, assets, corpus status/validate/import, local status/setup, evaluate ID [METHODS], jobs, job ID, cancel-job ID, report ID [FILE], runs, start SETTINGS.json, import TRANSCRIPT.json, watch ID, ruling ID TEXT, cancel ID, transcript ID [FILE], export ID [FILE]");
+            default -> throw new IllegalArgumentException("Commands: config, settings, assets, corpus status/validate/import, pilot list/import/show/prepare/evaluate, local status/setup, evaluate ID [METHODS], jobs, job ID, cancel-job ID, report ID [FILE], runs, start SETTINGS.json, import TRANSCRIPT.json, watch ID, ruling ID TEXT, cancel ID, transcript ID [FILE], export ID [FILE]");
         }
     }
     void menu() throws Exception {
         while (true) {
-            output.println("\n1 Start sitting\n2 Saved sittings\n3 Watch sitting\n4 Chair ruling\n5 Adjourn\n6 Export JSON\n7 Export text\n8 Import transcript\n9 Saved settings\n10 Advanced assets\n11 Start from saved settings\n12 Local evaluation setup\n13 Evaluate sitting\n14 Analysis jobs/reports\n15 LLM rubric evaluation\n16 Grounding corpus\n0 Exit");
+            output.println("\n1 Start sitting\n2 Saved sittings\n3 Watch sitting\n4 Chair ruling\n5 Adjourn\n6 Export JSON\n7 Export text\n8 Import transcript\n9 Saved settings\n10 Advanced assets\n11 Start from saved settings\n12 Local evaluation setup\n13 Evaluate sitting\n14 Analysis jobs/reports\n15 LLM rubric evaluation\n16 Grounding corpus\n17 Human-review pilots\n0 Exit");
             String choice=ask("Choice: ");
             if (choice.equals("0") || choice.isEmpty() && !input.hasNextLine()) return;
             try {
                 switch (choice) {
+                    case "17" -> {
+                        output.println(get("/api/pilots")); String action=ask("Pilot action: import, show, prepare, evaluate (blank = return): ");
+                        if (action.isBlank()) break;
+                        if (action.equals("import")) output.println(post("/api/pilots",Files.readString(Path.of(ask("Pilot JSON file: ")))));
+                        else {
+                            String path="/api/pilots/"+encode(ask("Pilot id: "));
+                            switch (action) {
+                                case "show" -> { String file=ask("Output JSON file (blank = print): "), text=get(path); if (file.isBlank()) output.println(text); else Files.writeString(Path.of(file),text); }
+                                case "prepare" -> { String seed=ask("Preparation seed (blank = 123; labels remain blank): "); output.println(post(path+"/prepare",Json.write(Map.of("seed",seed.isBlank() ? 123 : Long.parseLong(seed))))); }
+                                case "evaluate" -> { String methods=ask("Method IDs separated by commas (blank = defaults; reviewed data required): "); output.println(post(path+"/evaluate",Json.write(methods.isBlank() ? Map.of() : Map.of("methods",Arrays.asList(methods.split(",")))))); }
+                                default -> throw new IllegalArgumentException("Choose a listed pilot action");
+                            }
+                        }
+                    }
                     case "16" -> {
                         output.println(get("/api/corpus")); String file=ask("Candidate corpus JSON file (blank = return): ");
                         if (file.isBlank()) break;

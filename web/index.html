@@ -56,6 +56,23 @@
       <div id="analysis-report"></div>
       <p id="analysis-status" role="status" class="hint"></p>
     </section>
+    <details class="card pilot-tools">
+      <summary class="card-title">Human-review pilots</summary>
+      <p class="hint">Import genuine source sentences with policy propositions. Prepare 200 items for review with blank labels and separate source debates. Use reviewer pseudonyms. Reviewed labels and provenance are uploader declarations; synthetic fixtures verify software and cannot establish research accuracy.</p>
+      <label for="pilot-file" class="field-label">Pilot dataset JSON file</label>
+      <input id="pilot-file" type="file" accept="application/json,.json">
+      <button id="refresh-pilots" type="button" class="btn btn-secondary">Refresh pilots</button>
+      <label for="pilot-id" class="field-label">Saved pilot</label>
+      <select id="pilot-id"></select>
+      <label for="pilot-seed" class="field-label">Preparation seed</label>
+      <input id="pilot-seed" type="number" step="1" value="123">
+      <button id="prepare-pilot" type="button" class="btn btn-secondary">Prepare 200 unlabelled items</button>
+      <button id="evaluate-pilot" type="button" class="btn btn-secondary">Run selected local methods on pilot</button>
+      <a id="download-pilot" hidden>Download pilot for review</a>
+      <p class="hint">Scoring uses the methods selected above and existing local model setup. Each reviewed item must produce one analysis chunk; split units count as failures rather than being aggregated. Reports retain completed items if a method fails or a job is interrupted.</p>
+      <p id="pilot-status" class="hint" role="status"></p>
+    </details>
+
     <section class="card saved-runs" aria-labelledby="saved-title">
       <div class="saved-head"><h2 id="saved-title" class="card-title">Saved sittings</h2>
         <button id="refresh-runs" type="button" class="btn btn-secondary">Refresh</button></div>

@@ -21,6 +21,7 @@ public final class DebateApplication implements AutoCloseable {
     private final JobService background;
     private final ManagedNlp nlp;
     private final LocalEvaluationService evaluation;
+    private final PilotService pilots;
     private final LlmEvaluationService llmEvaluation;
     private final Function<ModelConfig,ChatManager> providers;
     private final Map<String,RunSession> sessions=new ConcurrentHashMap<>();
@@ -35,10 +36,12 @@ public final class DebateApplication implements AutoCloseable {
         this.corpus=new CorpusService(assets);
         this.background=new JobService(root.resolve("runs/jobs")); this.nlp=new ManagedNlp(root);
         this.llmEvaluation=new LlmEvaluationService(root,background,providers);
-        this.evaluation=new LocalEvaluationService(root,background,(config,settings) -> {
+        java.util.function.BiFunction<engine.evaluation.local.LocalEvaluationConfig,String,engine.evaluation.local.NlpClient> analysisFactory=(config,settings) -> {
             if (analysisClients!=null) return analysisClients.apply(config);
             nlp.ensureRunning(config,settings); return new engine.evaluation.local.HttpNlpClient(config.endpoint(),java.time.Duration.ofSeconds(config.timeoutSeconds()));
-        });
+        };
+        this.evaluation=new LocalEvaluationService(root,background,analysisFactory);
+        this.pilots=new PilotService(root,background,evaluation,analysisFactory);
         this.jobs=new ThreadPoolExecutor(2,2,0,TimeUnit.SECONDS,new ArrayBlockingQueue<>(4),
                 task -> { Thread thread=new Thread(task,"parliament-job"); thread.setDaemon(true); return thread; });
         for (String id:store.ids()) {
@@ -53,6 +56,7 @@ public final class DebateApplication implements AutoCloseable {
     public ConfigurationSnapshot configuration() { return ConfigurationSnapshot.load(root); }
     public AssetService assets() { return assets; }
     public CorpusService corpus() { return corpus; }
+    public PilotService pilots() { return pilots; }
     public SettingsService settings() { return settings; }
     public JobService background() { return background; }
     public Map<String,Object> localReadiness() { return nlp.readiness(evaluation.configuration()); }

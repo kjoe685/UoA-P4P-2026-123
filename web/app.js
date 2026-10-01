@@ -521,6 +521,42 @@ async function updateAsset(save) {
 }
 
 let sitting = null;
+async function refreshPilots(selected=null) {
+  try {
+    const current=selected || $('#pilot-id').value, pilots=await api('/api/pilots');
+    $('#pilot-id').replaceChildren(el('option',{text:'Choose pilot',attrs:{value:''}}),...pilots.map(pilot=>el('option',{
+      text:`${pilot.sourceTitle} · ${pilot.evidenceType} · ${pilot.items} items · ${pilot.id.slice(0,8)}`,attrs:{value:pilot.id,selected:pilot.id===current}})));
+    selectPilot();
+  } catch(error) { $('#pilot-status').textContent=error.message; }
+}
+function selectPilot() {
+  const id=$('#pilot-id').value, link=$('#download-pilot'); link.hidden=!id;
+  if (id) { link.href=`/api/pilots/${encodeURIComponent(id)}?download=1`; link.download=`pilot-${id}.json`; }
+}
+async function importPilot(event) {
+  const file=event.target.files[0]; if (!file) return;
+  try {
+    if (file.size>1500000) throw new Error('Choose pilot JSON up to 1.5 MB (one million characters).');
+    const result=await api('/api/pilots',{method:'POST',body:JSON.parse(await file.text())});
+    await refreshPilots(result.id); $('#pilot-status').textContent=`Imported ${result.items} ${result.evidenceType} items. ${result.reviewStatus}.`;
+  } catch(error) { $('#pilot-status').textContent=error.message; }
+  finally { event.target.value=''; }
+}
+async function preparePilot() {
+  try {
+    const id=$('#pilot-id').value; if (!id) throw new Error('Choose a source pilot.');
+    const result=await api(`/api/pilots/${encodeURIComponent(id)}/prepare`,{method:'POST',body:{seed:Number($('#pilot-seed').value)}});
+    await refreshPilots(result.id); $('#pilot-status').textContent='Prepared 200 items with blank labels. Download, obtain real human review, then import the completed dataset.';
+  } catch(error) { $('#pilot-status').textContent=error.message; }
+}
+async function evaluatePilot() {
+  try {
+    const pilot=$('#pilot-id').value; if (!pilot) throw new Error('Choose a reviewed pilot.');
+    const methods=Array.from(document.querySelectorAll('input[name="analysis-method"]:checked')).map(input=>input.value);
+    const {id}=await api(`/api/pilots/${encodeURIComponent(pilot)}/evaluate`,{method:'POST',body:{methods}});
+    $('#pilot-status').textContent=`Pilot analysis job ${id} queued. Open its report in Local analysis.`; await refreshJobs();
+  } catch(error) { $('#pilot-status').textContent=error.message; }
+}
 
 function openSitting(id) {
   closeSitting();
@@ -1044,7 +1080,16 @@ async function openReport(id) {
         contents.push(section);
       }
     }
-    if (result.methods) for (const method of result.methods) {
+    if (result.pilotId) {
+      contents.push(el('p',{text:`${result.evidenceType}: ${result.interpretation}`}));
+      for (const method of result.methods) {
+        const metric=method.metrics;
+        contents.push(el('details',{},el('summary',{text:`${method.methodId} · ${method.split} · ${metric.count}/${method.plannedItems} completed items`}),
+          el('p',{text:`Macro-F1 ${metric.macroF1.toFixed(3)} · coverage ${(100*metric.coverage).toFixed(1)}% · failures ${metric.failures} · abstentions ${metric.abstentions} · mean ${metric.meanLatencyMillis.toFixed(1)} ms · p95 ${metric.p95LatencyMillis.toFixed(1)} ms`}),
+          el('pre',{text:JSON.stringify(metric.confusionMatrix,null,2)})));
+      }
+    }
+    if (result.methods && !result.pilotId) for (const method of result.methods) {
       const section=el('details',{},el('summary',{text:`${method.methodId} · ${method.status}${method.error ? ` · ${method.error}` : ''}`}));
       contents.push(section);
       for (const batch of method.batches) for (const item of batch.items) {
@@ -1061,6 +1106,11 @@ async function openReport(id) {
 
 function wireEvents() {
   $('#setup-local').addEventListener('click',setupLocal);
+  $('#pilot-file').addEventListener('change',importPilot);
+  $('#pilot-id').addEventListener('change',selectPilot);
+  $('#refresh-pilots').addEventListener('click',()=>refreshPilots());
+  $('#prepare-pilot').addEventListener('click',preparePilot);
+  $('#evaluate-pilot').addEventListener('click',evaluatePilot);
   $('#setup-cardiff').addEventListener('click',()=>setupLocalModel('cardiff-sentiment'));
   $('#setup-deberta').addEventListener('click',()=>setupLocalModel('deberta-stance'));
   $('#refresh-jobs').addEventListener('click',async()=>{await refreshJobs(); await refreshLocalReadiness();});
@@ -1140,6 +1190,7 @@ async function main() {
   } catch (error) { $('#settings-status').textContent = error.message; }
   await refreshSavedRuns();
   await refreshCorpus();
+  await refreshPilots();
   await refreshJobs(); await refreshLocalReadiness();
   setInterval(refreshJobs,3000);
 

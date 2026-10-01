@@ -1,6 +1,6 @@
 # Configuration and saved runs
 
-`config/engine.json` defines validated model presets, independent agent/evaluator defaults, party profiles, default topic/rounds and interruption probabilities/seed. `prompts/` contains editable base/persona/grounding/turn/strategy templates. `data/hansard/excerpts.json` retains main's small, genuine corpus; expansion remains a later milestone. Changes affect new runs without recompilation. Active runs keep immutable source contents and SHA-256 hashes.
+`config/engine.json` defines validated model presets, independent agent/evaluator defaults, party profiles, default topic/rounds and interruption probabilities/seed. `prompts/` contains editable base/persona/grounding/turn/engagement/strategy templates. `data/hansard/excerpts.json` contains 500 genuine, reproducibly extracted excerpts. Changes affect new runs without recompilation. Active runs keep immutable source contents and SHA-256 hashes.
 
 Model presets include the deterministic demo, OpenAI, Anthropic, Gemini, Grok and Ollama. Agent and judge presets are independent, with optional member overrides. Selecting a preset never downloads or substitutes a model. Credentials are resolved only when the selected provider is constructed, and adapters are reused safely with stateless requests.
 
