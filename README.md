@@ -252,3 +252,6 @@ run the app — only to regenerate `HansardExcerpts.json`). To redo or extend it
 ├── README.md
 └── .gitignore
 ```
+# Implementation status
+
+The [primary implementation plan](docs/implementation-plan.md) governs ongoing work. Read the [progress and recovery record](docs/implementation-progress.md) to see verified checkpoints and unfinished tasks. The [integration plan](docs/integration-plan.md) is secondary historical reference.
