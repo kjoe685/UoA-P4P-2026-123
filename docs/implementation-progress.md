@@ -11,9 +11,13 @@
 
 ## Active task
 
-**T05 — Providers and advanced settings (REQ-05–11, 12–13, 20–26, 49–50, 53–55, 57).**
+**T06a — VADER and local evaluation runtime (REQ-27–34, 49–50, 53–56, 57).**
 
-Outcome: independent provider/model selection and reusable settings plus validated prompt/profile/model editing through browser, guided CLI and commands.
+Outcome: explicit managed local setup, readiness, durable evaluation jobs and separate VADER reports via browser, guided CLI and commands. Dependencies: T05 checkpoint 0b5a5be. Ported NLP source/lock/tests and wire/validator files are currently uncommitted; adapting schema 2 string evidence IDs and stable topic targets before connecting services. Next implement managed uv setup, job persistence and interface parity; verify real VADER plus mock malformed evidence, Unicode, partial failure, cancellation and restart. Cardiff and DeBERTa remain later checkpoints; no transformer weights downloaded.
+
+T06a in progress: managed uv 0.12.16 with official SHA-256 verified, managed Python 3.12.14 + locked lightweight dependencies installed locally. Python 13 passed / 3 transformer tests skipped; Java 38 passed. Added durable bounded setup/evaluation jobs, restart/cancellation retention, string-ID schema 2 NLP projection, Unicode/evidence validation, independent method reports and CLI/menu/browser operations. Final managed-service browser QA and docs remain before commit. Test server session 32604 still old T05 JAR; replace it. No paid calls or transformer weights.
+
+T06a complete: managed browser setup and real VADER report for saved demonstration passed (79 items / 2 batches, status ok, implementation 0.2.0, VADER 3.3.2 provenance). Browser report reopening after backend restart works with service stopped, making no inference calls. Owned Python process stopped with prior backend. CLI exports same report. Final Java verify: 38 pass; Python 13 pass / 3 optional skips. Screenshot parliament-vader-analysis.png in thread visualization directory. Latest idle server session 54833, port 18087. Logs use HTTP/1.1; saved jobs validate state and fall back to an explicit UI failure if progress cannot be committed. Cardiff/DeBERTa setup and weights remain pending.
 
 Contracts: model/provider settings, credential resolution, allowlisted editable assets, saved settings, shared API. Dependencies: T03/T04 checkpoint `48e69e6`. Reuse: review Anthropic/Gemini/Grok/Ollama adapters and corresponding tests at `c41c4c2`; never import branch history.
 
@@ -36,7 +40,8 @@ Verification: Maven verify passes 2 tests (HTTP demo/chair/replay and cancellati
 | T03 privacy/configuration | Implemented | Outbound HTTP sentinels, immutable snapshots, strict public/private contracts; 12-test suite passes |
 | T04 runtime/persistence/parity | Implemented; download UX acceptance partial | Shared application, bounded jobs, persistence/recovery/import/export; commands/menu/API tests and browser replay pass |
 | T05 providers/settings | Complete | 33 tests pass, browser save/load/rejection and real JSON download; no live provider verification |
-| T06–T10 | Pending | See primary plan |
+| T06a VADER/jobs | Complete | 38 Java tests, 13 Python tests/3 optional skips, managed setup/real inference/report restart verified |
+| T06b–T10 | Pending | See primary plan |
 
 ## Recovery procedure
 

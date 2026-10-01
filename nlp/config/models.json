@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "batchSize": 8,
+  "cpuThreads": 4,
+  "minScore": 0.6,
+  "minMargin": 0.15,
+  "maxChunksPerItem": 1000,
+  "cardiff": {
+    "modelId": "cardiffnlp/twitter-roberta-base-sentiment-latest",
+    "revision": "3216a57f2a0d9c45a2e6c20157c20c49fb4bf9c7",
+    "maxTokens": 512
+  },
+  "deberta": {
+    "modelId": "MoritzLaurer/deberta-v3-base-zeroshot-v2.0-c",
+    "revision": "bddf8c5411c34ac3565e16e04384fd68b2618dda",
+    "maxTokens": 512
+  },
+  "stanceHypotheses": {
+    "support": "The speaker supports the following policy: {proposition}",
+    "oppose": "The speaker opposes the following policy: {proposition}",
+    "unrelated": "The speaker expresses no position on the following policy: {proposition}"
+  }
+}

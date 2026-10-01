@@ -42,4 +42,6 @@ replay_pid*
 /keys/**/*_Key.txt
 /nlp/.venv/
 /nlp/.cache/
+/nlp/.models/
+.pytest_cache/
 __pycache__/

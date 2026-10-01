@@ -928,7 +928,64 @@ async function downloadJson() {
   document.body.append(link); link.click(); link.remove();
 }
 
+async function refreshJobs() {
+  try {
+    const jobs = await api('/api/jobs');
+    $('#analysis-jobs').replaceChildren(...jobs.slice(0,30).map(job => el('div', { className:'saved-row' },
+      el('span', { text: `${job.kind} · ${job.state.toLowerCase()} · ${job.progress}` }),
+      el('button', { className:'btn btn-secondary', text:'Open report', attrs:{ type:'button' }, on:{click:()=>openReport(job.id)} }),
+      ['QUEUED','RUNNING'].includes(job.state) ? el('button', { className:'btn btn-secondary', text:'Cancel job', attrs:{type:'button'},
+        on:{click:async()=>{ try { await api(`/api/jobs/${encodeURIComponent(job.id)}/cancel`,{method:'POST',body:{}}); await refreshJobs(); }
+          catch(error){$('#analysis-status').textContent=error.message;} }} }) : null)));
+  } catch(error) { $('#analysis-status').textContent=error.message; }
+}
+
+async function refreshLocalReadiness() {
+  try {
+    const state=await api('/api/local-readiness');
+    $('#local-readiness').textContent=state.running ? 'Local service is running. Methods load when selected.'
+      : state.installed ? 'Dependencies installed. Evaluation starts the local service when needed.' : 'Local dependencies are not installed. Set up VADER to begin.';
+  } catch(error) { $('#local-readiness').textContent=error.message; }
+}
+
+async function setupLocal() {
+  try {
+    const {id}=await api('/api/local-setup',{method:'POST',body:{}});
+    $('#analysis-status').textContent=`Setup job ${id} queued.`; await refreshJobs();
+  } catch(error) { $('#analysis-status').textContent=error.message; }
+}
+
+async function evaluateSitting() {
+  if (!sitting) return;
+  try {
+    const {id}=await api(`/api/debates/${encodeURIComponent(sitting.id)}/evaluate`,{method:'POST',body:{methods:['vader-sentiment']}});
+    $('#analysis-status').textContent=`Analysis job ${id} captures the speeches saved so far.`; await refreshJobs();
+  } catch(error) { $('#analysis-status').textContent=error.message; }
+}
+
+async function openReport(id) {
+  try {
+    const job=await api(`/api/jobs/${encodeURIComponent(id)}`), result=job.result;
+    $('#analysis-status').textContent=job.progress;
+    if (!result) { $('#analysis-report').replaceChildren(); return; }
+    const contents=[el('h3',{text:`${job.kind} · ${job.state.toLowerCase()}`})];
+    if (result.methods) for (const method of result.methods) {
+      contents.push(el('h4',{text:`${method.methodId} · ${method.status}${method.error ? ` · ${method.error}` : ''}`}));
+      for (const batch of method.batches) for (const item of batch.items) {
+        contents.push(el('p',{text:`${item.turnId}${item.targetId ? ` → ${item.targetId}` : ''}: ${item.status}${item.error ? ` · ${item.error}` : ''}`}));
+        for (const chunk of item.chunks) contents.push(el('p',{className:'analysis-chunk',text:`${chunk.text} — ${chunk.label}${chunk.compound!=null ? ` (compound ${chunk.compound})` : ''}`}));
+      }
+    }
+    contents.push(el('a',{text:'Download analysis JSON',attrs:{href:`/api/jobs/${encodeURIComponent(id)}/report?download=1`,download:`analysis-${id}.json`}}));
+    contents.push(el('details',{},el('summary',{text:'Evidence, provenance and separate scores'}),el('pre',{text:JSON.stringify(result,null,2)})));
+    $('#analysis-report').replaceChildren(...contents);
+  } catch(error) { $('#analysis-status').textContent=error.message; }
+}
+
 function wireEvents() {
+  $('#setup-local').addEventListener('click',setupLocal);
+  $('#refresh-jobs').addEventListener('click',async()=>{await refreshJobs(); await refreshLocalReadiness();});
+  $('#evaluate-btn').addEventListener('click',evaluateSitting);
   $('#load-settings').addEventListener('click', loadSettings);
   $('#save-settings').addEventListener('click', saveSettings);
   $('#read-asset').addEventListener('click', readAsset);
@@ -989,6 +1046,8 @@ async function main() {
     $('#asset-path').replaceChildren(...paths.map(path => el('option', { text: path, attrs: { value: path } })));
   } catch (error) { $('#settings-status').textContent = error.message; }
   await refreshSavedRuns();
+  await refreshJobs(); await refreshLocalReadiness();
+  setInterval(refreshJobs,3000);
 
   // Rejoin a sitting in progress after a page reload.
   const savedSitting = readStore(sessionStorage, SITTING_STORAGE_KEY);

@@ -27,6 +27,30 @@ public final class ApiHandler implements HttpHandler {
         if (parts.length==3 && parts[2].equals("config")) {
             require(method,"GET"); sendJson(exchange,200,config()); return;
         }
+        if (parts.length==3 && parts[2].equals("local-readiness")) {
+            require(method,"GET"); sendJson(exchange,200,application.localReadiness()); return;
+        }
+        if (parts.length==3 && parts[2].equals("local-setup")) {
+            require(method,"POST"); if (!body(exchange).isEmpty()) throw new IllegalArgumentException("VADER setup needs an empty object");
+            sendJson(exchange,202,Map.of("id",application.setupLocalNlp().id())); return;
+        }
+        if (parts.length==3 && parts[2].equals("jobs")) {
+            require(method,"GET"); sendJson(exchange,200,application.background().list().stream().map(job -> {
+                Map<String,Object> summary=new LinkedHashMap<>(); summary.put("id",job.id()); summary.put("kind",job.kind());
+                summary.put("runId",job.runId()); summary.put("createdAt",job.createdAt()); summary.put("state",job.state()); summary.put("progress",job.progress()); return summary;
+            }).toList()); return;
+        }
+        if (parts.length>=4 && parts[2].equals("jobs")) {
+            var job=application.background().find(parts[3]);
+            if (parts.length==4) { require(method,"GET"); sendJson(exchange,200,job); return; }
+            if (parts.length==5 && parts[4].equals("cancel")) {
+                require(method,"POST"); body(exchange); application.background().cancel(job.id()); sendJson(exchange,202,Map.of()); return;
+            }
+            if (parts.length==5 && parts[4].equals("report")) {
+                require(method,"GET"); if (job.result()==null) throw new IllegalStateException("No report yet");
+                downloadHeader(exchange,job.id()+"-analysis.json"); sendJson(exchange,200,job.result()); return;
+            }
+        }
         if (parts.length==3 && parts[2].equals("settings")) {
             require(method,"GET"); sendJson(exchange,200,application.settings().names()); return;
         }
@@ -74,6 +98,7 @@ public final class ApiHandler implements HttpHandler {
         if (parts.length==5 && parts[2].equals("debates")) {
             var session=application.find(parts[3]);
             switch (parts[4]) {
+                case "evaluate" -> { require(method,"POST"); sendJson(exchange,202,Map.of("id",application.evaluate(session.id(),body(exchange)).id())); return; }
                 case "events" -> { require(method,"GET"); stream(exchange,session); return; }
                 case "transcript" -> { require(method,"GET"); downloadHeader(exchange,session.id()+".json"); sendJson(exchange,200,session.transcript()); return; }
                 case "export" -> { require(method,"GET"); downloadHeader(exchange,session.id()+".txt"); sendText(exchange,application.textExport(session.id())); return; }

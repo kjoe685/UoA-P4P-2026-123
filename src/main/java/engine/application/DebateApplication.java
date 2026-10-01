@@ -17,12 +17,23 @@ public final class DebateApplication implements AutoCloseable {
     private final RunStore store;
     private final AssetService assets;
     private final SettingsService settings;
+    private final JobService background;
+    private final ManagedNlp nlp;
+    private final LocalEvaluationService evaluation;
     private final Function<ModelConfig,ChatManager> providers;
     private final Map<String,RunSession> sessions=new ConcurrentHashMap<>();
     private final ThreadPoolExecutor jobs;
     public DebateApplication(Path root,RunStore store,Function<ModelConfig,ChatManager> providers) {
+        this(root,store,providers,null);
+    }
+    public DebateApplication(Path root,RunStore store,Function<ModelConfig,ChatManager> providers,
+                             Function<engine.evaluation.local.LocalEvaluationConfig,engine.evaluation.local.NlpClient> analysisClients) {
         this.root=root; this.store=store; this.providers=providers;
         this.assets=new AssetService(root); this.settings=new SettingsService(root.resolve("runs/settings"));
+        this.background=new JobService(root.resolve("runs/jobs")); this.nlp=new ManagedNlp(root);
+        this.evaluation=new LocalEvaluationService(root,background,analysisClients!=null ? analysisClients : config -> {
+            nlp.ensureRunning(config); return new engine.evaluation.local.HttpNlpClient(config.endpoint(),java.time.Duration.ofSeconds(config.timeoutSeconds()));
+        });
         this.jobs=new ThreadPoolExecutor(2,2,0,TimeUnit.SECONDS,new ArrayBlockingQueue<>(4),
                 task -> { Thread thread=new Thread(task,"parliament-job"); thread.setDaemon(true); return thread; });
         for (String id:store.ids()) {
@@ -37,6 +48,17 @@ public final class DebateApplication implements AutoCloseable {
     public ConfigurationSnapshot configuration() { return ConfigurationSnapshot.load(root); }
     public AssetService assets() { return assets; }
     public SettingsService settings() { return settings; }
+    public JobService background() { return background; }
+    public Map<String,Object> localReadiness() { return nlp.readiness(evaluation.configuration()); }
+    public BackgroundJob setupLocalNlp() {
+        var config=evaluation.configuration();
+        return background.submit("local-setup",null,Map.of("method","vader-sentiment"),context -> {
+            context.update("Installing managed Python and locked VADER dependencies",null); nlp.install(context);
+            context.checkCancelled(); context.update("Starting local analysis service",null); nlp.ensureRunning(config);
+            context.update("VADER dependencies installed; analysis remains explicit",nlp.readiness(config)); return true;
+        });
+    }
+    public BackgroundJob evaluate(String id,Map<String,Object> body) { return evaluation.start(find(id).transcript(),body); }
     public synchronized RunSession start(Map<String,Object> body) {
         if (jobs.getActiveCount()+jobs.getQueue().size()>=6) throw new IllegalStateException("Debate job limit reached");
         var snapshot=configuration(); var spec=RunSpec.resolve(settings.resolve(body),snapshot.config());
@@ -89,6 +111,7 @@ public final class DebateApplication implements AutoCloseable {
         return text.toString();
     }
     @Override public void close() {
+        background.close(); nlp.close();
         sessions.values().stream().filter(session -> !session.isFinished()).forEach(RunSession::adjourn);
         jobs.shutdown();
         try { if (!jobs.awaitTermination(5,TimeUnit.SECONDS)) jobs.shutdownNow(); }

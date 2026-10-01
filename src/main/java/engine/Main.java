@@ -43,6 +43,25 @@ public final class Main {
     public void command(String[] args) throws Exception {
         switch (args[0]) {
             case "config" -> output.println(get("/api/config"));
+            case "local" -> {
+                requireArgs(args,2);
+                switch (args[1]) {
+                    case "status" -> output.println(get("/api/local-readiness"));
+                    case "setup" -> output.println(post("/api/local-setup","{}"));
+                    default -> throw new IllegalArgumentException("local status | setup");
+                }
+            }
+            case "evaluate" -> {
+                requireArgs(args,2); Map<String,Object> settings=args.length>2 ? Map.of("methods",Arrays.asList(args[2].split(","))) : Map.of();
+                output.println(post(runPath(args[1])+"/evaluate",Json.write(settings)));
+            }
+            case "jobs" -> output.println(get("/api/jobs"));
+            case "job" -> { requireArgs(args,2); output.println(get("/api/jobs/"+encode(args[1]))); }
+            case "cancel-job" -> { requireArgs(args,2); output.println(post("/api/jobs/"+encode(args[1])+"/cancel","{}")); }
+            case "report" -> {
+                requireArgs(args,2); String report=get("/api/jobs/"+encode(args[1])+"/report");
+                if (args.length>2) Files.writeString(Path.of(args[2]),report); else output.println(report);
+            }
             case "settings" -> {
                 requireArgs(args,2);
                 switch (args[1]) {
@@ -73,16 +92,33 @@ public final class Main {
                 requireArgs(args,2); String text=get(runPath(args[1])+(args[0].equals("transcript") ? "/transcript" : "/export"));
                 if (args.length>2) Files.writeString(Path.of(args[2]),text,StandardCharsets.UTF_8); else output.println(text);
             }
-            default -> throw new IllegalArgumentException("Commands: config, settings, assets, runs, start SETTINGS.json, import TRANSCRIPT.json, watch ID, ruling ID TEXT, cancel ID, transcript ID [FILE], export ID [FILE]");
+            default -> throw new IllegalArgumentException("Commands: config, settings, assets, local status/setup, evaluate ID [METHODS], jobs, job ID, cancel-job ID, report ID [FILE], runs, start SETTINGS.json, import TRANSCRIPT.json, watch ID, ruling ID TEXT, cancel ID, transcript ID [FILE], export ID [FILE]");
         }
     }
     void menu() throws Exception {
         while (true) {
-            output.println("\n1 Start sitting\n2 Saved sittings\n3 Watch sitting\n4 Chair ruling\n5 Adjourn\n6 Export JSON\n7 Export text\n8 Import transcript\n9 Saved settings\n10 Advanced assets\n11 Start from saved settings\n0 Exit");
+            output.println("\n1 Start sitting\n2 Saved sittings\n3 Watch sitting\n4 Chair ruling\n5 Adjourn\n6 Export JSON\n7 Export text\n8 Import transcript\n9 Saved settings\n10 Advanced assets\n11 Start from saved settings\n12 Local evaluation setup\n13 Evaluate sitting\n14 Analysis jobs/reports\n0 Exit");
             String choice=ask("Choice: ");
             if (choice.equals("0") || choice.isEmpty() && !input.hasNextLine()) return;
             try {
                 switch (choice) {
+                    case "12" -> {
+                        output.println(get("/api/local-readiness"));
+                        if (ask("Type setup to download managed Python and VADER dependencies (blank = return): ").equals("setup")) output.println(post("/api/local-setup","{}"));
+                    }
+                    case "13" -> {
+                        String id=ask("Sitting id: "), methods=ask("Method IDs separated by commas (blank = defaults): ");
+                        output.println(post(runPath(id)+"/evaluate",Json.write(methods.isBlank() ? Map.of() : Map.of("methods",Arrays.asList(methods.split(","))))));
+                    }
+                    case "14" -> {
+                        output.println(get("/api/jobs")); String id=ask("Job id (blank = return): "); if (id.isBlank()) break;
+                        output.println(get("/api/jobs/"+encode(id))); String action=ask("Action: report, cancel, or blank to return: ");
+                        if (action.equals("cancel")) output.println(post("/api/jobs/"+encode(id)+"/cancel","{}"));
+                        if (action.equals("report")) {
+                            String file=ask("Output JSON file (blank = print): "), report=get("/api/jobs/"+encode(id)+"/report");
+                            if (file.isBlank()) output.println(report); else Files.writeString(Path.of(file),report);
+                        }
+                    }
                     case "1" -> { String response=post("/api/debates",Json.write(guidedSettings())); output.println(response);
                         @SuppressWarnings("unchecked") Map<String,Object> result=(Map<String,Object>)Json.parse(response);
                         output.println("Watch this sitting with choice 3: "+result.get("id")); }

@@ -60,4 +60,31 @@ class CliParityTest {
             } finally { server.stop(0); ((ExecutorService)server.getExecutor()).shutdownNow(); }
         }
     }
+    @Test void evaluationJobsAndReportsUseSharedCommandsAndGuidedMenu() throws Exception {
+        TestFixtures.copyResources(root);
+        try (var app=new DebateApplication(root,new RunStore(root.resolve("runs")),model -> new DemoChatManager(),
+                config -> request -> new engine.evaluation.local.NlpResponse(2,List.of(new engine.evaluation.local.NlpResponse.Method(
+                        request.methods().get(0),"failed","model_unavailable",null,List.of(),0))))) {
+            var server=WebServer.start(0,app);
+            try {
+                String base="http://localhost:"+server.getAddress().getPort(); ByteArrayOutputStream bytes=new ByteArrayOutputStream();
+                var output=new PrintStream(bytes,true,java.nio.charset.StandardCharsets.UTF_8); var cli=new Main(base,new Scanner(""),output);
+                var run=app.start(TestFixtures.settings()); cli.command(new String[]{"watch",run.id()}); bytes.reset();
+                cli.command(new String[]{"local","status"}); assertTrue(bytes.toString().contains("installed")); bytes.reset();
+                cli.command(new String[]{"evaluate",run.id(),"vader-sentiment"});
+                String id=(String)((Map<?,?>)Json.parse(bytes.toString())).get("id"); bytes.reset();
+                long deadline=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(10);
+                while (!app.background().find(id).terminal() && System.nanoTime()<deadline) Thread.sleep(10);
+                cli.command(new String[]{"jobs"}); assertTrue(bytes.toString().contains(id)); bytes.reset();
+                cli.command(new String[]{"job",id}); assertTrue(bytes.toString().contains("model_unavailable")); bytes.reset();
+                Path report=root.resolve("analysis.json"); cli.command(new String[]{"report",id,report.toString()});
+                assertTrue(Files.readString(report).contains("vader-sentiment"));
+                assertFalse(Files.readString(report).contains("strategy"));
+                new Main(base,new Scanner("12\n\n13\n"+run.id()+"\n\n14\n"+id+"\nreport\n\n0\n"),output).menu();
+                assertEquals(2,app.background().list().size());
+                assertThrows(IllegalStateException.class,() -> cli.command(new String[]{"evaluate",run.id(),"unknown"}));
+                cli.command(new String[]{"cancel-job",id}); assertEquals(BackgroundJob.State.FAILED,app.background().find(id).state());
+            } finally { server.stop(0); ((ExecutorService)server.getExecutor()).shutdownNow(); }
+        }
+    }
 }

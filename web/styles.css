@@ -868,3 +868,7 @@ textarea { resize: vertical; min-height: 72px; }
 .settings-card input, .settings-card select, .advanced-assets select { max-width: 420px; }
 .advanced-assets summary { cursor: pointer; }
 .advanced-assets textarea { width: 100%; font-family: ui-monospace, monospace; margin-block: 8px; }
+.local-analysis { margin-bottom: 20px; }
+#analysis-report { max-height: 560px; overflow: auto; }
+#analysis-report pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }
+.analysis-chunk { padding: 8px; border-left: 3px solid var(--green); }

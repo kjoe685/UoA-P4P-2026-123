@@ -18,7 +18,9 @@ For OpenAI, set `OPENAI_API_KEY` or copy `keys/openAi/OpenAI_Key_TEMPLATE.txt` t
 
 Anthropic, Gemini, Grok and local Ollama adapters are also integrated. Select a preset and configure the provider as described in the [configuration reference](docs/configuration.md). These integrations have mock protocol coverage; live access and model behaviour remain unverified. Do not install Python or NLP models for a basic debate.
 
-Save and load reusable settings in setup. **Advanced configuration** edits model/profile/interruptions JSON, prompts and grounding; validation precedes each save. Existing sittings retain their frozen resources. Evaluators remain the next stage in the [primary plan](docs/implementation-plan.md).
+Save and load reusable settings in setup. **Advanced configuration** edits model/profile/interruptions JSON, prompts and grounding; validation precedes each save. Existing sittings retain their frozen resources.
+
+For optional local lexical sentiment, click **Set up local VADER**, follow its job, open a saved sitting and click **Analyze with VADER**. Setup obtains managed Python and locked dependencies; analysis makes no cloud calls. Reports retain sentence evidence, separate scores and provenance. See the [local analysis guide](nlp/README.md). Cardiff, DeBERTa and LLM rubrics continue in the [primary plan](docs/implementation-plan.md).
 
 ## Terminal and development
 

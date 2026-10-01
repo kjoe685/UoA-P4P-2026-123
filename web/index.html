@@ -33,6 +33,17 @@
   </header>
 
   <main>
+    <section class="card local-analysis" aria-labelledby="analysis-title">
+      <div class="saved-head"><h2 id="analysis-title" class="card-title">Local analysis</h2>
+        <button id="refresh-jobs" type="button" class="btn btn-secondary">Refresh analysis</button></div>
+      <p class="hint">VADER reports lexical sentiment for each sentence. Scores describe wording; they do not establish political stance or argument quality.</p>
+      <p id="local-readiness" class="hint" role="status"></p>
+      <button id="setup-local" type="button" class="btn btn-secondary">Set up local VADER</button>
+      <p class="hint">Setup downloads managed Python and locked dependencies. Analysis uses the local service. Transformer methods are being integrated separately.</p>
+      <div id="analysis-jobs" class="saved-list"></div>
+      <div id="analysis-report"></div>
+      <p id="analysis-status" role="status" class="hint"></p>
+    </section>
     <section class="card saved-runs" aria-labelledby="saved-title">
       <div class="saved-head"><h2 id="saved-title" class="card-title">Saved sittings</h2>
         <button id="refresh-runs" type="button" class="btn btn-secondary">Refresh</button></div>
@@ -165,6 +176,7 @@
           </div>
           <button type="button" id="export-btn" class="btn btn-ghost">Download transcript</button>
           <button type="button" id="export-json-btn" class="btn btn-ghost">Download JSON</button>
+          <button type="button" id="evaluate-btn" class="btn btn-ghost">Analyze with VADER</button>
         </div>
         <div id="transcript-scroller" class="transcript-scroller">
           <div id="transcript" class="transcript" aria-live="polite" aria-relevant="additions"></div>
