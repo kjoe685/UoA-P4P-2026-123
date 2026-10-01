@@ -74,3 +74,19 @@ T08a active (REQ-43,53–55,57), dependency3c59438. Implement zero/global/per-pa
 T08a Java51 pass. Browser exposed numeric input change timing: filled quantity controls showed0/1 but saved defaults. Corrected to input events; recheck savedsetup/actualprivate selection beforecommit. Latestserver10187 port18087. Genuine corpus source verified via officialDataverseAPI: file3758791 Corp_NZHoR_V2.rds,1002250606bytes,MD5 9fd5ed34476b1a428ba16079b955d8fc. No datasetdownload yet; careful memory-aware extraction needed for T08b.
 
 T08a verified: Java51 pass. Browser corrected input events then saved grounding-zero-with-labour-one and started d1dce138-223e-49fa-b506-ab06dccecabb withshared0/Labour1/National0 confirmed inprivate selection metadata. Oldschema replay test passes withoutsetuprewrite/providercreation. Screenshotparliament-grounding-counts.png. User .iml preserved. T08b sourcefile1GB notdownloaded; no expansionclaim. Commitnext.
+
+T08b source preparation active (REQ-42,55–57), dependency a47c3d6. Add an explicit developer-side resumable official 1GB corpus download with pinned file identity/size/checksum; no automatic launch download or import. Acceptance actualchecksum/cache reuse, interrupted partial resume when observed. Further memory-aware extraction, metadata/dedup/import interface parity stillpending. Record backgrounddownload state beforeusage exhaustion.
+
+Usage checkpoint 2026-10-02T03:39:33.2312154+13:00:99% primary usage consumed. Latest verifiedcommit a47c3d6 T08a; Java51/Python17 pass. TemporaryQAservers10187 and58347 stopped. T08b downloader/source state: {
+    "schemaVersion":  1,
+    "doi":  "10.7910/DVN/L4OAKN",
+    "fileId":  3758791,
+    "fileName":  "Corp_NZHoR_V2.rds",
+    "bytes":  1002250606,
+    "officialMd5":  "9fd5ed34476b1a428ba16079b955d8fc",
+    "sha256":  "e796a474362a013355ffe3dce3d7adcb8e38e99be18b601622ae6b48fa71c373",
+    "sourceUrl":  "https://dataverse.harvard.edu/api/access/datafile/3758791",
+    "verifiedAt":  "2026-10-02T03:39:32.0821916+13:00"
+}. Scriptdownload-hansard.ps1 WIP until full verification; no genuine expansion/import performed. Nextfinishchecksum/cache reuse then memory-aware extraction/metadata/dedup/import interfaces. Useriml preserved. No pushes/paidcalls.
+
+T08b source preparation verified 2026-10-02T03:40:38.6349544+13:00: official1,002,250,606byte NZRDS downloaded, size/officialMD5 verified; SHA256 e796a474362a013355ffe3dce3d7adcb8e38e99be18b601622ae6b48fa71c373. Repeat downloadhelper reused verifiedcache. Datasetversion1.0/CC0-1.0 verified viaofficialAPI. All download/QAprocesses finished/stopped. This is source preparation only: expanded excerpts, extraction/dedup/import and interface parity remainpending. NativeUnix/resume interruption acceptance of thishelper remainspending. Next memory-aware extraction then corpus validation beforeanyassetsreplacement.
