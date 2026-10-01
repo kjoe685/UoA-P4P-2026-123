@@ -10,6 +10,7 @@ public enum TemplateName {
     NEW_TOPIC("NewTopicCue.txt", "TOPIC"),
     FOLLOW_UP("FollowUpCue.txt", "TOPIC"),
     INTERJECTION("InterjectionCue.txt", "TOPIC"),
+    ENGAGEMENT("EngagementCue.txt", "TOPIC_ID", "TARGET_TURN_ID", "OWN_TURN_IDS"),
     TOPIC_ANNOUNCEMENT("TopicAnnouncement.txt", "TOPIC"),
     TOPIC_DERAILMENT("strategies/TopicDerailment.txt"),
     STRAW_MAN("strategies/StrawMan.txt"),

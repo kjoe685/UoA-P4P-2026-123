@@ -44,14 +44,14 @@ public final class DebateManager {
                     TemplateName cue=firstOverall ? TemplateName.OPENING : firstOnTopic ? TemplateName.NEW_TOPIC : TemplateName.FOLLOW_UP;
                     firstOverall=false; firstOnTopic=false;
                     output.speakerCalled(speaker.identity(),false);
-                    String speech=speaker.speak(List.copyOf(evidence),prompts.cue(cue,topic.title()));
+                    String speech=speaker.speak(List.copyOf(evidence),prompts.turnCue(cue,topic,speaker.identity(),evidence));
                     if (!emit(PublicEvent.Type.SPEECH,speaker.identity(),speech)) return;
                     List<Agent> others=new ArrayList<>(agents); others.remove(speaker); Collections.shuffle(others,random);
                     for (Agent candidate:others) {
                         if (stopped) return;
                         if (candidate.shouldInterject(random,interruptions)) {
                             output.speakerCalled(candidate.identity(),true);
-                            String text=candidate.speak(List.copyOf(evidence),prompts.cue(TemplateName.INTERJECTION,topic.title()));
+                            String text=candidate.speak(List.copyOf(evidence),prompts.turnCue(TemplateName.INTERJECTION,topic,candidate.identity(),evidence));
                             if (!emit(PublicEvent.Type.INTERJECTION,candidate.identity(),text)) return;
                             break;
                         }

@@ -54,7 +54,13 @@ class OutboundIsolationTest {
             var adversary=new Agent(new Participant("b","Other MP",Party.NATIONAL,"National"),AdversarialStrategy.STRAW_MAN,provider,
                     "HIDDEN_STRATEGY_SENTINEL OTHER_GROUNDING_SENTINEL",List.of("OTHER_GROUNDING_SENTINEL"),model);
             List<PublicEvent> events=List.of(new PublicEvent("turn-1","topic-1",PublicEvent.Type.TOPIC,null,"Housing"));
-            ordinary.speak(events,"Opening"); adversary.speak(events,"Opening"); ordinary.speak(events,"Follow up");
+            ordinary.speak(events,"Opening"); adversary.speak(events,"Opening");
+            var snapshot=engine.TestFixtures.copyResources(root); var prompts=new engine.prompt.PromptManager(snapshot);
+            var topic=new Topic("topic-1","Housing",null);
+            var contributions=new ArrayList<>(events);
+            contributions.add(new PublicEvent("turn-2","topic-1",PublicEvent.Type.SPEECH,ordinary.identity(),"We should build more public homes."));
+            contributions.add(new PublicEvent("turn-3","topic-1",PublicEvent.Type.SPEECH,adversary.identity(),"How will you fund that?"));
+            ordinary.speak(contributions,prompts.turnCue(engine.prompt.TemplateName.FOLLOW_UP,topic,ordinary.identity(),contributions));
             for (int index=0;index<payloads.size();index++) {
                 String payload=Json.write(payloads.get(index));
                 if (index==1) { assertTrue(payload.contains("HIDDEN_STRATEGY_SENTINEL")); assertFalse(payload.contains("ORDINARY_PRIVATE_SENTINEL")); }
@@ -62,6 +68,8 @@ class OutboundIsolationTest {
                 assertFalse(payload.contains("KEY_SENTINEL")); assertFalse(payload.contains("STRAW_MAN"));
                 assertEquals(false,payloads.get(index).get("store"));
             }
+            assertTrue(Json.write(payloads.get(2)).contains("Reply target: turn-3"));
+            assertTrue(Json.write(payloads.get(2)).contains("contributions on this topic: turn-2"));
             assertFalse(Json.write(events).contains("SENTINEL"));
             assertThrows(IllegalArgumentException.class,() -> Json.write(ordinary));
             assertFalse(provider.toString().contains("KEY_SENTINEL"));

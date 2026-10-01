@@ -6,14 +6,14 @@
 - Branch: `codex/dual-interface-integration`, created from refreshed `origin/main` at `a99269c`.
 - Recovered primary plan from previous chat `01a0f6c1-32c6-7a33-bf8c-6ad9fee837e5`; that chat ended in Plan mode without writing changes.
 - Preserved secondary plan from `9cbcb12`. Evaluation reference: `c41c4c2`, file-level reuse only.
-- T01–T08a committed; T08b source preparation `d7af82d`. T08b extraction/import verified below and ready for local checkpoint; T09 behaviour/pilot tools follows.
+- T01–T08 committed; T08b extraction/import `b08964c`. T09a targeted cues verified below; T09b pilot tools follows.
 - Existing untracked `UoA-P4P-2026-123.iml` belongs to the user; preserve it.
 
 ## Active task
 
-**T08b — Genuine corpus extraction and shared import (REQ-42–43, 53–57).**
+**T09a — Targeted engagement and position continuity (REQ-05–06, 11, 16–19, 53–55, 57).**
 
-Outcome: 500 genuine excerpts (100 each for five supported parties), source-row/date/speaker/agenda/full-speech hash/exact excerpt span, deterministic bounded extraction, global deduplication, strict validated atomic import/status shared by browser/menu/commands, private frozen corpus provenance. Dependency: `d7af82d`. Java54 and extractor5 pass; candidate reproduced byte-for-byte and imported through shared CLI/API and browser. Named-settings grounding-count loading fixed and browser verified zero remains zero. Screenshot `parliament-corpus-import.png` in current automation visualization directory. Next commit T08b, then record T09 behaviour/pilot acceptance before implementation. No paid calls or research-validity claims. Detailed dated history below is retained for recovery.
+Outcome: editable engagement cue references the latest other-party current-topic contribution and own opening/recent public positions; explicit public reasons for revisions/concessions; private tactics ask for observable behaviour. Dependency: `b08964c`. Java56 pass, including fixed multi-topic pointers and actual mock HTTP privacy. Initial new-test compile accessor typo and generic-word assertion collision corrected; complete suite rerun. Next commit T09a then record T09b pilot-data import/report acceptance. Live behavioural success and genuine human research review remain pending; no paid calls. Detailed dated history below is retained for recovery.
 
 T06a in progress: managed uv 0.12.16 with official SHA-256 verified, managed Python 3.12.14 + locked lightweight dependencies installed locally. Python 13 passed / 3 transformer tests skipped; Java 38 passed. Added durable bounded setup/evaluation jobs, restart/cancellation retention, string-ID schema 2 NLP projection, Unicode/evidence validation, independent method reports and CLI/menu/browser operations. Final managed-service browser QA and docs remain before commit. Test server session 32604 still old T05 JAR; replace it. No paid calls or transformer weights.
 
@@ -46,6 +46,7 @@ Verification: Maven verify passes 2 tests (HTTP demo/chair/replay and cancellati
 | T07 LLM rubric | Complete | Java49; actual mock HTTP privacy; synthetic browser/CLI/menu; repair/budget/evidence/cancellation/restart |
 | T08a quantities | Complete | Java51; zero/overrides/private selection; legacy replay and browser save/start |
 | T08b corpus/import | Verified | Java54/extractor5, 500 genuine excerpts, identical repeated extraction, shared CLI/menu/API/browser import, frozen private resources |
+| T09a targeted cues | Software verified; human review pending | Java56, current-topic/public-ID targets, own position history and actual mock HTTP privacy |
 | T09–T10 | Pending | Behaviour/pilot tools and final delivery acceptance; human research review remains pending |
 
 ## Recovery procedure
@@ -97,3 +98,7 @@ T08b extraction/import active (REQ-42–43, 53–57), dependency d7af82d. Recove
 T08b WIP: dependency-free narrow XDR reader indexed the verified 925766-row NZ file without loading its text vector; candidate has 100 excerpts for each of five supported parties. Official API reconfirmed version1/CC0-1.0 and pinned size. Shared corpus service/API/commands/menu/browser preview-import added; strict metadata/hash/dedup/span/count validation and private selection provenance now implemented. Found and corrected browser named-settings load losing shared grounding count. Java51 baseline passed with old corpus; extractor5 offline tests and Node syntax pass. Initial Maven invocation failed without managed MAVEN_USER_HOME, then managed wrapper passed. Next import latest candidate through backend, add corpus/frozen-resource/interface regressions, verify reproducibility and browser flow. No paid calls.
 
 T08b verified 2026-10-02: Java54 pass, extractor5 pass, Node syntax pass. Official file SHA256 verified before every extraction; repeated default candidates and installed corpus are identical SHA256 cac8861595cdd7effc9ad2b82f655836904ba5f6c96b909eca1e7e1c1a29402e (596415 bytes). Five parties/100 each, source dates2018-2019; biased recent-date subset explicitly documented. CLI real import, menu/API tests, browser chooser/preview/import and named-settingszero loading pass. Snapshot/importconflict/hash/span/dedup/secretmetadata rejection tests pass. Screenshot parliament-corpus-import.png. Server64681 remains idle18087; no paidcalls. Next checkpointT08b thenT09 targeted rebuttals/concessions and pilot tools.
+
+T09a active (REQ-05–06, 11, 16–19, 53–55, 57), dependency b08964c. Add editable recipient-specific engagement cue using stable public IDs: latest other-party contribution on current topic, own opening/recent position history, explicit coherent revision/concession reasons. Preserve hidden assignments and ordinary-agent blindness; cues use public evidence only. Acceptance controlled multi-topic/challenge/repetition/concession/tactic fixture, actual mock outbound isolation, prompt validation/freeze and existing scheduler/cancellation tests. Behavioural success with live models and human review remains pending. Next implement public-ID cue assembly and fixed-scenario tests before T09b pilot-data tools.
+
+T09a verified: Java56 pass. Engagement template and deterministic public-ID targeting/own opening+recent history frozen with snapshots. Mock outbound requests retain recipient isolation and do not announce assignments. Controlled concession fixture verifies wiring only; human/live behaviour acceptance remains pending. Next T09b reviewed pilot import/preparation/report tools with explicit synthetic labels.
