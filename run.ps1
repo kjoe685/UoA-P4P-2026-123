@@ -9,7 +9,7 @@ try {
     $jar = Join-Path $PSScriptRoot 'target/virtual-parliament.jar'
     $stampFile = Join-Path $PSScriptRoot 'target/launcher-build.sha256'
     $inputs = @(Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'src') -Recurse -File; Get-Item -LiteralPath (Join-Path $PSScriptRoot 'pom.xml')) | Sort-Object FullName
-    $inputHashes = ($inputs | ForEach-Object { (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash }) -join ''
+    $inputHashes = ($inputs | ForEach-Object { $_.FullName.Substring($PSScriptRoot.Length) + ':' + (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash }) -join '|'
     $hashAlgorithm = [Security.Cryptography.SHA256]::Create()
     try { $fingerprint = [BitConverter]::ToString($hashAlgorithm.ComputeHash([Text.Encoding]::UTF8.GetBytes($inputHashes))).Replace('-', '') } finally { $hashAlgorithm.Dispose() }
     $previousFingerprint = if (Test-Path -LiteralPath $stampFile) { (Get-Content -LiteralPath $stampFile -Raw).Trim() } else { '' }

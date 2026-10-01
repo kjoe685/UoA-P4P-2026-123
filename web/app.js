@@ -148,7 +148,7 @@ function setStatus(state, text) {
    ========================================================================= */
 
 let config = null;
-const setup = { topics: [], rounds: 3, members: {} };
+const setup = { topics: [], policyTargets: [], rounds: 3, members: {} };
 
 async function initSetup() {
   try {
@@ -164,8 +164,15 @@ async function initSetup() {
   }
 
   const saved = readStore(localStorage, SETUP_STORAGE_KEY) || {};
-  setup.provider = saved.provider === 'openai' ? 'openai' : 'demo';
-  $('#provider').value = setup.provider;
+  setup.agentModelPreset = config.models[saved.agentModelPreset] ? saved.agentModelPreset : config.agentModelPreset;
+  setup.evaluatorModelPreset = config.models[saved.evaluatorModelPreset] ? saved.evaluatorModelPreset : config.evaluatorModelPreset;
+  setup.policyTargets = Array.isArray(saved.policyTargets) ? saved.policyTargets : [];
+  for (const [selector, key] of [['#agent-model', 'agentModelPreset'], ['#evaluator-model', 'evaluatorModelPreset']]) {
+    $(selector).replaceChildren(...Object.entries(config.models).map(([id, model]) => el('option', {
+      text: model.provider === 'demo' ? 'Deterministic demonstration · no model calls' : `${id} · ${model.provider}`,
+      attrs: { value: id, selected: setup[key] === id },
+    })));
+  }
   setup.topics = Array.isArray(saved.topics) && saved.topics.length ? saved.topics : [config.defaultTopic];
   setup.rounds = clampRounds(saved.rounds ?? config.defaultRounds);
   for (const party of config.parties) {
@@ -174,6 +181,7 @@ async function initSetup() {
     setup.members[party.id] = {
       included: savedMember ? savedMember.included !== false : true,
       strategy: strategyIsKnown ? savedMember.strategy : 'NONE',
+      modelPreset: config.models[savedMember?.modelPreset] ? savedMember.modelPreset : '',
     };
   }
 
@@ -213,6 +221,12 @@ function renderTopics() {
         input: (event) => { setup.topics[index] = event.target.value; saveSetup(); },
       },
     }),
+    el('input', {
+      className: 'policy-target',
+      attrs: { type: 'text', value: setup.policyTargets[index] || '', maxlength: 2000,
+        placeholder: 'Optional policy proposition for stance evaluation', 'aria-label': `Policy proposition for item ${index + 1}` },
+      on: { input: event => { setup.policyTargets[index] = event.target.value; saveSetup(); } },
+    }),
     el('button', {
       className: 'icon-btn',
       text: '↑',
@@ -238,14 +252,16 @@ function addTopic(text) {
     return;
   }
   // Replace a lone empty item rather than adding next to it.
-  if (setup.topics.length === 1 && !setup.topics[0].trim()) setup.topics = [];
+  if (setup.topics.length === 1 && !setup.topics[0].trim()) { setup.topics = []; setup.policyTargets = []; }
   setup.topics.push(topic);
+  setup.policyTargets.push('');
   showFormError('');
   renderTopics();
 }
 
 function removeTopic(index) {
   setup.topics.splice(index, 1);
+  setup.policyTargets.splice(index, 1);
   renderTopics();
 }
 
@@ -253,6 +269,7 @@ function moveTopic(index, delta) {
   const target = index + delta;
   if (target < 0 || target >= setup.topics.length) return;
   [setup.topics[index], setup.topics[target]] = [setup.topics[target], setup.topics[index]];
+  [setup.policyTargets[index], setup.policyTargets[target]] = [setup.policyTargets[target], setup.policyTargets[index]];
   renderTopics();
 }
 
@@ -292,6 +309,12 @@ function renderParties() {
       seatBadge(party.id),
       el('span', { className: 'party-name', text: party.name })),
     el('p', { className: 'party-ideology', text: capitalise(party.ideology) }),
+    el('div', {},
+      el('label', { className: 'field-label', text: 'Model override', attrs: { for: `model-${party.id}` } }),
+      el('select', { attrs: { id: `model-${party.id}`, disabled: !member.included },
+        on: { change: event => { member.modelPreset = event.target.value; saveSetup(); } } },
+      el('option', { text: 'Shared agent model', attrs: { value: '', selected: !member.modelPreset } }),
+      ...Object.keys(config.models).map(id => el('option', { text: id, attrs: { value: id, selected: member.modelPreset === id } })))),
     el('div', {},
       el('label', { className: 'field-label', text: 'Behaviour', attrs: { for: selectId } }),
       el('select', {
@@ -337,14 +360,16 @@ function renderSummary() {
     el('strong', { text: `${speeches} scheduled ${speeches === 1 ? 'speech' : 'speeches'}` }),
     ', plus random interjections',
     disruptors ? ` (more with ${disruptors} ${disruptors === 1 ? 'disruptor' : 'disruptors'} seated)` : '',
-    '. Each speech is one call to the OpenAI API.',
+    config.models[setup.agentModelPreset]?.provider === 'demo' && members.every(member => !member.modelPreset || config.models[member.modelPreset]?.provider === 'demo')
+      ? '. The demonstration makes no model calls.' : '. Each generated speech calls the selected provider.',
   );
 }
 
 function selectedMembers() {
   return config.parties
     .filter((party) => setup.members[party.id].included)
-    .map((party) => ({ party: party.id, strategy: setup.members[party.id].strategy }));
+    .map((party) => ({ party: party.id, strategy: setup.members[party.id].strategy,
+      ...(setup.members[party.id].modelPreset ? { modelPreset: setup.members[party.id].modelPreset } : {}) }));
 }
 
 function cleanTopics() {
@@ -375,7 +400,8 @@ async function convene(event) {
   try {
     const { id } = await api('/api/debates', {
       method: 'POST',
-      body: { topics: cleanTopics(), rounds: setup.rounds, members, provider: setup.provider },
+      body: { topics: setup.topics.map((title, index) => ({ title: title.trim(), policyTarget: setup.policyTargets[index] || null })).filter(topic => topic.title),
+        rounds: setup.rounds, members, agentModelPreset: setup.agentModelPreset, evaluatorModelPreset: setup.evaluatorModelPreset },
     });
     openSitting(id);
   } catch (error) {
@@ -447,6 +473,7 @@ function closeSitting() {
   if (sitting && sitting.source) sitting.source.close();
   sitting = null;
   writeStore(sessionStorage, SITTING_STORAGE_KEY, null);
+  refreshSavedRuns();
 }
 
 function showSetup() {
@@ -472,6 +499,7 @@ function handleEvent(event) {
 }
 
 function onSitting(event) {
+  event.members = event.members.map(member => ({ ...member, strategy: member.strategy || 'NONE' }));
   sitting.members = event.members;
   sitting.topics = event.topics;
   sitting.startedAt = event.startedAt || Date.now();
@@ -492,10 +520,9 @@ function onSitting(event) {
     `Sitting of ${formatDate(sitting.startedAt)}, from ${formatTime(sitting.startedAt)}`,
     '',
     'Members present:',
-    ...event.members.map((m) => `  ${m.name} (${m.partyName}), ${m.strategy === 'NONE'
-      ? 'cooperative' : `disruptor: ${strategyLabel(m.strategy).toLowerCase()}`}`),
+    ...event.members.map((m) => `  ${m.name} (${m.partyName})`),
     '',
-    'This transcript was generated by AI agents. It is not a record of the New Zealand Parliament.',
+    event.demonstration ? 'Fixed demonstration speeches. No model calls were made.' : 'This is a simulated debate, not a record of the New Zealand Parliament.',
   );
 }
 
@@ -520,6 +547,7 @@ function onCalling(event) {
 }
 
 function onSpeech(event) {
+  event.strategy = sitting.members.find(member => member.memberId === event.memberId)?.strategy || 'NONE';
   $('#floor').hidden = true;
   setActiveMember(null);
 
@@ -548,9 +576,11 @@ function onSpeech(event) {
 function onChair(event) {
   // Rulings typed by the user are echoed back when the engine reads them to the House.
   const pendingIndex = sitting.pendingRulings.indexOf(event.text);
-  const isUserRuling = pendingIndex !== -1;
-  if (isUserRuling) {
+  const isUserRuling = event.ruling === true || pendingIndex !== -1;
+  if (pendingIndex !== -1) {
     sitting.pendingRulings.splice(pendingIndex, 1);
+  }
+  if (isUserRuling) {
     sitting.rulings += 1;
     renderTally();
     updateRulingStatus();
@@ -585,6 +615,7 @@ function onAdjourned(event) {
     complete: `The House adjourned at ${time}.`,
     adjourned: `The Speaker adjourned the House at ${time}.`,
     error: `The House rose at ${time}.`,
+    interrupted: `The sitting was interrupted before ${time}. Saved speeches are retained.`,
   }[event.outcome] || `The House adjourned at ${time}.`;
   appendEntry(el('p', { className: 'entry system-entry', text }));
   sitting.log.push('', text);
@@ -600,6 +631,7 @@ function onAdjourned(event) {
     $('#ruling-status').textContent = 'The House adjourned before your last ruling could be read.';
   }
   writeStore(sessionStorage, SITTING_STORAGE_KEY, null);
+  refreshSavedRuns();
 }
 
 /* Transcript scrolling: follow new speeches unless the reader has scrolled up to read. */
@@ -692,7 +724,8 @@ function renderMemberList() {
       el('span', { className: 'member-name', text: member.name }),
       el('span', {
         className: `member-role${member.strategy !== 'NONE' ? ' is-disruptor' : ''}`,
-        text: member.strategy === 'NONE' ? 'Cooperative' : `Disruptor: ${strategyLabel(member.strategy)}`,
+        text: member.assignmentKnown === false ? 'Assignment unknown · imported transcript'
+          : member.strategy === 'NONE' ? 'Cooperative' : `Disruptor: ${strategyLabel(member.strategy)}`,
       })))));
 }
 
@@ -796,28 +829,58 @@ async function adjourn() {
   }
 }
 
-function downloadTranscript() {
-  if (!sitting || !sitting.log.length) return;
-  const text = `${sitting.log.join('\n')}\n`;
-  const stamp = new Date(sitting.startedAt).toISOString().slice(0, 16).replace(/[:T]/g, '-');
+async function downloadTranscript() {
+  if (!sitting) return;
   const link = el('a', {
     attrs: {
-      href: URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' })),
-      download: `virtual-parliament-hansard-${stamp}.txt`,
+      href: `/api/debates/${encodeURIComponent(sitting.id)}/export?download=1`,
+      download: `parliament-${sitting.id}.txt`,
     },
   });
   document.body.append(link);
   link.click();
   link.remove();
-  setTimeout(() => URL.revokeObjectURL(link.href), 1000);
 }
 
 /* =========================================================================
    Wiring
    ========================================================================= */
 
+async function refreshSavedRuns() {
+  try {
+    const runs = await api('/api/debates');
+    $('#saved-runs').replaceChildren(...runs.slice(0, 30).map(run => el('div', { className: 'saved-row' },
+      el('span', { text: `${run.topics.map(topic => topic.title).join(' · ')} — ${run.outcome.toLowerCase()}, ${run.speeches} contributions` }),
+      el('button', { className: 'btn btn-secondary', text: 'Open', attrs: { type: 'button' }, on: { click: () => openSitting(run.id) } }))));
+    if (!runs.length) $('#saved-runs').textContent = 'No saved sittings yet.';
+    $('#saved-status').textContent = '';
+  } catch (error) { $('#saved-status').textContent = error.message; }
+}
+
+async function importTranscript(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  try {
+    if (file.size > 2 * 1024 * 1024) throw new Error('Transcript must be at most 2 MiB.');
+    const { id } = await api('/api/debates/import', { method: 'POST', body: JSON.parse(await file.text()) });
+    await refreshSavedRuns();
+    openSitting(id);
+  } catch (error) { $('#saved-status').textContent = `Import failed: ${error.message}`; }
+  finally { event.target.value = ''; }
+}
+
+async function downloadJson() {
+  if (!sitting) return;
+  const link = el('a', { attrs: { href: `/api/debates/${encodeURIComponent(sitting.id)}/transcript?download=1`, download: `parliament-${sitting.id}.json` } });
+  document.body.append(link); link.click(); link.remove();
+}
+
 function wireEvents() {
-  $('#provider').addEventListener('change', (event) => { setup.provider = event.target.value; saveSetup(); });
+  $('#agent-model').addEventListener('change', event => { setup.agentModelPreset = event.target.value; saveSetup(); });
+  $('#evaluator-model').addEventListener('change', event => { setup.evaluatorModelPreset = event.target.value; saveSetup(); });
+  $('#refresh-runs').addEventListener('click', refreshSavedRuns);
+  $('#import-transcript').addEventListener('change', importTranscript);
+  $('#export-json-btn').addEventListener('click', downloadJson);
   $('#setup-form').addEventListener('submit', convene);
   $('#add-topic').addEventListener('click', () => {
     addTopic($('#new-topic').value);
@@ -862,6 +925,7 @@ async function main() {
   wireEvents();
   renderQuickRulings();
   await initSetup();
+  await refreshSavedRuns();
 
   // Rejoin a sitting in progress after a page reload.
   const savedSitting = readStore(sessionStorage, SITTING_STORAGE_KEY);

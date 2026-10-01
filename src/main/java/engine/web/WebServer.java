@@ -4,8 +4,9 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 import engine.ChatManager;
-import engine.openAi.OpenAIChatManager;
-import engine.utils.FileTextReader;
+import engine.application.DebateApplication;
+import engine.application.RunStore;
+import engine.config.ModelConfig;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -65,7 +66,9 @@ public class WebServer {
             return;
         }
 
-        HttpServer server = start(port, OpenAIChatManager::new);
+        DebateApplication application = DebateApplication.local(Path.of("."));
+        HttpServer server = start(port, application);
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> { application.close(); server.stop(0); }, "parliament-shutdown"));
         System.out.println("=== AI-Based Virtual Parliament: web frontend ===");
         System.out.println("The House is open at http://localhost:" + server.getAddress().getPort());
         System.out.println("Press Ctrl+C to stop the server.");
@@ -80,12 +83,16 @@ public class WebServer {
      *
      * @param chatManagerFactory creates a fresh {@link ChatManager} for each MP agent, given the API key
      */
-    public static HttpServer start(int port, Function<String, ChatManager> chatManagerFactory) throws IOException {
+    public static HttpServer start(int port, Function<ModelConfig, ChatManager> chatManagerFactory) throws IOException {
+        return start(port, new DebateApplication(Path.of("."), new RunStore(Path.of("runs")), chatManagerFactory));
+    }
+
+    public static HttpServer start(int port, DebateApplication application) throws IOException {
         HttpServer server = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), port), 0);
         // Each open event stream holds a thread, so the pool must be able to grow.
         server.setExecutor(Executors.newCachedThreadPool());
 
-        ApiHandler apiHandler = new ApiHandler(new FileTextReader(), chatManagerFactory);
+        ApiHandler apiHandler = new ApiHandler(application);
         server.createContext("/api/", exchange -> guarded(exchange, apiHandler));
         server.createContext("/", exchange -> guarded(exchange, WebServer::serveStaticFile));
         server.start();

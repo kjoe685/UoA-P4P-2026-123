@@ -801,6 +801,13 @@ textarea { resize: vertical; min-height: 72px; }
 
 /* ---------- Footer ---------- */
 
+.saved-runs { margin-bottom: 24px; }
+.saved-head, .saved-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.saved-list { display: grid; gap: 8px; max-height: 240px; overflow: auto; margin-bottom: 16px; }
+.saved-row { padding: 8px 0; border-bottom: 1px solid var(--line); }
+.saved-row span { overflow-wrap: anywhere; }
+.policy-target { grid-column: 2 / -1; grid-row: 2; }
+
 .site-footer {
   border-top: 1px solid var(--line);
   background: var(--surface-2);

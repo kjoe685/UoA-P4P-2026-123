@@ -1,153 +1,75 @@
 package engine.debate;
 
 import engine.agent.Agent;
+import engine.config.InterruptionConfig;
 import engine.io.EngineOutput;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Queue;
+import engine.prompt.*;
+import engine.transcript.*;
+import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-public class DebateManager {
-
-    private static final String SPEAKER_NAME = "The Speaker";
-
-    private static final String OPENING_CUE =
-            "It is now your turn to open the debate. Give one concise speech (3-5 sentences) in character.";
-    private static final String NEW_TOPIC_CUE =
-            "It is now your turn to open discussion on this new topic. Give one concise speech (3-5 sentences) "
-                    + "in character.";
-    private static final String FOLLOW_UP_CUE =
-            "It is now your turn to speak again. Respond to the debate so far, in character. "
-                    + "Give one concise speech (3-5 sentences).";
-    private static final String INTERJECTION_CUE =
-            "Interject briefly right now on what was just said — a heckle, a point of order, or a sharp "
-                    + "one-line rebuttal. Keep it to 1-2 sentences.";
-
-    private static final double COOPERATIVE_INTERJECTION_CHANCE = 0.15;
-    private static final double ADVERSARIAL_INTERJECTION_CHANCE = 0.45;
-
+/** Main's single scheduler, preserving chair rulings, progress and cancellation. */
+public final class DebateManager {
     private final List<Agent> agents;
-    private final List<String> topics;
-    private final int roundsPerTopic;
+    private final List<Topic> topics;
+    private final int rounds;
     private final EngineOutput output;
-
-    // Written from other threads (e.g. the web frontend) while run() is in progress.
-    private final Queue<String> pendingRulings = new ConcurrentLinkedQueue<>();
-    private volatile boolean stopRequested = false;
-
-    public DebateManager(List<Agent> agents, List<String> topics, int roundsPerTopic, EngineOutput output) {
-        this.agents = agents;
-        this.topics = topics;
-        this.roundsPerTopic = roundsPerTopic;
-        this.output = output;
+    private final PromptManager prompts;
+    private final InterruptionConfig interruptions;
+    private final Random random;
+    private final Queue<String> rulings=new ConcurrentLinkedQueue<>();
+    private final List<PublicEvent> evidence=new ArrayList<>();
+    private final Object publicationLock=new Object();
+    private volatile boolean stopped;
+    private String currentTopic;
+    public DebateManager(List<Agent> agents,List<Topic> topics,int rounds,EngineOutput output,
+                         PromptManager prompts,InterruptionConfig interruptions) {
+        this.agents=List.copyOf(agents); this.topics=List.copyOf(topics); this.rounds=rounds;
+        this.output=output; this.prompts=prompts; this.interruptions=interruptions;
+        this.random=new Random(interruptions.seed());
     }
-
     public void run() {
-        boolean firstSpeechOverall = true;
-
-        for (int topicIndex = 0; topicIndex < topics.size(); topicIndex++) {
-            if (stopRequested) {
-                return;
-            }
-            String topic = topics.get(topicIndex);
-            output.topicStarted(topicIndex + 1, topics.size(), topic);
-
-            if (topicIndex > 0) {
-                announceNewTopic(topic);
-            }
-
-            boolean firstSpeechThisTopic = true;
-            for (int round = 1; round <= roundsPerTopic; round++) {
-                for (Agent speaker : agents) {
-                    deliverSpeakerRulings();
-                    if (stopRequested) {
-                        return;
+        boolean firstOverall=true;
+        for (Topic topic:topics) {
+            if (stopped) return;
+            currentTopic=topic.id();
+            if (!emit(PublicEvent.Type.TOPIC,null,topic.title())) return;
+            if (!firstOverall && !emit(PublicEvent.Type.CHAIR,null,prompts.cue(TemplateName.TOPIC_ANNOUNCEMENT,topic.title()))) return;
+            boolean firstOnTopic=true;
+            for (int round=0;round<rounds;round++) {
+                for (Agent speaker:agents) {
+                    String ruling;
+                    while ((ruling=rulings.poll())!=null) if (!emit(PublicEvent.Type.CHAIR_RULING,null,ruling)) return;
+                    if (stopped) return;
+                    TemplateName cue=firstOverall ? TemplateName.OPENING : firstOnTopic ? TemplateName.NEW_TOPIC : TemplateName.FOLLOW_UP;
+                    firstOverall=false; firstOnTopic=false;
+                    output.speakerCalled(speaker.identity(),false);
+                    String speech=speaker.speak(List.copyOf(evidence),prompts.cue(cue,topic.title()));
+                    if (!emit(PublicEvent.Type.SPEECH,speaker.identity(),speech)) return;
+                    List<Agent> others=new ArrayList<>(agents); others.remove(speaker); Collections.shuffle(others,random);
+                    for (Agent candidate:others) {
+                        if (stopped) return;
+                        if (candidate.shouldInterject(random,interruptions)) {
+                            output.speakerCalled(candidate.identity(),true);
+                            String text=candidate.speak(List.copyOf(evidence),prompts.cue(TemplateName.INTERJECTION,topic.title()));
+                            if (!emit(PublicEvent.Type.INTERJECTION,candidate.identity(),text)) return;
+                            break;
+                        }
                     }
-
-                    String cue = firstSpeechOverall
-                            ? OPENING_CUE
-                            : firstSpeechThisTopic ? NEW_TOPIC_CUE : FOLLOW_UP_CUE;
-                    firstSpeechOverall = false;
-                    firstSpeechThisTopic = false;
-
-                    output.speakerCalled(speaker, false);
-                    String statement = speaker.speak(cue);
-                    if (stopRequested || Thread.currentThread().isInterrupted()) return;
-                    output.displayMessage(speaker, statement, false);
-                    broadcast(speaker, statement);
-
-                    maybeInterject(speaker);
                 }
             }
         }
     }
-
-    /**
-     * Queues a ruling from the Speaker of the House. It is read out to every agent before the next scheduled
-     * speech, so it can steer the rest of the debate (e.g. calling an adversarial member back to the topic).
-     * Safe to call from another thread while {@link #run()} is in progress.
-     */
-    public void addSpeakerRuling(String ruling) {
-        pendingRulings.add(ruling);
-    }
-
-    /** Asks the debate to stop before the next speech. Safe to call from another thread. */
-    public void requestStop() {
-        stopRequested = true;
-    }
-
-    public boolean isStopRequested() {
-        return stopRequested;
-    }
-
-    private void announceNewTopic(String topic) {
-        String announcement = "We now move to a new topic: \"" + topic + "\".";
-        output.displaySpeakerMessage(announcement);
-        for (Agent agent : agents) {
-            agent.hear(SPEAKER_NAME, announcement);
+    private boolean emit(PublicEvent.Type type,Participant speaker,String text) {
+        synchronized (publicationLock) {
+            if (stopped || Thread.currentThread().isInterrupted()) return false;
+            var event=new PublicEvent("turn-"+(evidence.size()+1),currentTopic,type,speaker,text);
+            output.publicEvent(event); // Persistence adapter must succeed before publication.
+            evidence.add(event);
+            return true;
         }
     }
-
-    private void deliverSpeakerRulings() {
-        String ruling;
-        while ((ruling = pendingRulings.poll()) != null) {
-            output.displaySpeakerMessage(ruling);
-            for (Agent agent : agents) {
-                agent.hear(SPEAKER_NAME, ruling);
-            }
-        }
-    }
-
-    private void maybeInterject(Agent speaker) {
-        if (stopRequested) {
-            return;
-        }
-        List<Agent> others = new ArrayList<>(agents);
-        others.remove(speaker);
-        Collections.shuffle(others);
-
-        for (Agent candidate : others) {
-            double chance = candidate.isAdversarial()
-                    ? ADVERSARIAL_INTERJECTION_CHANCE
-                    : COOPERATIVE_INTERJECTION_CHANCE;
-            if (Math.random() < chance) {
-                output.speakerCalled(candidate, true);
-                String interjection = candidate.speak(INTERJECTION_CUE);
-                if (stopRequested || Thread.currentThread().isInterrupted()) return;
-                output.displayMessage(candidate, interjection, true);
-                broadcast(candidate, interjection);
-                return;
-            }
-        }
-    }
-
-    private void broadcast(Agent speaker, String statement) {
-        for (Agent listener : agents) {
-            if (listener != speaker) {
-                listener.hear(speaker.getName(), statement);
-            }
-        }
-    }
+    public void addSpeakerRuling(String ruling) { rulings.add(ruling); }
+    public void requestStop() { synchronized (publicationLock) { stopped=true; } }
+    public boolean isStopRequested() { return stopped; }
 }

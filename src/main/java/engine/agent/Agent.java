@@ -1,45 +1,35 @@
 package engine.agent;
 
 import engine.ChatManager;
+import engine.chat.*;
+import engine.config.*;
+import engine.transcript.*;
+import engine.utils.Json;
+import java.util.*;
 
-public class Agent {
-
-    private final String name;
-    private final Party party;
-    private final AdversarialStrategy strategy;
-    private final ChatManager chatManager;
-
-    public Agent(String name, Party party, AdversarialStrategy strategy, ChatManager chatManager, String systemPrompt) {
-        this.name = name;
-        this.party = party;
-        this.strategy = strategy;
-        this.chatManager = chatManager;
-        chatManager.addMessage(systemPrompt);
+/** Recipient-specific private context. The provider holds no conversation state. */
+public final class Agent {
+    private final Participant identity;
+    private final PrivateAgentContext context;
+    private final ChatManager provider;
+    public Agent(Participant identity, AdversarialStrategy strategy, ChatManager provider,
+                 String instructions, List<String> grounding, ModelConfig model) {
+        this.identity=Objects.requireNonNull(identity); this.provider=Objects.requireNonNull(provider);
+        this.context=new PrivateAgentContext(instructions,strategy,grounding,model);
     }
-
-    public String getName() {
-        return name;
+    public Participant identity() { return identity; }
+    public boolean shouldInterject(Random random,InterruptionConfig settings) {
+        return random.nextDouble() < (context.strategy==AdversarialStrategy.NONE
+                ? settings.cooperativeChance() : settings.adversarialChance());
     }
-
-    public Party getParty() {
-        return party;
+    public String speak(List<PublicEvent> publicEvidence,String cue) {
+        List<ChatMessage> messages=new ArrayList<>();
+        for (var event:List.copyOf(publicEvidence)) {
+            boolean own=event.speaker()!=null && identity.id().equals(event.speaker().id());
+            messages.add(new ChatMessage(own ? ChatMessage.Role.ASSISTANT : ChatMessage.Role.USER,Json.write(event)));
+        }
+        messages.add(new ChatMessage(ChatMessage.Role.USER,cue));
+        return provider.complete(new ChatRequest(context.systemPrompt,messages,context.model)).requireCompletedText();
     }
-
-    public AdversarialStrategy getStrategy() {
-        return strategy;
-    }
-
-    public boolean isAdversarial() {
-        return strategy != AdversarialStrategy.NONE;
-    }
-
-    public void hear(String speakerName, String statement) {
-        chatManager.addMessage(speakerName + ": " + statement);
-    }
-
-    public String speak(String cue) {
-        chatManager.addMessage(cue);
-        chatManager.sendChat();
-        return chatManager.getMessageContent();
-    }
+    @Override public String toString() { return "Agent["+identity.id()+", private context redacted]"; }
 }

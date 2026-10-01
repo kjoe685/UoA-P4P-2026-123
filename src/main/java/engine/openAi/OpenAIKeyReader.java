@@ -15,6 +15,8 @@ public final class OpenAIKeyReader {
      *                               the template placeholder
      */
     public static String read(FileTextReader fileTextReader) {
+        String environmentKey = System.getenv("OPENAI_API_KEY");
+        if (environmentKey != null && !environmentKey.isBlank()) return environmentKey.trim();
         String apiKey;
         try {
             apiKey = fileTextReader.readText(API_KEY_PATH).trim();
@@ -29,5 +31,10 @@ public final class OpenAIKeyReader {
                     + "Replace the placeholder in that file with your actual OpenAI API key, then try again.");
         }
         return apiKey;
+    }
+
+    public static boolean configured() {
+        try { read(new FileTextReader()); return true; }
+        catch (IllegalStateException e) { return false; }
     }
 }

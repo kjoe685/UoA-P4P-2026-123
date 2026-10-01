@@ -33,6 +33,15 @@
   </header>
 
   <main>
+    <section class="card saved-runs" aria-labelledby="saved-title">
+      <div class="saved-head"><h2 id="saved-title" class="card-title">Saved sittings</h2>
+        <button id="refresh-runs" type="button" class="btn btn-secondary">Refresh</button></div>
+      <p class="hint">Speeches are saved automatically. Open a sitting to replay its history, including after a restart.</p>
+      <div id="saved-runs" class="saved-list"></div>
+      <label class="field-label" for="import-transcript">Import a public transcript JSON file</label>
+      <input id="import-transcript" type="file" accept=".json,application/json">
+      <p id="saved-status" role="status" class="hint"></p>
+    </section>
     <!-- ============ Setup: convene a sitting ============ -->
     <section id="setup-view" class="view" aria-labelledby="setup-title">
       <div class="intro">
@@ -83,11 +92,11 @@
             <p class="hint">rounds per item. In each round, every member speaks once.</p>
           </div>
           <p id="sitting-summary" class="summary"></p>
-          <label for="provider">Generation</label>
-          <select id="provider">
-            <option value="demo">Deterministic demonstration · no model calls</option>
-            <option value="openai">OpenAI · uses your API key</option>
-          </select>
+          <label class="field-label" for="agent-model">Agent model</label>
+          <select id="agent-model"></select>
+          <label class="field-label" for="evaluator-model">Evaluator model</label>
+          <select id="evaluator-model"></select>
+          <p class="hint">Evaluator choice is saved independently. Evaluation actions are still being integrated.</p>
           <p class="hint">The demonstration uses fixed sample speeches and cannot test model behaviour.</p>
         </fieldset>
 
@@ -131,6 +140,7 @@
             <h2 id="sitting-title" class="hansard-title">Sitting of the House</h2>
           </div>
           <button type="button" id="export-btn" class="btn btn-ghost">Download transcript</button>
+          <button type="button" id="export-json-btn" class="btn btn-ghost">Download JSON</button>
         </div>
         <div id="transcript-scroller" class="transcript-scroller">
           <div id="transcript" class="transcript" aria-live="polite" aria-relevant="additions"></div>

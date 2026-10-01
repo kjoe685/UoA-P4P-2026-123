@@ -1,7 +1,6 @@
 package engine;
 
+@FunctionalInterface
 public interface ChatManager {
-    void addMessage(String message);
-    void sendChat();
-    String getMessageContent();
+    engine.chat.ChatResponse complete(engine.chat.ChatRequest request);
 }

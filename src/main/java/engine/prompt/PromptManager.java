@@ -1,52 +1,37 @@
 package engine.prompt;
 
 import engine.agent.AdversarialStrategy;
-import engine.agent.HansardExcerpts;
-import engine.agent.Party;
-import engine.utils.FileTextReader;
-
+import engine.config.PartyProfile;
+import engine.config.ConfigurationSnapshot;
 import java.util.List;
+import java.util.Map;
 
-public class PromptManager {
+/** Assembles one recipient's instructions; never renders the complete run configuration. */
+public final class PromptManager {
+    private final ConfigurationSnapshot snapshot;
 
-    private static final String BASE_PROMPT_PATH = "resources/prompts/BasePrompt.txt";
-    private static final String POLITICIAN_PROMPT_PATH = "resources/prompts/PoliticanPrompt.txt";
+    public PromptManager(ConfigurationSnapshot snapshot) { this.snapshot = snapshot; }
 
-    private final FileTextReader fileTextReader;
-    private final HansardExcerpts hansardExcerpts;
-
-    public PromptManager(FileTextReader fileTextReader) {
-        this.fileTextReader = fileTextReader;
-        this.hansardExcerpts = new HansardExcerpts(fileTextReader);
+    public String assemblePersonaPrompt(String agentName, PartyProfile profile,
+                                        AdversarialStrategy strategy, List<String> excerpts) {
+        StringBuilder prompt = new StringBuilder(snapshot.template(TemplateName.BASE).render(Map.of()));
+        prompt.append("\n\n").append(snapshot.template(TemplateName.PERSONA).render(Map.of(
+                "AGENT_NAME", agentName, "PARTY_NAME", profile.displayName(), "IDEOLOGY", profile.ideology())));
+        if (!excerpts.isEmpty()) {
+            prompt.append("\n\n").append(snapshot.template(TemplateName.GROUNDING).render(Map.of(
+                    "PARTY_NAME", profile.displayName(), "EXCERPTS", String.join("\n\n", excerpts))));
+        }
+        if (strategy != AdversarialStrategy.NONE) {
+            prompt.append("\n\n").append(snapshot.template(TemplateName.valueOf(strategy.name())).render(Map.of()));
+        }
+        return prompt.toString();
     }
 
-    public String assemblePersonaPrompt(String agentName, Party party, AdversarialStrategy strategy, String topic) {
-        String basePrompt = fileTextReader.readText(BASE_PROMPT_PATH);
-        String personaPrompt = fileTextReader.readText(POLITICIAN_PROMPT_PATH)
-                .replace("{{AGENT_NAME}}", agentName)
-                .replace("{{PARTY_NAME}}", party.getDisplayName())
-                .replace("{{IDEOLOGY}}", party.getIdeology())
-                .replace("{{TOPIC}}", topic);
-
-        StringBuilder prompt = new StringBuilder();
-        prompt.append(basePrompt).append("\n\n").append(personaPrompt);
-
-        List<String> excerpts = hansardExcerpts.getExcerpts(party);
-        if (!excerpts.isEmpty()) {
-            prompt.append("\n\nHere are real excerpts of ").append(party.getDisplayName())
-                    .append(" MPs speaking in the New Zealand House of Representatives (from official Hansard "
-                            + "transcripts), to ground your rhetorical style. Use them only to inform tone, phrasing, "
-                            + "and parliamentary convention. Do not mention, name, or impersonate any specific real "
-                            + "individual:");
-            for (String excerpt : excerpts) {
-                prompt.append("\n- \"").append(excerpt).append("\"");
-            }
+    public String cue(TemplateName name, String topic) {
+        if (!List.of(TemplateName.OPENING, TemplateName.NEW_TOPIC, TemplateName.FOLLOW_UP,
+                TemplateName.INTERJECTION, TemplateName.TOPIC_ANNOUNCEMENT).contains(name)) {
+            throw new IllegalArgumentException("Not a public turn template");
         }
-
-        if (strategy != AdversarialStrategy.NONE) {
-            prompt.append("\n\nAdversarial directive: ").append(strategy.getInstruction());
-        }
-
-        return prompt.toString();
+        return snapshot.template(name).render(Map.of("TOPIC", topic));
     }
 }

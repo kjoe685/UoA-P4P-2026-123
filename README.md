@@ -14,13 +14,17 @@ On Linux/macOS, run `sh run.sh` from the extracted folder. This launcher support
 
 ## Generate a real debate
 
-For the current OpenAI integration, copy `keys/openAi/OpenAI_Key_TEMPLATE.txt` to `keys/openAi/OpenAI_Key.txt`, put your key in that file, and select **OpenAI** in setup. The key stays on the server and is ignored by Git. Real generation spends provider credit. The existing default model is `gpt-5-nano`; live availability has not been checked in this implementation.
+For OpenAI, set `OPENAI_API_KEY` or copy `keys/openAi/OpenAI_Key_TEMPLATE.txt` to `keys/openAi/OpenAI_Key.txt`, put your key in that file, and select an OpenAI **Agent model** in setup. The key stays on the server and is ignored by Git. Real generation spends provider credit. `gpt-5-nano` and `gpt-4o-mini` are retained presets; live availability has not been checked in this implementation.
 
 Additional providers, reusable advanced settings and evaluators are being integrated in the [primary plan](docs/implementation-plan.md). Do not install Python or NLP models for a basic debate.
 
 ## Terminal and development
 
-Run `run.cmd cli` (Windows) or `sh run.sh cli` (Unix) for guided debate setup. `run.cmd serve` starts the server without opening a browser. A custom port can follow `serve`, for example `run.cmd serve 8081`.
+Run `run.cmd cli` (Windows) or `sh run.sh cli` (Unix) for the guided menu: start, browse/watch saved sittings, rule, adjourn, import, or export. The menu attaches to localhost:8080, starting a backend if needed. A backend started by the menu stops when you exit. `run.cmd serve` starts a persistent server without opening a browser. A custom port can follow `serve`, for example `run.cmd serve 8081`.
+
+Scriptable commands attach to the running server: `run.cmd cli runs`, `run.cmd cli start settings.json`, `run.cmd cli watch ID`, `run.cmd cli ruling ID "Order!"`, `run.cmd cli cancel ID`, `run.cmd cli transcript ID public.json`, `run.cmd cli export ID public.txt`, and `run.cmd cli import public.json`. Set `PARLIAMENT_URL` to use a custom server port. The [configuration reference](docs/configuration.md) contains a settings example.
+
+Runs are saved under ignored `runs/` folders. Public JSON and text exports contain the roster, agenda, completed contributions, public chair context and outcome. Private prompts, grounding, assignments and model settings are stored separately. A restart marks unfinished runs as interrupted and retains completed speeches; it never resumes model calls automatically.
 
 Open `pom.xml` as a project in IntelliJ and select a Java 17+ JDK. For development, use `mvnw.cmd verify` or `sh mvnw verify`; the build creates `target/virtual-parliament.jar`. See the [developer guide](docs/development.md) for layout and testing.
 
