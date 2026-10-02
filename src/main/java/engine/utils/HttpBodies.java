@@ -12,8 +12,8 @@ import java.util.function.IntUnaryOperator;
 /** Bounded UTF-8 responses and interruptible body deadlines, including stalls after headers. */
 public final class HttpBodies {
     public static final int JSON_LIMIT = 16 * 1024 * 1024;
-    private static final ScheduledExecutorService WATCHER=Executors.newSingleThreadScheduledExecutor(task -> {
-        var thread=new Thread(task,"parliament-http-deadlines"); thread.setDaemon(true); return thread;
+    private static final ExecutorService READERS=Executors.newCachedThreadPool(task -> {
+        var thread=new Thread(task,"parliament-http-body"); thread.setDaemon(true); return thread;
     });
     public record Response(int statusCode,HttpHeaders headers,String body) { }
     public static final class ResponseTooLargeException extends IOException {
@@ -48,22 +48,53 @@ public final class HttpBodies {
 
     public static <T,E extends Exception> T consume(InputStream input,long deadline,Runnable check,Reader<T,E> reader)
             throws E,IOException,InterruptedException {
-        Thread worker=Thread.currentThread();
-        var guard=WATCHER.scheduleWithFixedDelay(() -> {
-            if (worker.isInterrupted() || System.nanoTime()>=deadline)
-                try { input.close(); } catch (IOException ignored) { }
-        },0,100,TimeUnit.MILLISECONDS);
+        check.run(); checkInterrupted();
+        var finished=new CountDownLatch(1);
+        var task=new FutureTask<T>(() -> reader.read(input)) {
+            @Override public void run() { try { super.run(); } finally { finished.countDown(); } }
+        };
+        // Java17's HTTP stream clears interrupts inside its blocking queue read. Keep the
+        // caller interruptible while a daemon reader consumes the body; close it on failure.
+        READERS.execute(task); boolean completed=false;
         try {
+            while (true) {
+                check.run(); checkInterrupted();
+                long remaining=deadline==Long.MAX_VALUE ? Long.MAX_VALUE : deadline-System.nanoTime();
+                if (remaining<=0) throw new HttpTimeoutException("HTTP response timed out");
+                try {
+                    T result=task.get(Math.min(remaining,TimeUnit.MILLISECONDS.toNanos(100)),TimeUnit.NANOSECONDS);
+                    check.run(); checkInterrupted();
+                    if (deadline!=Long.MAX_VALUE && System.nanoTime()>=deadline) throw new HttpTimeoutException("HTTP response timed out");
+                    completed=true; return result;
+                } catch (TimeoutException ignored) { /* Recheck deadline and job state. */ }
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt(); throw e;
+        } catch (ExecutionException e) {
             check.run(); checkInterrupted();
-            T result=reader.read(input);
-            check.run(); checkInterrupted();
-            if (System.nanoTime()>=deadline) throw new HttpTimeoutException("HTTP response timed out");
-            return result;
-        } catch (IOException e) {
-            check.run(); checkInterrupted();
-            if (System.nanoTime()>=deadline) throw new HttpTimeoutException("HTTP response timed out");
-            throw e;
-        } finally { guard.cancel(false); }
+            if (deadline!=Long.MAX_VALUE && System.nanoTime()>=deadline) throw new HttpTimeoutException("HTTP response timed out");
+            Throwable cause=e.getCause();
+            if (cause instanceof IOException io) throw io;
+            if (cause instanceof InterruptedException interruption) { Thread.currentThread().interrupt(); throw interruption; }
+            if (cause instanceof RuntimeException runtime) throw runtime;
+            if (cause instanceof Error error) throw error;
+            @SuppressWarnings("unchecked") E checked=(E)cause;
+            throw checked;
+        } finally {
+            if (!completed) {
+                try { input.close(); } catch (IOException ignored) { }
+                task.cancel(true);
+            }
+            // Let file-writing callbacks close their resources before a cancelled operation
+            // releases its caller. Bound cleanup even for a callback that ignores cancellation.
+            boolean interrupted=Thread.interrupted();
+            long cleanupDeadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(1);
+            while (finished.getCount()!=0 && System.nanoTime()<cleanupDeadline) {
+                try { finished.await(cleanupDeadline-System.nanoTime(),TimeUnit.NANOSECONDS); }
+                catch (InterruptedException e) { interrupted=true; }
+            }
+            if (interrupted) Thread.currentThread().interrupt();
+        }
     }
 
     public static byte[] bounded(InputStream input,int limit) throws IOException {

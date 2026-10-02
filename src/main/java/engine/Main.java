@@ -9,6 +9,8 @@ import com.sun.net.httpserver.HttpServer;
 import java.io.*;
 import java.net.URI;
 import java.net.http.*;
+import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.*;
@@ -296,12 +298,47 @@ public final class Main {
     }
     private String ask(String prompt) { output.print(prompt); return input.hasNextLine() ? input.nextLine().trim() : ""; }
     private void watch(String id) throws Exception {
-        var request=HttpRequest.newBuilder(URI.create(base+runPath(id)+"/events")).GET().build();
-        var response=http.send(request,HttpResponse.BodyHandlers.ofInputStream());
-        if (response.statusCode()!=200) { response.body().close(); throw new IllegalStateException("Cannot read sitting events"); }
-        try (var reader=new BufferedReader(new InputStreamReader(response.body(),StandardCharsets.UTF_8))) {
-            String line;
-            while ((line=reader.readLine())!=null) if (line.startsWith("data: ")) output.println(line.substring(6));
+        try {
+            var request=HttpRequest.newBuilder(URI.create(base+runPath(id)+"/events")).timeout(requestTimeout).GET().build();
+            var response=http.send(request,HttpResponse.BodyHandlers.ofInputStream());
+            try (var body=response.body()) {
+                String type=response.headers().firstValue("Content-Type").orElse("").split(";",2)[0].trim();
+                if (response.statusCode()!=200 || !type.equalsIgnoreCase("text/event-stream"))
+                    throw new IllegalStateException("Cannot read sitting events");
+                // Guard cancellation throughout the body, with no total sitting-duration limit.
+                HttpBodies.consume(body,Long.MAX_VALUE,() -> { },stream -> {
+                    var reader=new BufferedInputStream(stream); String line;
+                    while ((line=eventLine(reader))!=null) if (line.startsWith("data: ")) {
+                        if (Thread.currentThread().isInterrupted()) throw new InterruptedException();
+                        String event=line.substring(6);
+                        try {
+                            if (!(Json.parse(event) instanceof Map<?,?>)) throw new IllegalArgumentException();
+                        } catch (IllegalArgumentException e) { throw new IllegalStateException("Invalid sitting event JSON"); }
+                        output.println(event);
+                    }
+                    return null;
+                });
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt(); throw new IllegalStateException("Sitting event request interrupted");
+        } catch (HttpTimeoutException e) {
+            throw new IllegalStateException("Sitting event response timed out");
+        } catch (CharacterCodingException e) {
+            throw new IllegalStateException("Sitting event is not valid UTF-8");
+        } catch (IOException e) {
+            throw new IllegalStateException("Cannot read sitting events; use watch again to reconnect");
+        }
+    }
+    private static String eventLine(InputStream input) throws IOException,InterruptedException {
+        var bytes=new ByteArrayOutputStream();
+        while (true) {
+            int value=input.read();
+            if (value<0 && bytes.size()==0) return null;
+            if (value<0 || value=='\n' || value=='\r')
+                return StandardCharsets.UTF_8.newDecoder().decode(ByteBuffer.wrap(bytes.toByteArray())).toString();
+            if (bytes.size()>=HttpBodies.JSON_LIMIT) throw new IllegalStateException("Sitting event line exceeds the terminal size limit");
+            bytes.write(value);
+            if ((bytes.size() & 8191)==0 && Thread.currentThread().isInterrupted()) throw new InterruptedException();
         }
     }
     private String get(String path) throws Exception { return request(path,null); }

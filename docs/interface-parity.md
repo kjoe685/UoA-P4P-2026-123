@@ -8,6 +8,8 @@ Ordinary terminal API responses have a30-second deadline through the body read a
 
 Incoming API JSON and browser corpus/pilot/transcript files require valid UTF-8. The shared JSON boundary rejects unpaired Unicode surrogates in values/keys before mapping or storage; valid Māori, emoji, combining marks and replacement characters retain their exact text. Files with malformed encoding must be corrected rather than silently rewritten during import. Developer file-decoding fixtures run with `node scripts/verify-file-decoding.cjs`; ordinary use needs no Node installation.
 
+Terminal event watching has a30-second header timeout and16MiB encoded-line limit, requires UTF-8 JSON event objects and rejects other response types. Interruption closes a stalled stream. Valid debate streams have no total duration limit; keep-alives and replay continue through the same watch command/guided choice3.
+
 | Operation | Browser | Guided choice | Scriptable command / shared endpoint |
 |---|---|---|---|
 | Inspect model/party/default choices and credential help | Sitting setup | 1, prompts | `config` / `GET /api/config` |

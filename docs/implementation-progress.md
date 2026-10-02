@@ -6,8 +6,24 @@
 - Branch: `codex/dual-interface-integration`, created from refreshed `origin/main` at `a99269c`.
 - Recovered primary plan from previous chat `01a0f6c1-32c6-7a33-bf8c-6ad9fee837e5`; that chat ended in Plan mode without writing changes.
 - Preserved secondary plan from `9cbcb12`. Evaluation reference: `c41c4c2`, file-level reuse only.
-- T01–T20 software checkpoints verified locally; latest checkpoint title `T20: refresh isolated Windows delivery verification` (see Git log for local commit hash). External platform/human acceptance remains below.
+- T01–T21 software checkpoints verified locally; latest checkpoint title `T21: bound sitting streams and preserve body cancellation` (see Git log for local commit hash). External platform/human acceptance remains below.
 - Existing untracked `UoA-P4P-2026-123.iml` belongs to the user; preserve it.
+
+## T21 completed checkpoint
+
+**T21 — Bound and interrupt terminal sitting-event reads (REQ-01–02, 46, 49–50, 53, 55, 58).**
+
+Dependency: T20 `eaf6ba9`. `Main.watch` bypasses the ordinary response guard: no header timeout, unbounded replacement-decoding line reader and no cancellation guard after headers. Preserve long-running debates/15-second keep-alives while bounding each encoded line, requiring valid UTF-8/scalar JSON event data and closing the stream on interruption. No total debate-duration limit or new user flags. Both watch command and guided choice3 use the same adapter.
+
+Acceptance: fake wire oversized/malformed event lines fail with sanitized errors, stalled header request times out and interrupted stalled body releases the worker; exact Unicode and multiple keep-alives/replay events work beyond the header timeout; actual application/command/menu parity stays correct. Use current30-second header timeout and16MiB per-line cap; reuse shared interrupt guard without imposing a total stream deadline. Next reproduce failures with isolated loopback fixtures, implement bounded strict event reading, run focused/full checks and commit locally. No inference, owner data changes or paid calls.
+
+T21 WIP: before-change fixtures reproduced oversized/malformed event and incorrect content-type acceptance plus stalled headers. Initial interruption happened during headers; corrected synchronization waits until a valid first event is printed and now reproduces a body-read stall (`target/T21-event-transport-reproduction/after-event-interruption.xml`). Implemented strict bounded UTF-8/scalar JSON lines, expected event-stream response type, header-only timeout and shared stream cancellation guard; active stream duration remains unlimited. Next focused/full command/menu/application checks before a checkpoint. No inference or owner data changes.
+
+T21 focused20/21 pass; after-event cancellation still stalls with the existing guard. Reviewed the pinned local JDK17 source (`HttpResponseInputStream.current`): its blocking queue read catches/clears InterruptedException and continues. A watcher polling that reader's flag can therefore miss cancellation. Extend this task before edits: execute guarded body callbacks on daemon reader tasks while the original caller waits interruptibly with the existing deadline/checks; cancellation closes the body and cancels the reader. Verify a direct shared-utility after-first-byte regression, checked-exception identity and all provider/NLP/runtime tests. This fixes the shared guard rather than weakening the fixture or shortening valid debate duration.
+
+T21 focused38 pass with the revised shared guard. Corrected after-event and direct after-first-byte regressions now release the original caller with its interrupt flag preserved; tested daemon readers close their callback resources before release (cleanup is awaited for up to one second). Checked exceptions retain their type/identity, deadlines/job checks remain on the caller, and existing fake provider/NLP/local-runtime download tests pass. Added a reader-resource completion assertion before the full suite. Next full build, review/threading/ancestry checks and local checkpoint; no owner files or model calls.
+
+T21 verified 2026-10-02: full Java135/shaded build passes, followed by the additional guided choice3 refusal/return check. Eight new tests cover real after-first-byte cancellation, reader resource closure/checked exceptions/early refusal, malformed UTF-8/JSON/surrogates, encoded-line bounds, response type, header deadlines, after-event interruption and exact Unicode/keep-alives beyond the header deadline. The shared guard keeps the original caller interruptible and uses daemon body callbacks with bounded cleanup; it does not rely on Java17's swallowed reader interrupt. Providers/NLP/runtime/debate/cancellation/recovery/interface regressions pass. Reproduction XMLs retained under `target/T21-event-transport-reproduction`; initial connection-stage interruption is explicitly superseded. Diff/ancestry pass, references unchanged. No owner data changes, inference, paid calls or push. Next continue requirement-focused source/acceptance review before recording any further edits.
 
 ## T20 completed checkpoint
 
@@ -149,7 +165,7 @@ T11 final verification: 500/500 source/content checks pass; 131 original passage
 - Genuine human behavioural review for REQ-16–19 and real labels/adjudication for the 200-item pilot. Software cues, review preparation and scoring are implemented; synthetic scores never establish research accuracy. Latest disjoint genuine prepared file is ignored target/genuine-review-pilot-current-grounding.json (import explicitly). The older target/genuine-review-pilot.json and owner pilot2224fde6-83eb-455c-9e5c-aba790e4723e were preserved; the old artifact has19 overlaps after T11 grounding changes. Keep labels blank until real review and curate propositions/context/sampling before research use.
 - Account-specific cloud and local Ollama availability/model behaviour remain unverified. Routine tests use fake providers and no paid calls. Public university hosting/authentication remains future scope under REQ-58.
 
-No half-finished code remains after the verified T20 checkpoint. Preserve the unrelated .iml. One exploratory ZIP RecoveryTest had a transient ERROR that did not reproduce in six focused repeats or later full ZIP checks; the original failure logs remain in target/delivery-23fea5f924854757b21e2ce56afe387f. Investigate if it recurs; do not suppress tests or infer a cause from this run.
+No half-finished code remains after the verified T21 checkpoint. Preserve the unrelated .iml. One exploratory ZIP RecoveryTest had a transient ERROR that did not reproduce in six focused repeats or later full ZIP checks; the original failure logs remain in target/delivery-23fea5f924854757b21e2ce56afe387f. Investigate if it recurs; do not suppress tests or infer a cause from this run.
 
 ## Earlier checkpoint notes (historical)
 
@@ -201,6 +217,7 @@ Verification: Maven verify passes 2 tests (HTTP demo/chair/replay and cancellati
 | T18 terminal transport/exports | Software verified with fixtures | Java123, body bounds/deadlines/cancel, redirect/error refusal and owner-file preservation,201/202/Unicode and atomic export replacement |
 | T19 Unicode boundaries | Software verified with fixtures | Java127, strict UTF-8/scalar rejection before mutation and exact valid text/canonical round trips; native Blob/TextDecoder fixtures |
 | T20 refreshed Windows delivery | Isolated current-host acceptance verified | ZIP Java127/build, fresh Maven/dependencies, packaged ZIP/gzip/zstd/JNI, optional runtime absence, Unicode/menu/ownership/reuse/recovery; cached Java explicit |
+| T21 stream/cancellation transport | Software verified with fixtures | Java135, strict bounded event lines/header timeout/long streams/menu refusal and robust shared after-body-read cancellation with resource cleanup |
 
 ## Recovery procedure
 
