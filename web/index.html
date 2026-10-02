@@ -80,7 +80,8 @@
       <label for="pilot-id" class="field-label">Saved pilot</label>
       <select id="pilot-id"></select>
       <label for="pilot-seed" class="field-label">Preparation seed</label>
-      <input id="pilot-seed" type="number" step="1" value="123">
+      <input id="pilot-seed" type="text" inputmode="numeric" value="123">
+      <p class="hint">Use a whole number. The exact seed is retained for repeatable preparation.</p>
       <button id="prepare-pilot" type="button" class="btn btn-secondary">Prepare 200 unlabelled items</button>
       <button id="evaluate-pilot" type="button" class="btn btn-secondary">Run selected local methods on pilot</button>
       <a id="download-pilot" hidden>Download pilot for review</a>

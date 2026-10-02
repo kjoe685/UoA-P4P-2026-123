@@ -24,6 +24,8 @@ Preparation excludes source speeches used in the **currently installed** groundi
 
 Full-speech hashes must also be disjoint between calibration and held-out groups, even when the same content has different declared speech/debate IDs or sampled sentences. Reviewed imports and blank preparation reject such overlap before saving; repeated source content within one split remains allowed. Correct source grouping or curate another non-overlapping candidate before preparing again. Existing source files, labels and preparation policies are preserved.
 
+Preparation retains the exact whole-number seed through browser, commands and the guided menu, within the signed64-bit range. Decimal/exponent and out-of-range values are refused. The browser starts with123 and requires a nonempty value; an omitted command seed or blank guided prompt uses123. Invalid seed diagnostics do not repeat the input text. These guarantees concern deterministic software preparation, not sampling quality or human review.
+
 After a grounding corpus replacement, recheck earlier pilot files against the installed source-speech exclusions. The [2026-10-02 excerpt audit](hansard-audit.md) replaced 104 source speeches; the old `target/genuine-review-pilot.json` has 19 current overlaps. Import/evaluation rejects current grounding overlap. Its replacement `target/genuine-review-pilot-current-grounding.json` has 200 blank review items, zero grounding speech/hash overlap and disjoint source-debate groups. It is an ignored local artifact, ready to import and curate; the old owner pilot and historical files/labels were preserved.
 
 ## Review and import

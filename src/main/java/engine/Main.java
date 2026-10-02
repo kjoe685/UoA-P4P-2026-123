@@ -73,7 +73,7 @@ public final class Main {
                     case "list" -> output.println(get("/api/pilots"));
                     case "import" -> { requireArgs(args,3); output.println(post("/api/pilots",Files.readString(Path.of(args[2])))); }
                     case "show" -> { requireArgs(args,3); String dataset=get("/api/pilots/"+encode(args[2])); if (args.length>3) writeOutput(args[3],dataset); else output.println(dataset); }
-                    case "prepare" -> { requireArgs(args,3); output.println(post("/api/pilots/"+encode(args[2])+"/prepare",Json.write(Map.of("seed",args.length>3 ? Long.parseLong(args[3]) : 123)))); }
+                    case "prepare" -> { requireArgs(args,3); output.println(post("/api/pilots/"+encode(args[2])+"/prepare",Json.write(Map.of("seed",args.length>3 ? pilotSeed(args[3]) : 123)))); }
                     case "evaluate" -> { requireArgs(args,3); output.println(post("/api/pilots/"+encode(args[2])+"/evaluate",Json.write(args.length>3 ? Map.of("methods",Arrays.asList(args[3].split(","))) : Map.of()))); }
                     default -> throw new IllegalArgumentException("pilot list | import FILE | show ID [FILE] | prepare ID [SEED] | evaluate ID [METHODS]");
                 }
@@ -181,7 +181,7 @@ public final class Main {
                             String path="/api/pilots/"+encode(ask("Pilot id: "));
                             switch (action) {
                                 case "show" -> { String file=ask("Output JSON file (blank = print): "), text=get(path); if (file.isBlank()) output.println(text); else writeOutput(file,text); }
-                                case "prepare" -> { String seed=ask("Preparation seed (blank = 123; labels remain blank): "); output.println(post(path+"/prepare",Json.write(Map.of("seed",seed.isBlank() ? 123 : Long.parseLong(seed))))); }
+                                case "prepare" -> { String seed=ask("Preparation seed (blank = 123; labels remain blank): "); output.println(post(path+"/prepare",Json.write(Map.of("seed",seed.isBlank() ? 123 : pilotSeed(seed))))); }
                                 case "evaluate" -> { String methods=ask("Method IDs separated by commas (blank = defaults; reviewed data required): "); output.println(post(path+"/evaluate",Json.write(methods.isBlank() ? Map.of() : Map.of("methods",Arrays.asList(methods.split(",")))))); }
                                 default -> throw new IllegalArgumentException("Choose a listed pilot action");
                             }
@@ -384,6 +384,12 @@ public final class Main {
     }
     private static String runPath(String id) { return "/api/debates/"+java.net.URLEncoder.encode(id,StandardCharsets.UTF_8); }
     private static void writeOutput(String file,String text) { AtomicFiles.write(Path.of(file).toAbsolutePath().normalize(),text); }
+    private static long pilotSeed(String text) {
+        try { return Long.parseLong(text==null ? "" : text.trim()); }
+        catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Preparation seed needs a whole number between -9223372036854775808 and 9223372036854775807");
+        }
+    }
     private static String encode(String value) { return java.net.URLEncoder.encode(value,StandardCharsets.UTF_8); }
     private static void requireArgs(String[] args,int count) { if (args.length<count) throw new IllegalArgumentException("Missing command argument"); }
 }

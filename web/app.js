@@ -55,6 +55,30 @@ async function readJsonFile(file) {
   catch { throw new Error('Choose a JSON file encoded as valid UTF-8.'); }
 }
 
+function integerText(value, minimum, maximum, message) {
+  const text = String(value).trim();
+  if (!/^[+-]?\d+$/.test(text)) throw new Error(message);
+  const number = BigInt(text);
+  if (number < BigInt(minimum) || number > BigInt(maximum)) throw new Error(message);
+  return number.toString();
+}
+
+function groundingInput(value, override = false) {
+  if (override && String(value).trim() === '') return null;
+  return Number(integerText(value, -1, 1000, 'Grounding count must be -1 (all) or an integer from 0 to 1000'));
+}
+
+function updateGroundingInput(event, party = null) {
+  try {
+    const count = groundingInput(event.target.value, party !== null);
+    if (party !== null) setup.members[party].groundingCount = count;
+    else setup.groundingCount = count;
+    event.target.setCustomValidity(''); showFormError(''); saveSetup();
+  } catch (error) {
+    event.target.setCustomValidity(error.message); showFormError(error.message);
+  }
+}
+
 const $ = (selector) => document.querySelector(selector);
 
 /** Creates an element. `props` may hold className, text, attrs, dataset, style, on (event handlers). */
@@ -325,7 +349,7 @@ function renderParties() {
     el('p', { className: 'party-ideology', text: capitalise(party.ideology) }),
     el('label',{className:'field-label',text:`Grounding count override (${party.groundingAvailable} available)`,attrs:{for:`grounding-${party.id}`}}),
     el('input',{attrs:{id:`grounding-${party.id}`,type:'number',min:-1,max:1000,step:1,value:member.groundingCount ?? '',placeholder:'Shared count',disabled:!member.included},
-      on:{input:event=>{ member.groundingCount=event.target.value==='' ? null : Number(event.target.value); saveSetup(); }}}),
+      on:{input:event=>updateGroundingInput(event,party.id)}}),
     el('div', {},
       el('label', { className: 'field-label', text: 'Model override', attrs: { for: `model-${party.id}` } }),
       el('select', { attrs: { id: `model-${party.id}`, disabled: !member.included },
@@ -433,8 +457,14 @@ async function convene(event) {
    ========================================================================= */
 
 function currentSettings() {
+  const groundingCount = groundingInput($('#grounding-count').value);
+  const members = selectedMembers().map(member => {
+    const count = groundingInput($(`#grounding-${member.party}`).value, true);
+    const { groundingCount: previous, ...value } = member;
+    return { ...value, ...(count !== null ? { groundingCount: count } : {}) };
+  });
   return { topics: setup.topics.map((title, index) => ({ title: title.trim(), policyTarget: setup.policyTargets[index] || null })).filter(topic => topic.title),
-    rounds: setup.rounds, members: selectedMembers(), agentModelPreset: setup.agentModelPreset, evaluatorModelPreset: setup.evaluatorModelPreset, groundingCount:setup.groundingCount };
+    rounds: setup.rounds, members, agentModelPreset: setup.agentModelPreset, evaluatorModelPreset: setup.evaluatorModelPreset, groundingCount };
 }
 
 async function refreshSettings() {
@@ -555,7 +585,8 @@ async function importPilot(event) {
 async function preparePilot() {
   try {
     const id=$('#pilot-id').value; if (!id) throw new Error('Choose a source pilot.');
-    const result=await api(`/api/pilots/${encodeURIComponent(id)}/prepare`,{method:'POST',body:{seed:Number($('#pilot-seed').value)}});
+    const seed=integerText($('#pilot-seed').value,'-9223372036854775808','9223372036854775807','Preparation seed needs a whole number between -9223372036854775808 and 9223372036854775807');
+    const result=await api(`/api/pilots/${encodeURIComponent(id)}/prepare`,{method:'POST',jsonText:`{"seed":${seed}}`});
     await refreshPilots(result.id); $('#pilot-status').textContent='Prepared 200 items with blank labels. Download, obtain real human review, then import the completed dataset.';
   } catch(error) { $('#pilot-status').textContent=error.message; }
 }
@@ -1174,7 +1205,7 @@ function wireEvents() {
   $('#validate-corpus').addEventListener('click',()=>updateCorpus(false));
   $('#import-corpus').addEventListener('click',()=>updateCorpus(true));
   $('#agent-model').addEventListener('change', event => { setup.agentModelPreset = event.target.value; saveSetup(); });
-  $('#grounding-count').addEventListener('input',event=>{ setup.groundingCount=Number(event.target.value); saveSetup(); });
+  $('#grounding-count').addEventListener('input',event=>updateGroundingInput(event));
   $('#evaluator-model').addEventListener('change', event => { setup.evaluatorModelPreset = event.target.value; saveSetup(); });
   $('#refresh-runs').addEventListener('click', refreshSavedRuns);
   $('#import-transcript').addEventListener('change', importTranscript);
