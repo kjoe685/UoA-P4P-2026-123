@@ -17,11 +17,15 @@ public final class NlpInputMapper {
                 batches.add(new NlpRequest(2,List.of(method),batch)); batch=new ArrayList<>(); characters=0;
             }
             var topic=topics.get(event.topicId());
-            List<NlpRequest.Target> targets=method.equals("deberta-stance") && topic.policyTarget()!=null
+            List<NlpRequest.Target> targets=method.equals("deberta-stance") && hasPolicyText(topic.policyTarget())
                     ? List.of(new NlpRequest.Target(topic.id(),topic.policyTarget())) : List.of();
             batch.add(new NlpRequest.Turn(event.id(),event.text(),targets)); characters+=length;
         }
         if (!batch.isEmpty()) batches.add(new NlpRequest(2,List.of(method),batch));
         return List.copyOf(batches);
+    }
+    private static boolean hasPolicyText(String text) {
+        // Match Python str.isspace(), including non-breaking spaces and NEXT LINE.
+        return text!=null && text.codePoints().anyMatch(cp -> !Character.isWhitespace(cp) && !Character.isSpaceChar(cp) && cp!=0x85);
     }
 }

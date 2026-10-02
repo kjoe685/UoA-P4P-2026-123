@@ -6,9 +6,21 @@
 - Branch: `codex/dual-interface-integration`, created from refreshed `origin/main` at `a99269c`.
 - Recovered primary plan from previous chat `01a0f6c1-32c6-7a33-bf8c-6ad9fee837e5`; that chat ended in Plan mode without writing changes.
 - Preserved secondary plan from `9cbcb12`. Evaluation reference: `c41c4c2`, file-level reuse only.
-- T01–T29 checkpoints verified locally; latest checkpoint title `T29: verify current isolated Windows ZIP delivery` (see Git log for local commit hash). Application checkpoint T28 and T29 isolated Windows ZIP both pass Java159/shaded build; Python19 passed at T24 and is unchanged. External platform/model/human acceptance remains below.
+- T01–T30 checkpoints verified locally; latest checkpoint title `T30: preserve stance batches with blank optional targets` (see Git log for local commit hash). Application checkpoint T30 passes Java161/shaded build; T29 isolated Windows ZIP passes Java159/shaded build. Python19 passed at T24 and is unchanged. External platform/model/human acceptance remains below.
 - Existing untracked `UoA-P4P-2026-123.iml` belongs to the user; preserve it.
 - [Acceptance status](acceptance-status.md) maps all58 requirement IDs to current evidence and remaining platform/model/human checks. Historical WIP entries below are superseded by completed checkpoint records, not tasks to repeat.
+
+## T30 completed checkpoint
+
+**T30 — Treat blank optional policy propositions as missing stance targets (REQ-11, 27, 31–34, 46, 53–55, 57–58).**
+
+Dependency: T29 `27afdba` / application T28 `519e222`. Public topics allow optional policyTarget strings, and browser/commands can submit whitespace. The mapper treats every non-null string as a proposition; Python requires non-whitespace text, so one blank target can reject the whole HTTP batch and discard other valid items. Project blank optional targets to an empty target list using Python-compatible Unicode whitespace rules, preserving the original public topic and exact nonblank propositions.
+
+Acceptance: null/empty/ASCII/Unicode-whitespace propositions produce missing-target inputs while Māori/emoji/combining/nonblank text remains exact; valid and missing targets in the same fake HTTP batch retain valid stance results plus explicit no_policy_target items after restart. Sentiment requests remain target-free. Application/API/commands/menu share this projection without rewriting public evidence or guessing targets. Next add before-change mapper/wire regressions, make the small shared mapper change, then focused/full verification and local checkpoint. No owner data, real inference, models, labels, downloads or paid calls.
+
+T30 WIP: two before-change regressions reproduce empty/Unicode-whitespace target projection and whole mixed HTTP batch failure (`target/T30-policy-target-reproduction/before.xml`). Mapper now projects Python-compatible all-whitespace optional propositions to empty target lists; it retains original public topics and exact nonblank target strings. Documentation distinguishes missing-target results with an available analyzer from model availability. Next focused analysis/provenance/threshold/pilot/Unicode/command checks and full build, then local checkpoint; no owner data or actual inference.
+
+T30 verified 2026-10-02: focusedJava34/fullJava161/shaded build pass. Two added regressions cover null/empty/ASCII/all relevant Unicode whitespace, exact nonblank Māori/emoji/combining propositions, sentiment target exclusion, mixed fake HTTP valid/missing stance evidence through the shared API, exact public topic preservation and restart without repeated calls. Missing items retain no_policy_target while valid items remain scored; analyzer/model availability is not inferred. Python19 from T24 is unchanged. Diff/ancestry/reference checks pass; owneriml preserved. No owner data, real inference/models, downloads, labels, paid calls or push. Next inspect pilot split provenance for repeated source content under different declared speech/debate IDs.
 
 ## T29 completed checkpoint
 
@@ -266,7 +278,7 @@ T11 final verification: 500/500 source/content checks pass; 131 original passage
 - Genuine human behavioural review for REQ-16–19 and real labels/adjudication for the 200-item pilot. Software cues, review preparation and scoring are implemented; synthetic scores never establish research accuracy. Latest disjoint genuine prepared file is ignored target/genuine-review-pilot-current-grounding.json (import explicitly). The older target/genuine-review-pilot.json and owner pilot2224fde6-83eb-455c-9e5c-aba790e4723e were preserved; the old artifact has19 overlaps after T11 grounding changes. Keep labels blank until real review and curate propositions/context/sampling before research use.
 - Account-specific cloud and local Ollama availability/model behaviour remain unverified. Routine tests use fake providers and no paid calls. Public university hosting/authentication remains future scope under REQ-58.
 
-No half-finished code remains after the verified T29 checkpoint. Preserve the unrelated .iml. One exploratory ZIP RecoveryTest had a transient ERROR that did not reproduce in six focused repeats or later full ZIP checks; the original failure logs remain in target/delivery-23fea5f924854757b21e2ce56afe387f. Investigate if it recurs; do not suppress tests or infer a cause from this run.
+No half-finished code remains after the verified T30 checkpoint. Preserve the unrelated .iml. One exploratory ZIP RecoveryTest had a transient ERROR that did not reproduce in six focused repeats or later full ZIP checks; the original failure logs remain in target/delivery-23fea5f924854757b21e2ce56afe387f. Investigate if it recurs; do not suppress tests or infer a cause from this run.
 
 ## Earlier checkpoint notes (historical)
 
@@ -327,6 +339,7 @@ Verification: Maven verify passes 2 tests (HTTP demo/chair/replay and cancellati
 | T27 resource/runtime encoding | Java155/build verified | Strict UTF-8 snapshots/candidates/readiness/pull records; valid Unicode/hash identity, early source refusal and retained prior job progress |
 | T28 evaluator/durable encoding | Java159/build verified | Strict blind resource source/candidates and pre-filesystem atomic writer validation; exact valid Unicode/hash/frozen request control |
 | T29 latest isolated Windows ZIP | ZIP Java159/build/package/launcher verified | Fresh Maven/dependencies; cached pinned Java, explicit resumed fixture after sandbox refusal; optional runtimes absent, UTF-8/ownership/restart/recovery pass |
+| T30 optional stance target projection | Java161/build verified | Null/empty/Unicode-whitespace targets remain missing; mixed valid/missing HTTP/API/restart evidence preserved, exact public topics untouched |
 
 ## Recovery procedure
 
