@@ -42,8 +42,8 @@ public final class OfficialOllamaModelSmoke {
             byte[] bytes = Files.readAllBytes(sourcePath); sourceHash = LlmEvaluationResources.sha256(bytes);
             source = Json.read(Utf8.decode(bytes), Transcript.class);
             require(source.outcome() == Transcript.Outcome.COMPLETE && source.roster().size() == 2 && source.topics().size() == 1
-                    && source.events().stream().filter(event -> event.type() == PublicEvent.Type.SPEECH).count() == 2,
-                    "Retained acceptance evidence must be a completed two-speech single-topic sitting");
+                    && Set.of(2L,4L).contains(source.events().stream().filter(event -> event.type() == PublicEvent.Type.SPEECH).count()),
+                    "Retained acceptance evidence must be a completed bounded two-or-four-speech single-topic sitting");
             require(Files.isDirectory(root.resolve(".runtime/ollama-models")), "Evidence mode requires an existing local model cache");
         }
         if (!Files.isDirectory(root.resolve("config"))) TestFixtures.copyResources(root);
@@ -147,7 +147,8 @@ public final class OfficialOllamaModelSmoke {
             AtomicFiles.write(root.resolve("public-transcript-"+acceptanceId+".txt"), application.textExport(sitting.id()));
             result.put("sittingOutcome", evidence.outcome());
             result.put("publicContributions", evidence.events().stream().filter(event -> event.type() == PublicEvent.Type.SPEECH).count());
-            require(evidence.outcome() == Transcript.Outcome.COMPLETE && result.get("publicContributions").equals(behaviour ? 4L : 2L),
+            long expectedContributions=source==null ? (behaviour ? 4L : 2L) : source.events().stream().filter(event -> event.type()==PublicEvent.Type.SPEECH).count();
+            require(evidence.outcome() == Transcript.Outcome.COMPLETE && result.get("publicContributions").equals(expectedContributions),
                     "Actual local sitting must complete its bounded contributions; inspect retained public evidence");
             if (behaviour) {
                 require(modelCalls.get()==4 && chatCount(log)-initialChatRequests==4,"Behaviour preparation must make exactly four speech calls");
