@@ -80,6 +80,7 @@ Create and commit the documentation on a new `codex/dual-interface-integration` 
 - **Primary:** `docs/implementation-plan.md` — authoritative requirements, implementation order, branch instructions, reference sources and acceptance criteria.
 - **Secondary:** `docs/integration-plan.md` — preserve the previous plan, with a prominent notice linking to the primary plan and marking its branch/workflow decisions as historical.
 - **Progress:** `docs/implementation-progress.md` — current task, completed checkpoints, verification evidence and exact recovery instructions.
+- **Acceptance status:** `docs/acceptance-status.md` — requirement-by-requirement evidence and remaining external checks; the primary plan remains authoritative.
 - **Agent instructions:** root `AGENTS.md` — direct agents to read the primary plan and progress tracker first; enforce the branch and reuse rules below.
 
 Carry the existing requirement inventory into the primary plan, preserving IDs and provenance. Add the new requirements for complete CLI/browser parity, advanced setup, recoverable progress and fresh-machine quickstart. Clarify that localhost operation is required now; university hosting is a future deployment goal.

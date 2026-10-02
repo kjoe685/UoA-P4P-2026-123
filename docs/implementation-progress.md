@@ -6,8 +6,19 @@
 - Branch: `codex/dual-interface-integration`, created from refreshed `origin/main` at `a99269c`.
 - Recovered primary plan from previous chat `01a0f6c1-32c6-7a33-bf8c-6ad9fee837e5`; that chat ended in Plan mode without writing changes.
 - Preserved secondary plan from `9cbcb12`. Evaluation reference: `c41c4c2`, file-level reuse only.
-- T01–T22 software checkpoints verified locally; latest checkpoint title `T22: sanitize durable IDs and pilot error downloads` (see Git log for local commit hash). External platform/human acceptance remains below.
+- T01–T23 checkpoints verified locally; latest checkpoint title `T23: consolidate requirement acceptance and recovery status` (see Git log for local commit hash). Application checkpoint T22 `6e61d8c` passes Java139/shaded build; T23 changes documentation only. External platform/model/human acceptance remains below.
 - Existing untracked `UoA-P4P-2026-123.iml` belongs to the user; preserve it.
+- [Acceptance status](acceptance-status.md) maps all58 requirement IDs to current evidence and remaining platform/model/human checks. Historical WIP entries below are superseded by completed checkpoint records, not tasks to repeat.
+
+## T23 completed checkpoint
+
+**T23 — Consolidate current acceptance and recovery status (REQ-45, 48, 51–52, 55, 57–58; trace all REQ-01–58).**
+
+Dependency: T22 `6e61d8c`. The progress log contains historical WIP/acceptance notes which later checkpoints supersede. Create a concise acceptance ledger linked from the README, primary plan and current progress section: cover every requirement exactly once, distinguish software/fixture/historical evidence from genuine runtime/platform/human research acceptance, and identify the next external checks without fabricating labels or making paid calls. Preserve the historical log and exact artifacts/checkpoints.
+
+Acceptance: all58 IDs mapped to evidence/status/remaining checks, links resolve, current Java139/build and isolated Windows127 evidence correctly distinguished, verified commits/clean branch/ref ancestry/user .iml preserved. No application edits or repeated model/testing work needed. Next read the current interface/research/delivery evidence, write/check the ledger, then commit documentation and update automation memory with exact continuation context/time.
+
+T23 verified 2026-10-02: new [acceptance ledger](acceptance-status.md) maps all58 IDs exactly once, linked from README/primary plan/current progress. Relative file links and diff/ancestry checks pass; current root Java139 and T20 isolated ZIP127 are distinguished. The existing genuine review artifact retains SHA25649d40436964c90f6b3e1238dd6374618a414df3a362f2689c937e9eab5384637 and200 rows/zero labels. A supplementary PowerShell blank-row check initially had an expression-precedence error; corrected explicit counts pass without changing the artifact. No application edits or tests rerun, owner files or provider calls. Next reconcile new chats/files/checkpoints, then advance remaining actual runtime/platform/human acceptance described in the ledger; avoid repeating historical WIP work or manufacturing labels/features merely to consume usage.
 
 ## T22 completed checkpoint
 
@@ -177,7 +188,7 @@ T11 final verification: 500/500 source/content checks pass; 131 original passage
 - Genuine human behavioural review for REQ-16–19 and real labels/adjudication for the 200-item pilot. Software cues, review preparation and scoring are implemented; synthetic scores never establish research accuracy. Latest disjoint genuine prepared file is ignored target/genuine-review-pilot-current-grounding.json (import explicitly). The older target/genuine-review-pilot.json and owner pilot2224fde6-83eb-455c-9e5c-aba790e4723e were preserved; the old artifact has19 overlaps after T11 grounding changes. Keep labels blank until real review and curate propositions/context/sampling before research use.
 - Account-specific cloud and local Ollama availability/model behaviour remain unverified. Routine tests use fake providers and no paid calls. Public university hosting/authentication remains future scope under REQ-58.
 
-No half-finished code remains after the verified T22 checkpoint. Preserve the unrelated .iml. One exploratory ZIP RecoveryTest had a transient ERROR that did not reproduce in six focused repeats or later full ZIP checks; the original failure logs remain in target/delivery-23fea5f924854757b21e2ce56afe387f. Investigate if it recurs; do not suppress tests or infer a cause from this run.
+No half-finished code remains after the verified T23 checkpoint. Preserve the unrelated .iml. One exploratory ZIP RecoveryTest had a transient ERROR that did not reproduce in six focused repeats or later full ZIP checks; the original failure logs remain in target/delivery-23fea5f924854757b21e2ce56afe387f. Investigate if it recurs; do not suppress tests or infer a cause from this run.
 
 ## Earlier checkpoint notes (historical)
 
@@ -231,6 +242,7 @@ Verification: Maven verify passes 2 tests (HTTP demo/chair/replay and cancellati
 | T20 refreshed Windows delivery | Isolated current-host acceptance verified | ZIP Java127/build, fresh Maven/dependencies, packaged ZIP/gzip/zstd/JNI, optional runtime absence, Unicode/menu/ownership/reuse/recovery; cached Java explicit |
 | T21 stream/cancellation transport | Software verified with fixtures | Java135, strict bounded event lines/header timeout/long streams/menu refusal and robust shared after-body-read cancellation with resource cleanup |
 | T22 durable-ID/download privacy | Software verified with fixtures | Java139, static canonical storage validation, sanitized error downloads/no attachment, valid pilot files and command/menu preservation |
+| T23 acceptance/recovery ledger | Documentation verified | All58 IDs exactly once; linked evidence/remaining checks, historical WIP supersession and current/isolated test evidence distinguished |
 
 ## Recovery procedure
 
