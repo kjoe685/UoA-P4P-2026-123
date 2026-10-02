@@ -28,6 +28,7 @@ public final class DebateApplication implements AutoCloseable {
     private final BiFunction<ModelConfig,OllamaConfig,ChatManager> providers;
     private final Map<String,RunSession> sessions=new ConcurrentHashMap<>();
     private final ThreadPoolExecutor jobs;
+    private boolean closed;
     public DebateApplication(Path root,RunStore store,Function<ModelConfig,ChatManager> providers) {
         this(root,store,providers,null);
     }
@@ -128,6 +129,7 @@ public final class DebateApplication implements AutoCloseable {
         return llmEvaluation.start(session.transcript(),model,OllamaConfig.load(root));
     }
     public synchronized RunSession start(Map<String,Object> body) {
+        requireOpen();
         if (jobs.getActiveCount()+jobs.getQueue().size()>=6) throw new IllegalStateException("Debate job limit reached");
         var snapshot=configuration(); var spec=RunSpec.resolve(settings.resolve(body),snapshot.config());
         var prompts=new PromptManager(snapshot);
@@ -168,6 +170,7 @@ public final class DebateApplication implements AutoCloseable {
     public void ruling(String id,String text) { find(id).addSpeakerRuling(text); }
     public void cancel(String id) { find(id).adjourn(); }
     public synchronized RunSession importTranscript(Transcript source) {
+        requireOpen();
         var snapshot=configuration();
         var spec=new RunSpec(source.topics(),1,source.roster().stream()
                 .map(member -> new RunSpec.Member(member.party(),AdversarialStrategy.NONE,snapshot.config().agentModelPreset())).toList(),
@@ -186,7 +189,10 @@ public final class DebateApplication implements AutoCloseable {
                 .append(event.speaker()==null ? "The Speaker" : event.speaker().name()).append(": ").append(event.text()).append("\n");
         return text.toString();
     }
+    private void requireOpen() { if (closed) throw new IllegalStateException("Application backend is closed"); }
     @Override public void close() {
+        // Use the same admission lock as start/import, then release it before waiting for workers.
+        synchronized (this) { if (closed) return; closed=true; }
         try { background.close(); }
         finally {
             try { nlp.close(); }
