@@ -22,6 +22,8 @@ T45 verifies fresh current lightweight managed NLP installation in a new isolate
 
 T46's new tracked-source Windows ZIP passes184fake Java tests/shaded build and packaged archive/JNI/launcher/batch/UTF8 menu/ownership/restart/reuse/incomplete-cache checks. CachedJavaArchive=true/resumedFixture=false, with fresh Maven/dependencies, PS5.1/built-in-only PATH and spaces. Five current T44 evaluator/resource/validator/repair/test hashes match the extracted snapshot; protected46owner files and owned18089/8080release pass. This supersedes T43's181-test code delivery, retains its original two cause-unknown failures, and supplies current-host isolation rather than pristine/native-OS/model/human acceptance.
 
+T47 fixes four stale archive links and marks its old setup/layout explicitly, preserving historical content and linking the original asset to verified immutable main. All16 README/docs/evaluation/NLP documents and49local links pass. README now separates genuine current-host local generation/cache from unverified cloud access, invalid genuine rubric output and other-model/platform/research checks. Documentation only; T46's184-test code/build/ZIP and earlier actual model/report evidence remain unchanged.
+
 | Requirement | Current evidence | Remaining acceptance |
 |---|---|---|
 | REQ-01 | T03 recipient-only private setup; actual fake outbound HTTP sentinels | Preserve this boundary during future changes |

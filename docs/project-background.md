@@ -1,4 +1,6 @@
 # UoA-P4P-2026-123
+Historical notes retained from the earlier README. Setup commands, requirements, paths and layouts below describe that earlier version. Use the [current quickstart](../README.md) and [developer guide](development.md) for the supported Java17+ application. Current corpus provenance and sampling limits are in the [grounding guide](grounding.md).
+
 2026 Part 4 Project #123 at The University of Auckland - AI-based virtual parliament
 
 ## People
@@ -179,7 +181,7 @@ NZ House of Representatives sittings, not LLM-invented stereotypes. The source i
 
 The New Zealand file in that collection (`Corp_NZHoR_V2.rds`, ~925,000 speeches with speaker,
 party, and date metadata) was downloaded and a small, curated set of excerpts (2-3 per party, from
-2019 sittings) was extracted into [`resources/data/HansardExcerpts.json`](resources/data/HansardExcerpts.json).
+2019 sittings) was extracted into [`resources/data/HansardExcerpts.json` in the historical main snapshot](https://github.com/kjoe685/UoA-P4P-2026-123/blob/a99269c7a4c09c5f9ad976b7d035bf43dcb8c3fe/resources/data/HansardExcerpts.json).
 This is a proof-of-concept sample, not the full corpus — a fuller pipeline (systematic sampling
 across years/topics, argumentation-pattern extraction per Objective 1 of the project scope) is
 follow-on work.
@@ -256,4 +258,4 @@ run the app — only to regenerate `HansardExcerpts.json`). To redo or extend it
 ```
 # Implementation status
 
-The [primary implementation plan](docs/implementation-plan.md) governs ongoing work. Read the [progress and recovery record](docs/implementation-progress.md) to see verified checkpoints and unfinished tasks. The [integration plan](docs/integration-plan.md) is secondary historical reference.
+The [primary implementation plan](implementation-plan.md) governs ongoing work. Read the [progress and recovery record](implementation-progress.md) to see verified checkpoints and unfinished tasks. The [integration plan](integration-plan.md) is secondary historical reference.
