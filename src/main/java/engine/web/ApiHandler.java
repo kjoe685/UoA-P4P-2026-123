@@ -40,7 +40,10 @@ public final class ApiHandler implements HttpHandler {
                 else { require(method,"POST"); sendJson(exchange,201,application.pilots().importDataset(body(exchange))); }
                 return;
             }
-            if (parts.length==4) { require(method,"GET"); downloadHeader(exchange,parts[3]+"-pilot.json"); sendJson(exchange,200,application.pilots().read(parts[3])); return; }
+            if (parts.length==4) {
+                require(method,"GET"); var dataset=application.pilots().read(parts[3]);
+                downloadHeader(exchange,parts[3]+"-pilot.json"); sendJson(exchange,200,dataset); return;
+            }
             if (parts.length==5 && parts[4].equals("prepare")) { require(method,"POST"); sendJson(exchange,201,application.pilots().prepare(parts[3],body(exchange))); return; }
             if (parts.length==5 && parts[4].equals("evaluate")) { require(method,"POST"); sendJson(exchange,202,Map.of("id",application.pilots().evaluate(parts[3],body(exchange)).id())); return; }
         }

@@ -6,8 +6,20 @@
 - Branch: `codex/dual-interface-integration`, created from refreshed `origin/main` at `a99269c`.
 - Recovered primary plan from previous chat `01a0f6c1-32c6-7a33-bf8c-6ad9fee837e5`; that chat ended in Plan mode without writing changes.
 - Preserved secondary plan from `9cbcb12`. Evaluation reference: `c41c4c2`, file-level reuse only.
-- T01–T21 software checkpoints verified locally; latest checkpoint title `T21: bound sitting streams and preserve body cancellation` (see Git log for local commit hash). External platform/human acceptance remains below.
+- T01–T22 software checkpoints verified locally; latest checkpoint title `T22: sanitize durable IDs and pilot error downloads` (see Git log for local commit hash). External platform/human acceptance remains below.
 - Existing untracked `UoA-P4P-2026-123.iml` belongs to the user; preserve it.
+
+## T22 completed checkpoint
+
+**T22 — Sanitize malformed durable IDs and refuse error attachments (REQ-01–02, 27, 53, 55, 58).**
+
+Dependency: T21 `e0961c4`. Pilot storage calls UUID.fromString directly, whose malformed-input exception includes the supplied ID; the API returns that text. Pilot downloads also set attachment headers from the unvalidated URL before loading the item, so errors can carry an untrusted filename. Validate canonical durable IDs without echoing input and set pilot attachment headers only after a successful read. Apply the same static validation to run storage's identical UUID boundary; generated IDs and normal public downloads remain unchanged.
+
+Acceptance: malformed/null/noncanonical IDs fail without causes/input text or filesystem mutations; API malformed/missing pilot downloads return plain sanitized JSON errors without attachment headers; valid synthetic pilot downloads preserve canonical filenames/body. Command/menu failures remain bounded through the same API. Next reproduce direct/wire failures, patch the two storage validators/download ordering, then focused/full checks and local checkpoint. No owner pilot/run data, inference or paid calls.
+
+T22 WIP: four before-change regressions reproduce pilot/run malformed-ID text echo, API error attachment headers for malformed/missing IDs and terminal error text (`target/T22-durable-id-reproduction`). The initial test compile used the wrong package for package-private menu access; moved the fixture into engine and corrected guided show input before implementation. Canonical lowercase UUID shape now validates without parser diagnostics; pilot headers follow successful reads. Valid synthetic attachment content/filename passed before terminal refusal failed. Next focused/full checks and local checkpoint; no owner files or inference affected.
+
+T22 verified 2026-10-02: focused22 and full Java139/shaded build pass. Four added regressions cover malformed/null/short/noncanonical storage IDs, static errors/no state changes, malformed/missing API error downloads without attachment headers, valid synthetic filename/content and command/menu no-echo/existing-file preservation. Reproductions retained under `target/T22-durable-id-reproduction`. Diff/ancestry pass; six evaluation-only commits excluded, references unchanged. No owner pilot/run data changes, inference, paid calls or push. Next consolidate acceptance status against every requirement ID so subsequent automation can distinguish implemented software from external research/platform checks.
 
 ## T21 completed checkpoint
 
@@ -165,7 +177,7 @@ T11 final verification: 500/500 source/content checks pass; 131 original passage
 - Genuine human behavioural review for REQ-16–19 and real labels/adjudication for the 200-item pilot. Software cues, review preparation and scoring are implemented; synthetic scores never establish research accuracy. Latest disjoint genuine prepared file is ignored target/genuine-review-pilot-current-grounding.json (import explicitly). The older target/genuine-review-pilot.json and owner pilot2224fde6-83eb-455c-9e5c-aba790e4723e were preserved; the old artifact has19 overlaps after T11 grounding changes. Keep labels blank until real review and curate propositions/context/sampling before research use.
 - Account-specific cloud and local Ollama availability/model behaviour remain unverified. Routine tests use fake providers and no paid calls. Public university hosting/authentication remains future scope under REQ-58.
 
-No half-finished code remains after the verified T21 checkpoint. Preserve the unrelated .iml. One exploratory ZIP RecoveryTest had a transient ERROR that did not reproduce in six focused repeats or later full ZIP checks; the original failure logs remain in target/delivery-23fea5f924854757b21e2ce56afe387f. Investigate if it recurs; do not suppress tests or infer a cause from this run.
+No half-finished code remains after the verified T22 checkpoint. Preserve the unrelated .iml. One exploratory ZIP RecoveryTest had a transient ERROR that did not reproduce in six focused repeats or later full ZIP checks; the original failure logs remain in target/delivery-23fea5f924854757b21e2ce56afe387f. Investigate if it recurs; do not suppress tests or infer a cause from this run.
 
 ## Earlier checkpoint notes (historical)
 
@@ -218,6 +230,7 @@ Verification: Maven verify passes 2 tests (HTTP demo/chair/replay and cancellati
 | T19 Unicode boundaries | Software verified with fixtures | Java127, strict UTF-8/scalar rejection before mutation and exact valid text/canonical round trips; native Blob/TextDecoder fixtures |
 | T20 refreshed Windows delivery | Isolated current-host acceptance verified | ZIP Java127/build, fresh Maven/dependencies, packaged ZIP/gzip/zstd/JNI, optional runtime absence, Unicode/menu/ownership/reuse/recovery; cached Java explicit |
 | T21 stream/cancellation transport | Software verified with fixtures | Java135, strict bounded event lines/header timeout/long streams/menu refusal and robust shared after-body-read cancellation with resource cleanup |
+| T22 durable-ID/download privacy | Software verified with fixtures | Java139, static canonical storage validation, sanitized error downloads/no attachment, valid pilot files and command/menu preservation |
 
 ## Recovery procedure
 

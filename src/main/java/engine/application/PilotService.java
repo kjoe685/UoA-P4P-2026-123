@@ -17,7 +17,8 @@ public final class PilotService {
         this.root=root; this.directory=root.resolve("runs/pilots"); this.jobs=jobs; this.evaluation=evaluation; this.clients=clients;
     }
     private Path path(String id) {
-        if (!UUID.fromString(id).toString().equals(id)) throw new IllegalArgumentException("Invalid pilot id");
+        if (id==null || !id.matches("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"))
+            throw new IllegalArgumentException("Invalid pilot id");
         return directory.resolve(id+".json");
     }
     public PilotDataset read(String id) {

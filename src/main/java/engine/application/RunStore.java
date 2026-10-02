@@ -11,7 +11,8 @@ public class RunStore {
     private final Path root;
     public RunStore(Path root) { this.root=root.toAbsolutePath().normalize(); }
     private Path directory(String id) {
-        if (!UUID.fromString(id).toString().equals(id)) throw new IllegalArgumentException("Invalid run id");
+        if (id==null || !id.matches("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"))
+            throw new IllegalArgumentException("Invalid run id");
         return root.resolve(id);
     }
     public void create(String id,PrivateSetup setup) { write(directory(id).resolve("setup.json"),setup); }
