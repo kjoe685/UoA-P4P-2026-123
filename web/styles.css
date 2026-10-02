@@ -302,7 +302,7 @@ legend.card-title + * { clear: both; }
 .btn-large { padding: 13px 26px; font-size: 16px; }
 .btn-icon { width: 22px; height: 22px; color: var(--gold-bright); }
 
-input[type="text"], select, textarea {
+input[type="text"], input[type="number"], select, textarea {
   width: 100%;
   padding: 9px 12px;
   border-radius: var(--radius-sm);
@@ -310,7 +310,7 @@ input[type="text"], select, textarea {
   background: var(--surface);
   transition: border-color 0.15s, box-shadow 0.15s;
 }
-input[type="text"]:focus, select:focus, textarea:focus { border-color: var(--gold); box-shadow: var(--focus); outline: none; }
+input[type="text"]:focus, input[type="number"]:focus, select:focus, textarea:focus { border-color: var(--gold); box-shadow: var(--focus); outline: none; }
 select:disabled { opacity: 0.5; }
 textarea { resize: vertical; min-height: 72px; }
 
