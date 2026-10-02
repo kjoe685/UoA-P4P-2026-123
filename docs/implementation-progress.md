@@ -6,12 +6,24 @@
 - Branch: `codex/dual-interface-integration`, created from refreshed `origin/main` at `a99269c`.
 - Recovered primary plan from previous chat `01a0f6c1-32c6-7a33-bf8c-6ad9fee837e5`; that chat ended in Plan mode without writing changes.
 - Preserved secondary plan from `9cbcb12`. Evaluation reference: `c41c4c2`, file-level reuse only.
-- T01–T16 software checkpoints verified locally; latest checkpoint title `T16: enforce explicit local source for Ollama requests` (see Git log for local commit hash). External platform/human acceptance remains below.
+- T01–T17 software checkpoints verified locally; latest checkpoint title `T17: freeze NLP setup and bound readiness responses` (see Git log for local commit hash). External platform/human acceptance remains below.
 - Existing untracked `UoA-P4P-2026-123.iml` belongs to the user; preserve it.
 
 ## Active task
 
-No unfinished code at the T16 checkpoint. Continue requirement-focused inspection; record the next task and acceptance checks before edits. External acceptance remains below.
+No unfinished code at the T17 checkpoint. Continue requirement-focused inspection; record the next task and acceptance checks before edits. External acceptance remains below.
+
+## T17 completed checkpoint
+
+**T17 — Freeze NLP setup snapshots and bound readiness (REQ-01–02, 10–11, 14, 27, 31–33, 53–56, 58).**
+
+Dependency: T16 `6662ec8`. Source review found `ManagedNlp.health` still uses an unbounded string body with no after-header deadline. Base VADER setup captures the endpoint but reloads model-service settings when its queued job starts; setup reports also check the latest file rather than their captured snapshot. These differ from analysis and local LLM operation guarantees.
+
+Intended change: bounded/cancellable readiness through the shared transport; capture/persist endpoint and model-service settings for every NLP setup job and report against those settings; refuse interruption before process startup. Use an injected process starter for tiny fake lifecycle fixtures, with existing production constructors preserved. Acceptance: malformed/oversized/stalled fake health returns bounded sanitized readiness, interrupt never starts a child; queued setup/config edits retain the captured service hash/endpoint and durable report on restart; cancellation releases the worker and owned-only process cleanup remains correct. No Python/dependency/model download is needed for tests. Next add focused before-change wire/private-input regressions, then adapt managed readiness/setup and verify the full suite.
+
+T17 WIP: three before-change tests reproduced accepted oversized health, a stalled body beyond timeout and missing queued setup snapshots (`target/T17-nlp-setup-reproduction`). Shared bounded body/deadline transport, captured setup settings/reports, immediate interrupt refusal and injected tiny process lifecycle implemented; focused23 tests pass. A further regression reproduced arbitrary health fields reaching operational readiness (retained XML); fixed protocol/readiness field and type checks now reject these. Interrupted configuration validation also stopped no child previously; owned validation cleanup now runs in finally and is covered with a fake process. Next full Java build/ancestry and genuine existing local Python health-schema compatibility check, with no model generation/download or dependency install.
+
+T17 verified 2026-10-02: full Java117/shaded build passes. Six added tests cover oversized/stalled/unrecognized health, captured queued private input, fake startup/config edits/report/restart/owned stop and interrupted service/validation cleanup. Base/transformer setup persist both settings and endpoint and report against their initial snapshot. Packaged Java + separately compiled NlpReadinessSmoke accepts the actual existing Python0.2.0 health schema at temporary18089; all models remain unloaded, with no analysis/download/install calls (`target/T17-real-nlp-readiness.json`). Temporary Python service/session54062 stopped and endpoint unavailable verified; smoke process finished. Diff/ancestry pass, six evaluation-only commits excluded/reference tips unchanged. No user data rewrites, paid calls or push. Next audit remaining primary-plan contracts; native/pristine OS, actual Ollama/live provider and genuine human research acceptance stay separate.
 
 ## T16 completed checkpoint
 
@@ -149,6 +161,7 @@ Verification: Maven verify passes 2 tests (HTTP demo/chair/replay and cancellati
 | T14 local LLM setup/parity | Software verified with fixtures | Java91, bundled ZIP/gzip/zstd/JNI smoke, HTTP/menu/commands/browser explicit setup/model downloads, frozen settings/privacy, cache/range/cancel/restart and service ownership; genuine runtime/model/OS acceptance pending |
 | T15 bounded response transport | Software verified with fixtures | Java103, real loopback size/stall/cancel/error/retry/redirect checks and persisted partial analysis; strict UTF-8/shared deadline guard |
 | T16 explicit local source | Software verified with fixtures | Java111, simulated alias race, case/default-tag/source normalization, cache reuse, older protocol refusal and remote response rejection; pinned upstream source reviewed |
+| T17 NLP setup/readiness | Software and current Python schema verified | Java117, snapshot queue/edit/report/restart and fake process/cancellation tests; real existing unloaded health schema accepted by packaged Java; no inference/install/download |
 
 ## Recovery procedure
 
