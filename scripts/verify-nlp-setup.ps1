@@ -1,4 +1,4 @@
-param([string]$ResumeFixture, [int]$Port = 8767)
+param([string]$ResumeFixture, [int]$Port = 8767, [ValidateSet('Base','Models')][string]$Mode = 'Base')
 $ErrorActionPreference = 'Stop'
 $taskRepository = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $taskTarget = Join-Path $taskRepository 'target'
@@ -24,7 +24,7 @@ if (!(Test-Path -LiteralPath (Join-Path $taskTarget 'virtual-parliament.jar'))) 
 $taskStopSignal = Join-Path $taskFixture ('stop-' + [guid]::NewGuid().ToString('N') + '.requested')
 $taskStart = New-Object Diagnostics.ProcessStartInfo
 $taskStart.FileName = $taskJava
-$taskStart.Arguments = '-Djava.io.tmpdir="' + $taskTarget + '" -cp "' + (Join-Path $taskTarget 'test-classes') + ';' + (Join-Path $taskTarget 'virtual-parliament.jar') + '" engine.application.OfficialNlpSetupSmoke "' + $taskFixture + '" ' + $Port + ' "' + $taskStopSignal + '" ' + $taskMode
+$taskStart.Arguments = '-Djava.io.tmpdir="' + $taskTarget + '" -cp "' + (Join-Path $taskTarget 'test-classes') + ';' + (Join-Path $taskTarget 'virtual-parliament.jar') + '" engine.application.OfficialNlpSetupSmoke "' + $taskFixture + '" ' + $Port + ' "' + $taskStopSignal + '" ' + $taskMode + ' ' + $Mode.ToLowerInvariant()
 $taskStart.WorkingDirectory = $taskRepository
 $taskStart.UseShellExecute = $false
 $taskStart.CreateNoWindow = $true
@@ -33,15 +33,23 @@ $taskStart.RedirectStandardError = $true
 $taskStart.EnvironmentVariables['USERPROFILE'] = $taskProfile
 $taskStart.EnvironmentVariables['PATH'] = $env:SystemRoot + '\System32;' + $env:SystemRoot + ';' + $env:SystemRoot + '\System32\WindowsPowerShell\v1.0'
 foreach ($taskKey in @($taskStart.EnvironmentVariables.Keys)) {
-    if ($taskKey -match '^(UV_|PIP_|PYTHONPATH$|OLLAMA_|OPENAI_API_KEY$|ANTHROPIC_API_KEY$|GEMINI_API_KEY$|XAI_API_KEY$|HF_TOKEN$|HUGGING_FACE_HUB_TOKEN$)') { $taskStart.EnvironmentVariables.Remove($taskKey) }
+    if ($taskKey -match '^(UV_|PIP_|PYTHONPATH$|OLLAMA_|OPENAI_API_KEY$|ANTHROPIC_API_KEY$|GEMINI_API_KEY$|XAI_API_KEY$|HF_|HUGGING_FACE_HUB_TOKEN$|HUGGINGFACE_HUB_TOKEN$|TRANSFORMERS_OFFLINE$)') { $taskStart.EnvironmentVariables.Remove($taskKey) }
 }
 $taskStart.EnvironmentVariables['PYTHONNOUSERSITE'] = '1'
 $taskStart.EnvironmentVariables['PYTHONDONTWRITEBYTECODE'] = '1'
+if ($Mode -eq 'Models') {
+    $taskStart.EnvironmentVariables['HF_HUB_OFFLINE'] = '1'
+    $taskStart.EnvironmentVariables['TRANSFORMERS_OFFLINE'] = '1'
+    $taskStart.EnvironmentVariables['HF_HUB_DISABLE_TELEMETRY'] = '1'
+    $taskStart.EnvironmentVariables['HF_HUB_DISABLE_SYMLINKS_WARNING'] = '1'
+    $taskStart.EnvironmentVariables['HF_HOME'] = Join-Path $taskProfile 'hf-home'
+}
 Write-Output "Current managed NLP setup fixture: $taskFixture"
-if ($taskMode -eq 'resume') { Write-Output 'Explicit resume of retained managed NLP setup; cached fixture environment, no transformer weights or model generation.' }
+if ($Mode -eq 'Models') { Write-Output "Explicit $taskMode CPU dependency setup with checksum-verified copied weights kept offline; no weight transfers or model generation." }
+elseif ($taskMode -eq 'resume') { Write-Output 'Explicit resume of retained managed NLP setup; cached fixture environment, no transformer weights or model generation.' }
 else { Write-Output 'Explicit fresh lightweight Python/dependency installation; cached verified uv only, no transformer weights or model generation.' }
 $taskChild = [Diagnostics.Process]::Start($taskStart)
-[ordered]@{ pid=$taskChild.Id; fixture=$taskFixture; port=$Port; stopSignal=$taskStopSignal; mode=$taskMode; startedAt=(Get-Date -Format o) } |
+[ordered]@{ pid=$taskChild.Id; fixture=$taskFixture; port=$Port; stopSignal=$taskStopSignal; mode=$taskMode; setupMode=$Mode; startedAt=(Get-Date -Format o) } |
     ConvertTo-Json | Set-Content -LiteralPath (Join-Path $taskFixture 'process.json') -Encoding UTF8
 $taskErrors = $taskChild.StandardError.ReadToEndAsync()
 try {

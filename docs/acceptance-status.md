@@ -1,6 +1,6 @@
 # Acceptance status
 
-This ledger covers every requirement in the [primary plan](implementation-plan.md) as of 2026-10-03, current Windows delivery T49, public evaluator eligibility/genuine strict workflow T48, historical Windows delivery T46, managed NLP installation T45, bounded rubric repair T44, historical delivery T43, safe persistence diagnostics T43a, offline NLP T42, local-model/context T41, runtime T40 and frontend T39 (see Git log for local commit hashes). It records evidence and remaining acceptance, without replacing the plan. The [progress log](implementation-progress.md) retains detailed checks, failures and recovery artifacts; historical WIP entries are superseded by its current checkpoint and verified table.
+This ledger covers every requirement in the [primary plan](implementation-plan.md) as of 2026-10-03, current managed CPU/model setup T50, Windows delivery T49, public evaluator eligibility/genuine strict workflow T48, historical Windows delivery T46, managed NLP installation T45, bounded rubric repair T44, historical delivery T43, safe persistence diagnostics T43a, offline NLP T42, local-model/context T41, runtime T40 and frontend T39 (see Git log for local commit hashes). It records evidence and remaining acceptance, without replacing the plan. The [progress log](implementation-progress.md) retains detailed checks, failures and recovery artifacts; historical WIP entries are superseded by its current checkpoint and verified table.
 
 The current application and T49 clean isolated Windows ZIP pass187 Java tests/shaded build and include v3; historical T46 passed184. The historical **T43 clean isolated Windows ZIP passes181 Java tests and the shaded build**, packaged synthetic archive/JNI, actual batch/UTF8 guided menu, owned startup/stop, public evidence recovery, build reuse and interrupted cache checks. The tracked14e643c snapshot records cachedJavaArchive=true/resumedFixture=false, with fresh fixture Maven/dependencies, PS5.1/built-in-only PATH/spaces. Protected owner files and owned18089/8080-port release pass. Two preceding cold failures remain retained with unknown causes; targeted31+31replays and an instrumented179suite pass did not reproduce them. Safe diagnostic coverage does not establish their cause or a repair. Current-host isolation does not establish pristine/native-other-platform acceptance.
 
@@ -28,6 +28,8 @@ T48 passes187fake Java tests/shaded build and focused20checks after2missing-guid
 
 T49's new clean tracked-source Windows ZIP passes187fake Java tests/shaded build and all packaged archive/JNI/launcher/batch/UTF8 menu/ownership/public restart/reuse/incomplete-cache checks. Result cachedJavaArchive=true/resumedFixture=false; fresh Maven-dependencies, PS5.1/built-in PATH/spaces, all8current v3 evaluator/source/cue/resources/test/README hashes match. Protected46owner files and owned18089/8080release pass. This supersedes T46/184 while preserving prior failures and actual-model evidence; no optional runtime/model setup or paid call occurs. Current-host isolation remains distinct from pristine/native-platform acceptance.
 
+T50 passes fresh managed Python3.13.15/current locked CPU extras and shared offline model setup in a new WindowsPS5.1/built-in-PATH/space fixture, with resumedFixture=false. Only pinned uv and verified copied model snapshots are reused; child HF offline flags prohibit weight transfers. Exact current setup/model markers, separate package/cache/unloaded/loaded readiness, Unicode VADER/Cardiff5chunks each and DeBERTa3chunks plus one missing-target insufficiency pass current shared provenance/threshold/coverage validation. Repeated base setup retains extras and exact committed report bytes; reopening performs no inference, explicit offline restart works, and owned8768 releases. Per-job logs preserve transient uv rename warnings resolved during successful installation. Protected46owner files, old owner marker and all copied snapshot hashes remain unchanged. No production change: helper compilation/syntax pass, while187fake Java/build/T49ZIP and Python19 retain their existing evidence. No fresh weight download, human labels, model generation, accuracy or pristine/native-platform claim follows.
+
 | Requirement | Current evidence | Remaining acceptance |
 |---|---|---|
 | REQ-01 | T03 recipient-only private setup; actual fake outbound HTTP sentinels | Preserve this boundary during future changes |
@@ -43,7 +45,7 @@ T49's new clean tracked-source Windows ZIP passes187fake Java tests/shaded build
 | REQ-11 | T03/T08/T14/T17/T24–T28 frozen run/job/setup settings, exact source/local provenance and threshold decisions | None identified in software scope |
 | REQ-12 | T05 independent presets/member overrides; fake adapter tests; T41 qwen3:8b execution | Other selected models/target machines |
 | REQ-13 | T05 provider factory and five provider adapters | Account-specific access verification |
-| REQ-14 | T06/T07 separate local and rubric evaluators/jobs | Genuine evaluator validation |
+| REQ-14 | T06/T07 separate local and rubric evaluators/jobs; T48 strict genuine rubric workflow; T50 managed local model output | Human scoring validity and other model/platform acceptance |
 | REQ-15 | T04 browser/HTTP/terminal adapters share application services | Future presentation replacements need their own checks |
 | REQ-16 | T09a public-ID reply targets, topic-aware mock wire tests | Human review of actual claim responses |
 | REQ-17 | T09a own opening/recent position references | Human review of continuity under challenges |
@@ -60,9 +62,9 @@ T49's new clean tracked-source Windows ZIP passes187fake Java tests/shaded build
 | REQ-28 | T06/T07/T09b reports retain independent scales | None identified in software scope |
 | REQ-29 | T06/T07/T09b original per-method scores/provenance retained | None identified in software scope |
 | REQ-30 | T06/T07/T09b independent metrics; no aggregate quality result | None identified in software scope |
-| REQ-31 | T06a local VADER/default analysis; T42 real0.3.0 output; T45 fresh managed base installation/resumed recovery; T31 pilot split separation | Human-labelled sentiment validation |
-| REQ-32 | T06c/T30 separate DeBERTa stance/targets; T42 genuine0.3.0 output/provenance/thresholds/missing target | Human-labelled target/stance validation |
-| REQ-33 | T06 pinned CPU/open-model setup and offline smoke evidence | Native/pristine platform checks |
+| REQ-31 | T06a local VADER/default analysis; T42 real0.3.0 output; T45 base installation/resumed recovery; T50 fresh managed CPU installation/recovery; T31 pilot split separation | Human-labelled sentiment validation |
+| REQ-32 | T06c/T30 separate DeBERTa stance/targets; T42 genuine0.3.0 output; T50 fresh CPU extras/offline cache/current provenance/thresholds/missing target | Human-labelled target/stance validation |
+| REQ-33 | T06 pinned CPU/open-model setup; T50 fresh locked CPU extras/copied offline weights/current markers/extras retention | Native/pristine platform checks |
 | REQ-34 | T06/T07/T09b sentiment, stance and observable rubric scopes separated | Research interpretation; hidden intent is not inferred |
 | REQ-35 | T07 strict rubric/evidence/persistence; T41 context refusals; T44 coded repair; T48 public eligibility/genuine strict complete5-metric workflow | Human scoring validity; general reliability/other selected models |
 | REQ-36 | T07/T28 editable rubric/prompts/exact hashes; T44 editable frozen coded repair | None identified in software scope |
@@ -83,15 +85,15 @@ T49's new clean tracked-source Windows ZIP passes187fake Java tests/shaded build
 | REQ-51 | Historical T01 refreshed main at a99269c before planning | Historical requirement fulfilled; no branch reset needed |
 | REQ-52 | Primary plan starts with the full requirement inventory | Historical requirement fulfilled |
 | REQ-53 | T04–T14 interface matrix; shared command/menu/API/browser QA; T26/T35 large public round trips/exact browser source, T36 seed/count precision, T39 actual large browser chooser import/replay | Real runtime/model and remaining native interface acceptance |
-| REQ-54 | T05–T14 advanced assets/settings/analysis/runtime/pilot controls; T40 genuine current-host Windows runtime setup | Remaining optional setup/model checks on target platforms |
-| REQ-55 | T01–T43/T43a task records, safe static persistence diagnostics, recovery log, memory and local checkpoints | Keep recording before lengthy operations/interruption |
-| REQ-56 | T10 cold Windows ZIP; T13 genuine cached uv; T20/T29/T32/T38/T43/T46 refreshed ZIP; T45 fresh optional Python/base dependencies plus resumed recovery | Pristine Windows and native Linux/macOS |
+| REQ-54 | T05–T14 advanced assets/settings/analysis/runtime/pilot controls; T40 genuine Windows runtime; T50 fresh managed CPU extras/shared model setup | Remaining optional setup/model checks on target platforms |
+| REQ-55 | T01–T50/T43a task records, safe static persistence diagnostics, recovery log, memory and local checkpoints | Keep recording before lengthy operations/interruption |
+| REQ-56 | T10 cold Windows ZIP; T13 genuine cached uv; T20–T49 refreshed ZIP; T45 base installation; T50 fresh Python/CPU extras with copied offline weights | Pristine Windows and native Linux/macOS |
 | REQ-57 | Six evaluation-only commits excluded; reference tips unchanged | Repeat ancestry/ref checks at checkpoints |
-| REQ-58 | Local software/interfaces implemented; T40 runtime/T41 generation/T42 current offline analysis execution | Valid real rubric; target-platform/human acceptance; later hosting deferred |
+| REQ-58 | Local software/interfaces implemented; T40 runtime/T41 generation/T48 strict genuine rubric/T50 fresh CPU setup and offline output | Target-platform/human acceptance/general model reliability; later hosting deferred |
 
 ## Next acceptance work
 
-1. Obtain a valid genuine blind rubric assessment without weakening coverage/evidence rules; T41's local qwen3:8b sitting/cache/context execution and T42's current0.3.0 offline NLP output pass, but both real rubric reports retain failures. Keep the failed evidence and attempts. Other selected models/target machines remain unverified. Routine automated checks remain fake.
+1. Review the T48 genuine strict rubric result against human judgments and assess reliability across selected models, contexts and target machines. Its32768-context workflow passes after one repair; T41/T44 failed reports remain retained. T50 separately verifies fresh current CPU dependencies with copied offline weights. Functional schema/evidence compliance establishes no scoring accuracy or general reliability; routine automated checks remain fake.
 2. Run ZIP/launcher/optional setup acceptance on pristine Windows and native Linux/macOS. Git Bash fixture success on Windows establishes neither Unix binary execution nor another operating system.
 3. Have people review real debate behaviour using the fixed scenarios in [debate-behaviour.md](debate-behaviour.md). Synthetic speeches/concessions establish wiring only.
 4. Curate the existing200-item genuine blank pilot described in [pilot-study.md](pilot-study.md), including source context/propositions, both gold labels, reviewer declarations and debate-separated splits. Its current-grounding artifact has zero grounding source-speech/hash overlap and zero full-speech hash overlap between calibration and held-out groups; older preserved pilot material has19 grounding overlaps. Do not invent labels or reuse overlapping material for scoring.
