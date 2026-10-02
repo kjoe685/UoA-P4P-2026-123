@@ -39,10 +39,9 @@ def main():
     from .api import create_app
     from .service import AnalysisService, default_factories
 
-    import hashlib
     from .readiness import methods_readiness
     service = AnalysisService(default_factories(settings, args.cache))
-    uvicorn.run(create_app(service, hashlib.sha256(args.config.read_bytes()).hexdigest(),
+    uvicorn.run(create_app(service, settings.fingerprint(),
                           lambda: methods_readiness(settings, args.cache, set(service.analyzers))),
                 host="127.0.0.1", port=args.port, workers=1, access_log=False)
 

@@ -6,9 +6,23 @@
 - Branch: `codex/dual-interface-integration`, created from refreshed `origin/main` at `a99269c`.
 - Recovered primary plan from previous chat `01a0f6c1-32c6-7a33-bf8c-6ad9fee837e5`; that chat ended in Plan mode without writing changes.
 - Preserved secondary plan from `9cbcb12`. Evaluation reference: `c41c4c2`, file-level reuse only.
-- T01–T23 checkpoints verified locally; latest checkpoint title `T23: consolidate requirement acceptance and recovery status` (see Git log for local commit hash). Application checkpoint T22 `6e61d8c` passes Java139/shaded build; T23 changes documentation only. External platform/model/human acceptance remains below.
+- T01–T24 checkpoints verified locally; latest checkpoint title `T24: bind NLP provenance to frozen source settings` (see Git log for local commit hash). Application checkpoint T24 passes Java142/Python19/shaded build. External platform/model/human acceptance remains below.
 - Existing untracked `UoA-P4P-2026-123.iml` belongs to the user; preserve it.
 - [Acceptance status](acceptance-status.md) maps all58 requirement IDs to current evidence and remaining platform/model/human checks. Historical WIP entries below are superseded by completed checkpoint records, not tasks to repeat.
+
+## T24 completed checkpoint
+
+**T24 — Bind local analysis provenance to the frozen settings source (REQ-11, 27, 31–34, 53–55, 57–58).**
+
+Dependency: T23 `190ebda` / application T22 `6e61d8c`. Java validates local model/revision but accepts any syntactically valid configuration hash. Python hashes its normalized model independently of the raw file identity used by readiness, and the CLI rereads the file after loading settings. A stale response can therefore enter debate/pilot reports despite matching neither the operation's frozen thresholds nor hypotheses. Bind readiness and result provenance to the same bytes loaded once; require that identity before saving each analysis batch or pilot observation. Bump the local implementation identity so old services fail readiness rather than silently changing hash semantics.
+
+Acceptance: fake wire stale-hash regressions reproduce before changes; valid captured Unicode/formatting settings work; mismatched later batches/methods retain earlier success without raw response diagnostics; synthetic pilot mismatch fails explicitly; Python source/readiness identity uses one read and remains frozen after file edits; complete Java/Python checks and local checkpoint. No owner runs/pilots, real provider inference, downloads, paid calls or labels. Next write before-change regressions, then adapt source fingerprint/loading and shared provenance validation, update fixtures/documentation, verify and commit locally.
+
+T24 WIP: three Java before-change failures reproduce stale later HTTP batch acceptance, synthetic pilot acceptance and absent implementation/hash binding. Two Python failures reproduce normalized-versus-source identity and a file edit between load/readiness; retained under `target/T24-provenance-reproduction`. The initial Python readiness fixture edited after the reread and did not reproduce the race; corrected load-time edit is the retained evidence. Implemented one-read UTF-8 source hashing, shared result/readiness version0.3.0 and per-batch/pilot source validation; fixtures updated. Next refresh/validate the local lock identity offline, then focused/full suites and checkpoint. No owner files or inference.
+
+T24 verification in progress: Python19 pass without skips. `uv lock --offline` could not re-resolve because cached registry metadata is absent; changed only the editable project's version in the lock, preserving every dependency pin, and `uv lock --check --offline` verifies all49 packages in1ms. Focused Java analysis/pilot/readiness/command suite is running. The changed lock invalidates the managed setup marker as designed; documented one explicit VADER setup after upgrade to refresh it, retaining cached weights. No dependencies installed or model calls.
+
+T24 verified 2026-10-02: focusedJava31/fullJava142/Python19/shaded build pass, no skips. Exact source hashes (including CRLF/Māori/emoji) and implementation0.3.0 now bind local result/readiness identity to the frozen source loaded once. Stale second HTTP batches retain the first committed result after restart; synthetic pilot mismatches become200 explicit failures, with no stale raw provenance retained. Model/revision checks, actual outbound isolation, command/menu parity and partial recovery remain covered. Offline lock check49 passes with all dependency pins unchanged; source/progress/diff/ancestry checks pass. No owner data, real provider/model calls, downloads, paid calls or push. Next audit score/abstention consistency against the captured classifier thresholds, then remaining external acceptance.
 
 ## T23 completed checkpoint
 
@@ -188,7 +202,7 @@ T11 final verification: 500/500 source/content checks pass; 131 original passage
 - Genuine human behavioural review for REQ-16–19 and real labels/adjudication for the 200-item pilot. Software cues, review preparation and scoring are implemented; synthetic scores never establish research accuracy. Latest disjoint genuine prepared file is ignored target/genuine-review-pilot-current-grounding.json (import explicitly). The older target/genuine-review-pilot.json and owner pilot2224fde6-83eb-455c-9e5c-aba790e4723e were preserved; the old artifact has19 overlaps after T11 grounding changes. Keep labels blank until real review and curate propositions/context/sampling before research use.
 - Account-specific cloud and local Ollama availability/model behaviour remain unverified. Routine tests use fake providers and no paid calls. Public university hosting/authentication remains future scope under REQ-58.
 
-No half-finished code remains after the verified T23 checkpoint. Preserve the unrelated .iml. One exploratory ZIP RecoveryTest had a transient ERROR that did not reproduce in six focused repeats or later full ZIP checks; the original failure logs remain in target/delivery-23fea5f924854757b21e2ce56afe387f. Investigate if it recurs; do not suppress tests or infer a cause from this run.
+No half-finished code remains after the verified T24 checkpoint. Preserve the unrelated .iml. One exploratory ZIP RecoveryTest had a transient ERROR that did not reproduce in six focused repeats or later full ZIP checks; the original failure logs remain in target/delivery-23fea5f924854757b21e2ce56afe387f. Investigate if it recurs; do not suppress tests or infer a cause from this run.
 
 ## Earlier checkpoint notes (historical)
 
@@ -243,6 +257,7 @@ Verification: Maven verify passes 2 tests (HTTP demo/chair/replay and cancellati
 | T21 stream/cancellation transport | Software verified with fixtures | Java135, strict bounded event lines/header timeout/long streams/menu refusal and robust shared after-body-read cancellation with resource cleanup |
 | T22 durable-ID/download privacy | Software verified with fixtures | Java139, static canonical storage validation, sanitized error downloads/no attachment, valid pilot files and command/menu preservation |
 | T23 acceptance/recovery ledger | Documentation verified | All58 IDs exactly once; linked evidence/remaining checks, historical WIP supersession and current/isolated test evidence distinguished |
+| T24 local provenance identity | Java142/Python19/build verified | One-read source identity, implementation0.3.0, stale-batch/pilot refusal and retained committed evidence; unchanged dependency pins/offline lock49 |
 
 ## Recovery procedure
 

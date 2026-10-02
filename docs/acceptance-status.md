@@ -1,8 +1,8 @@
 # Acceptance status
 
-This ledger covers every requirement in the [primary plan](implementation-plan.md) as of 2026-10-02, application checkpoint `6e61d8c` (T22). It records evidence and remaining acceptance, without replacing the plan. The [progress log](implementation-progress.md) retains detailed checks, failures and recovery artifacts; historical WIP entries are superseded by its current checkpoint and verified table.
+This ledger covers every requirement in the [primary plan](implementation-plan.md) as of 2026-10-02, application checkpoint T24 (see Git log for the local commit hash). It records evidence and remaining acceptance, without replacing the plan. The [progress log](implementation-progress.md) retains detailed checks, failures and recovery artifacts; historical WIP entries are superseded by its current checkpoint and verified table.
 
-The current application passes **139 Java tests and the shaded build**. The most recent isolated Windows ZIP passes **127 tests**, packaged synthetic archive/JNI checks and launcher workflows at T20; T21–T22 were subsequently verified in the repository. T10 used fresh official Java/Maven/dependency downloads; T20 explicitly reused the verified Java archive and fetched fresh Maven/dependencies. Python17 and extractor11 checks are recorded at their relevant checkpoints. These counts describe software verification, not model availability or research accuracy.
+The current application passes **142 Java tests,19 Python tests and the shaded build**. The most recent isolated Windows ZIP passes **127 tests**, packaged synthetic archive/JNI checks and launcher workflows at T20; T21–T24 were subsequently verified in the repository. T10 used fresh official Java/Maven/dependency downloads; T20 explicitly reused the verified Java archive and fetched fresh Maven/dependencies. Extractor11 checks are recorded at their relevant checkpoints. These counts describe software verification, not model availability or research accuracy.
 
 | Requirement | Current evidence | Remaining acceptance |
 |---|---|---|
@@ -16,7 +16,7 @@ The current application passes **139 Java tests and the shaded build**. The most
 | REQ-08 | T05/T14 editable model/provider/local-runtime settings | Actual selected model verification |
 | REQ-09 | T07 editable independent metric rubrics | Research rubric validation |
 | REQ-10 | T03/T05 new-operation resource reload without compilation | None identified in software scope |
-| REQ-11 | T03/T08/T14/T17 frozen run/job resources and setup settings | None identified in software scope |
+| REQ-11 | T03/T08/T14/T17/T24 frozen run/job/setup settings and exact local result provenance | None identified in software scope |
 | REQ-12 | T05 independent presets/member overrides; fake adapter tests | Actual selected model verification |
 | REQ-13 | T05 provider factory and five provider adapters | Account-specific access verification |
 | REQ-14 | T06/T07 separate local and rubric evaluators/jobs | Genuine evaluator validation |
@@ -60,7 +60,7 @@ The current application passes **139 Java tests and the shaded build**. The most
 | REQ-52 | Primary plan starts with the full requirement inventory | Historical requirement fulfilled |
 | REQ-53 | T04–T14 interface matrix; shared command/menu/API and browser QA | Real runtime/model and native interface acceptance |
 | REQ-54 | T05–T14 advanced assets/settings/analysis/runtime/pilot controls | Actual optional runtime setup on target platforms |
-| REQ-55 | T01–T23 task records, recovery log, memory and local checkpoints | Keep recording before lengthy operations/interruption |
+| REQ-55 | T01–T24 task records, recovery log, memory and local checkpoints | Keep recording before lengthy operations/interruption |
 | REQ-56 | T10 cold Windows ZIP; T13 genuine cached uv; T20 refreshed ZIP | Pristine Windows and native Linux/macOS |
 | REQ-57 | Six evaluation-only commits excluded; reference tips unchanged | Repeat ancestry/ref checks at checkpoints |
 | REQ-58 | Local software/interfaces implemented; services/adapters/storage separated | Genuine local runtime acceptance; later hosting remains deferred |

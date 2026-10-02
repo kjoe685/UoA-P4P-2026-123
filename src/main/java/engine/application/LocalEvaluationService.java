@@ -74,7 +74,9 @@ public final class LocalEvaluationService {
             var source=(Map<?,?>)Json.parse(settings); var spec=(Map<?,?>)source.get(method.equals("cardiff-sentiment") ? "cardiff" : "deberta");
             model=(String)spec.get("modelId"); revision=(String)spec.get("revision");
         }
-        if (!model.equals(provenance.modelId()) || !revision.equals(provenance.revision()))
-            throw new IllegalStateException("Local response provenance does not match requested model");
+        if (!model.equals(provenance.modelId()) || !revision.equals(provenance.revision())
+                || !NlpResponse.IMPLEMENTATION_VERSION.equals(provenance.implementationVersion())
+                || !Hashes.sha256(settings).equals(provenance.configSha256()))
+            throw new IllegalStateException("Local response provenance does not match captured configuration");
     }
 }

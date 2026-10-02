@@ -5,6 +5,7 @@ import java.util.Map;
 
 /** Versioned service response. Validation against the submitted evidence is separate from transport. */
 public record NlpResponse(int schemaVersion, List<Method> methods) {
+    public static final String IMPLEMENTATION_VERSION="0.3.0";
     public NlpResponse { methods = List.copyOf(methods); }
     public record Method(String methodId, String status, String error, Provenance provenance,
                          List<Item> items, double latencyMillis) {

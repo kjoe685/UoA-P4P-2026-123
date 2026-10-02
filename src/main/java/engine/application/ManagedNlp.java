@@ -135,7 +135,7 @@ public final class ManagedNlp implements AutoCloseable {
             if (response.statusCode()!=200) throw new IllegalStateException("Incompatible local NLP service");
             Object value=Json.parse(response.body());
             if (response.statusCode()!=200 || !(value instanceof Map<?,?> body) || !Integer.valueOf(2).equals(body.get("schemaVersion"))
-                    || !"parliament-nlp".equals(body.get("service")) || !"0.2.0".equals(body.get("implementationVersion"))
+                    || !"parliament-nlp".equals(body.get("service")) || !engine.evaluation.local.NlpResponse.IMPLEMENTATION_VERSION.equals(body.get("implementationVersion"))
                     || !expectedHash.equals(body.get("configurationSha256")) || !validReadiness(body))
                 throw new IllegalStateException("Incompatible local NLP service");
             return body;

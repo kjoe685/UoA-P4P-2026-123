@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field, model_validator
+from pydantic import Field, PrivateAttr, model_validator
 
 from .schemas import WireModel
 
@@ -17,6 +17,7 @@ class ModelSpec(WireModel):
 
 
 class Settings(WireModel):
+    _source_sha256: str | None = PrivateAttr(default=None)
     schemaVersion: Literal[1]
     batchSize: int = Field(ge=1, le=64)
     cpuThreads: int = Field(ge=1, le=32)
@@ -37,7 +38,10 @@ class Settings(WireModel):
         return self
 
     def fingerprint(self) -> str:
-        return hashlib.sha256(json.dumps(self.model_dump(), sort_keys=True).encode()).hexdigest()
+        # Hash the exact validated source, matching the backend's frozen file bytes.
+        if self._source_sha256 is None:
+            raise ValueError("Load settings from a source configuration before analysis")
+        return self._source_sha256
 
 
 def load_settings(path: Path) -> Settings:
@@ -49,4 +53,7 @@ def load_settings(path: Path) -> Settings:
             result[key] = value
         return result
 
-    return Settings.model_validate(json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=reject_duplicates))
+    source = path.read_bytes()
+    settings = Settings.model_validate(json.loads(source.decode("utf-8"), object_pairs_hook=reject_duplicates))
+    settings._source_sha256 = hashlib.sha256(source).hexdigest()
+    return settings

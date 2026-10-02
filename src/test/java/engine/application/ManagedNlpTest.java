@@ -22,7 +22,7 @@ class ManagedNlpTest {
         return new LocalEvaluationConfig(1,URI.create("http://127.0.0.1:"+port+"/v1/analyze"),5,1,List.of("vader-sentiment"));
     }
     private static Map<String,Object> health(String settings) {
-        return Map.of("status","ok","schemaVersion",2,"service","parliament-nlp","implementationVersion","0.2.0",
+        return Map.of("status","ok","schemaVersion",2,"service","parliament-nlp","implementationVersion",engine.evaluation.local.NlpResponse.IMPLEMENTATION_VERSION,
                 "configurationSha256",Hashes.sha256(settings),"methods",List.of("vader-sentiment"),"readiness",Map.of());
     }
     @Test void readinessRejectsUnrecognizedFieldsInsteadOfSavingServiceSecrets() throws Exception {

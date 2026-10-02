@@ -29,7 +29,10 @@ class LocalEvaluationTest {
     }
     public static NlpResponse response(NlpRequest request) {
         boolean vader=request.methods().get(0).equals("vader-sentiment");
-        var provenance=new NlpResponse.Provenance("vaderSentiment","3.3.2","0.1.0","a".repeat(64),"cpu",Map.of("vaderSentiment","3.3.2"),"Lexical proportions, not probabilities","punctuation-v1",Map.of());
+        String settings;
+        try { settings=Files.readString(Path.of("nlp/config/models.json")); }
+        catch (java.io.IOException e) { throw new java.io.UncheckedIOException(e); }
+        var provenance=new NlpResponse.Provenance("vaderSentiment","3.3.2",NlpResponse.IMPLEMENTATION_VERSION,Hashes.sha256(settings),"cpu",Map.of("vaderSentiment","3.3.2"),"Lexical proportions, not probabilities","punctuation-v1",Map.of());
         var items=request.turns().stream().map(turn -> new NlpResponse.Item(turn.turnId(),null,"ok",null,List.of(
                 new NlpResponse.Chunk(0,0,turn.text().codePointCount(0,turn.text().length()),turn.text(),"positive",Map.of("positive",.9,"neutral",.1,"negative",0.),
                         vader ? .8 : null,vader ? null : new NlpResponse.Uncertainty(.9,.8,-(.9*Math.log(.9)+.1*Math.log(.1))/Math.log(3),false))),0)).toList();
