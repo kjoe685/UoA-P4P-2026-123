@@ -16,6 +16,7 @@ public final class ProviderCapabilities {
         };
     }
     public static void validateOptions(String provider, String model, Double temperature, String effort) {
+        if ("ollama".equals(provider)) engine.config.OllamaConfig.requireLocalModel(model);
         if ("gemini".equals(provider) && !model.matches("[a-zA-Z0-9._-]+"))
             throw new IllegalArgumentException("Gemini model must be a model ID");
         if (effort != null) {

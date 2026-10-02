@@ -48,7 +48,8 @@ public final class OllamaChatManager implements ChatManager {
         options.put("num_predict", request.model().maxCompletionTokens());
         if (request.model().temperature() != null) options.put("temperature", request.model().temperature());
         Map<String, Object> body = new LinkedHashMap<>();
-        body.put("model", request.model().model()); body.put("messages", messages);
+        // Enforce local source in the server handler even if the inventory alias changes after preflight.
+        body.put("model", engine.config.OllamaConfig.localModelReference(request.model().model())); body.put("messages", messages);
         body.put("stream", false); body.put("options", options);
         body.put("truncate",false); body.put("shift",false);
         if (request.outputSchema() != null) body.put("format", request.outputSchema().value());
@@ -64,6 +65,8 @@ public final class OllamaChatManager implements ChatManager {
             try {
                 JsonNode root = Json.read(response, JsonNode.class);
                 if (!root.path("done").isBoolean() || !root.path("done").booleanValue() || root.hasNonNull("error"))
+                    throw new IllegalArgumentException();
+                if (root.hasNonNull("remote_model") || root.hasNonNull("remote_host"))
                     throw new IllegalArgumentException();
                 CompletionStatus status = switch (root.path("done_reason").asText()) {
                     case "stop" -> CompletionStatus.COMPLETED;

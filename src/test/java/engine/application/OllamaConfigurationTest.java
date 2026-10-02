@@ -23,7 +23,7 @@ class OllamaConfigurationTest {
         }
         assertEquals(local.effective(key -> key.equals("OLLAMA_CONTEXT_TOKENS") ? "16384" : null).contextTokens(),16384);
         assertThrows(IllegalArgumentException.class,() -> local.effective(key -> key.equals("OLLAMA_BASE_URL") ? "http://SECRET_SENTINEL@localhost:11434" : null));
-        for (String model:List.of("x:cloud","x-cloud","../model","x\nSECRET","x?key=secret")) assertThrows(IllegalArgumentException.class,() -> OllamaConfig.requireLocalModel(model));
-        for (String model:List.of("qwen3:8b","namespace/model:v1","model")) OllamaConfig.requireLocalModel(model);
+        for (String model:List.of("x:cloud","x-cloud","x:CLOUD","x:Cloud","x:8b-CLOUD","x:cloud:local","x:local:local","../model","x\nSECRET","x?key=secret")) assertThrows(IllegalArgumentException.class,() -> OllamaConfig.requireLocalModel(model));
+        for (String model:List.of("qwen3:8b","namespace/model:v1","model","qwen3:8b:local","model:LOCAL")) OllamaConfig.requireLocalModel(model);
     }
 }

@@ -13,6 +13,29 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class ManagedOllamaTest {
     @TempDir Path root;
+    @Test void aliasChangedAfterInventoryCannotForwardPrivateChatRemotely() throws Exception {
+        try (var fixture=new OllamaFixture(); var manager=fixture.manager(root)) {
+            fixture.startService(); fixture.cache("alias:latest",true); fixture.aliasRace=true;
+            var model=new ModelConfig("ollama","alias",null,null,256,5);
+            var provider=new engine.provider.ProviderFactory(root,manager).forModel(model,fixture.config());
+            var request=new engine.chat.ChatRequest("PRIVATE_SETUP_SENTINEL",List.of(new engine.chat.ChatMessage(
+                    engine.chat.ChatMessage.Role.USER,"PRIVATE_PUBLIC_EVIDENCE_SENTINEL")),model,null);
+            var error=assertThrows(IllegalStateException.class,() -> provider.complete(request));
+            assertTrue(error.getMessage().contains("HTTP 404")); assertNull(error.getCause());
+            assertEquals(0,fixture.remoteForwards.get()); assertEquals(1,fixture.chats.get());
+            assertEquals("alias:latest:local",fixture.requests.get(0).get("model"));
+            assertFalse(Json.write(manager.readiness(fixture.config())).contains("SENTINEL"));
+        }
+    }
+    @Test void unsupportedExternalProtocolIsRefusedBeforeSendingModelInputsOrInstalling() throws Exception {
+        try (var fixture=new OllamaFixture(); var manager=fixture.manager(root)) {
+            fixture.version="0.34.0"; fixture.startService(); fixture.cache("qwen3:8b",true);
+            assertEquals(false,manager.readiness(fixture.config()).get("running"));
+            assertThrows(IllegalStateException.class,() -> manager.ensureRunning(fixture.config()));
+            assertEquals(0,fixture.starts.get()); assertEquals(0,fixture.chats.get()); assertEquals(0,fixture.pulls.get());
+            assertFalse(Files.exists(root.resolve(".runtime")));
+        }
+    }
     @Test void readinessNeverInstallsPullsOrGeneratesAndExternalServiceIsNeverOwnedOrStopped() throws Exception {
         try (var fixture=new OllamaFixture(); var manager=fixture.manager(root)) {
             assertEquals(false,manager.readiness(fixture.config()).get("running")); assertFalse(Files.exists(root.resolve(".runtime")));
@@ -20,6 +43,7 @@ class ManagedOllamaTest {
             var ready=manager.readiness(fixture.config()); assertEquals(true,ready.get("running")); assertEquals(false,ready.get("owned"));
             assertFalse(Json.write(ready).contains("REMOTE_SECRET_SENTINEL")); manager.ensureRunning(fixture.config());
             manager.requireCachedModel(fixture.config(),"qwen3:8b");
+            manager.requireCachedModel(fixture.config(),"qwen3:8b:LOCAL");
             assertThrows(IllegalStateException.class,() -> manager.requireCachedModel(fixture.config(),"missing"));
             assertThrows(IllegalStateException.class,() -> manager.requireCachedModel(fixture.config(),"remote-alias"));
             assertThrows(IllegalArgumentException.class,() -> manager.requireCachedModel(fixture.config(),"model:cloud"));
@@ -52,9 +76,10 @@ class ManagedOllamaTest {
         try (var fixture=new OllamaFixture(); var manager=fixture.manager(root); var jobs=new JobService(root.resolve("jobs"))) {
             fixture.startService();
             var job=pull(jobs,manager,fixture.config(),"qwen3:8b"); assertEquals(BackgroundJob.State.COMPLETE,finish(jobs,job.id()).state());
-            assertEquals(Map.of("model","qwen3:8b","stream",true),fixture.requests.get(0));
+            assertEquals(Map.of("model","qwen3:8b:local","stream",true),fixture.requests.get(0));
             assertFalse(Files.readString(root.resolve("jobs/"+job.id()+"/job.json")).contains("SENTINEL")); assertEquals(0,fixture.chats.get());
             assertEquals(BackgroundJob.State.COMPLETE,finish(jobs,pull(jobs,manager,fixture.config(),"qwen3:8b").id()).state()); assertEquals(1,fixture.pulls.get());
+            assertEquals(BackgroundJob.State.COMPLETE,finish(jobs,pull(jobs,manager,fixture.config(),"qwen3:8b:local").id()).state()); assertEquals(1,fixture.pulls.get());
             fixture.cache("alias:latest",false);
             assertEquals(BackgroundJob.State.FAILED,finish(jobs,pull(jobs,manager,fixture.config(),"alias").id()).state()); assertEquals(1,fixture.pulls.get());
             fixture.incompletePull=true; assertEquals(BackgroundJob.State.FAILED,finish(jobs,pull(jobs,manager,fixture.config(),"incomplete").id()).state());

@@ -34,7 +34,7 @@ public final class ManagedOllama implements AutoCloseable {
         try {
             var service=health(config); result.put("running",true); result.put("version",service.version());
             result.put("models",service.models()); result.put("message","Compatible local service responds; cached models have not been behaviourally verified");
-        } catch (RuntimeException e) { result.put("running",false); result.put("models",List.of()); result.put("message","Local service unavailable or incompatible"); }
+        } catch (RuntimeException e) { result.put("running",false); result.put("models",List.of()); result.put("message","Local service unavailable or incompatible; Ollama0.35.0 or newer is required"); }
         return result;
     }
     private boolean isOwned(OllamaConfig config) { var process=owned.get(config.baseUrl()); return process!=null && process.isAlive(); }
@@ -42,7 +42,7 @@ public final class ManagedOllama implements AutoCloseable {
     public synchronized void ensureRunning(OllamaConfig config) {
         if (closed) throw new IllegalStateException("Local runtime owner is closed");
         try { health(config); return; } catch (RuntimeException e) { checkInterrupted(); }
-        if (occupied(config)) throw new IllegalStateException("Configured Ollama port is occupied by an incompatible service");
+        if (occupied(config)) throw new IllegalStateException("Configured Ollama port is occupied by an incompatible service; use Ollama0.35.0 or newer");
         if (!installer.installed()) throw new IllegalStateException("Set up the local LLM runtime explicitly before using it");
         Process process=null;
         try {
@@ -76,7 +76,7 @@ public final class ManagedOllama implements AutoCloseable {
     private static void checkInterrupted() { if (Thread.currentThread().isInterrupted()) throw new CancellationException("Local operation cancelled"); }
     private Service health(OllamaConfig config) {
         JsonNode version=get(config,"/api/version"), tags=get(config,"/api/tags");
-        if (!version.path("version").isTextual() || !version.path("version").asText().matches("[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][A-Za-z0-9.-]+)?")
+        if (!version.path("version").isTextual() || !supportsLocalSource(version.path("version").asText())
                 || !tags.path("models").isArray() || tags.path("models").size()>1000) throw new IllegalStateException("Incompatible local Ollama service");
         var models=new ArrayList<Model>();
         for (var item:tags.path("models")) {
@@ -84,10 +84,17 @@ public final class ManagedOllama implements AutoCloseable {
             if (!item.path("name").isTextual() || name.length()>200 || !name.matches("[A-Za-z0-9][A-Za-z0-9._/:-]*")
                     || !item.path("size").isIntegralNumber() || !item.path("size").canConvertToLong() || item.path("size").longValue()<0
                     || !item.path("digest").isTextual() || !item.path("digest").asText().matches("[0-9a-f]{64}")) throw new IllegalStateException("Invalid local model inventory");
-            boolean local=!item.hasNonNull("remote_model") && !item.hasNonNull("remote_host") && !name.endsWith(":cloud") && !name.endsWith("-cloud");
+            String lower=name.toLowerCase(Locale.ROOT);
+            boolean local=!item.hasNonNull("remote_model") && !item.hasNonNull("remote_host") && !lower.endsWith(":cloud") && !lower.endsWith("-cloud");
             models.add(new Model(name,item.path("size").longValue(),item.path("digest").asText(),local));
         }
         return new Service(version.path("version").asText(),List.copyOf(models));
+    }
+    private static boolean supportsLocalSource(String version) {
+        // The managed pinned release establishes the minimum protocol reviewed for :local routing.
+        if (version.length()>64 || !version.matches("[0-9]{1,6}\\.[0-9]{1,6}\\.[0-9]{1,6}(?:[-+][A-Za-z0-9.-]+)?")) return false;
+        String[] parts=version.split("[.\\-+]",4);
+        return Integer.parseInt(parts[0])>0 || Integer.parseInt(parts[1])>=35;
     }
     private JsonNode get(OllamaConfig config,String path) {
         try {
@@ -99,22 +106,24 @@ public final class ManagedOllama implements AutoCloseable {
         catch (Exception e) { throw new IllegalStateException("Local Ollama unavailable or incompatible"); }
     }
     public void requireCachedModel(OllamaConfig config,String model) {
-        OllamaConfig.requireLocalModel(model);
+        model=OllamaConfig.localModelId(model);
         String selected=model.contains(":") ? model : model+":latest";
-        if (health(config).models().stream().noneMatch(item -> (item.name().equals(selected) || item.name().equals(model)) && item.local()))
+        String identity=model;
+        if (health(config).models().stream().noneMatch(item -> (item.name().equals(selected) || item.name().equals(identity)) && item.local()))
             throw new IllegalStateException("Download the selected local model explicitly before generation");
     }
     public void download(OllamaConfig config,String model,JobService.Context job) throws Exception {
-        OllamaConfig.requireLocalModel(model); ensureRunning(config); job.checkCancelled();
+        model=OllamaConfig.localModelId(model); ensureRunning(config); job.checkCancelled();
+        final String identity=model;
         String selected=model.contains(":") ? model : model+":latest";
-        if (health(config).models().stream().anyMatch(item -> (item.name().equals(model) || item.name().equals(selected)) && !item.local()))
+        if (health(config).models().stream().anyMatch(item -> (item.name().equals(identity) || item.name().equals(selected)) && !item.local()))
             throw new IllegalArgumentException("Selected model is a remote alias; choose a local model");
         try { requireCachedModel(config,model); job.update("Selected local model is already cached",readiness(config)); return; }
         catch (IllegalStateException ignored) { }
         job.update("Downloading selected local model; size depends on the configured model",Map.of("model",model));
         var request=HttpRequest.newBuilder(config.baseUrl().resolve("/api/pull"))
                 .timeout(Duration.ofSeconds(config.downloadTimeoutSeconds())).header("Content-Type","application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(Json.write(Map.of("model",model,"stream",true)),StandardCharsets.UTF_8)).build();
+                .POST(HttpRequest.BodyPublishers.ofString(Json.write(Map.of("model",OllamaConfig.localModelReference(model),"stream",true)),StandardCharsets.UTF_8)).build();
         RuntimeDownload.read(http,request,config.downloadTimeoutSeconds(),job::checkCancelled,input -> {
             boolean success=false; long last=0; int records=0;
             // Bound each NDJSON record; buffered readers can otherwise allocate an unbounded line.
@@ -124,7 +133,7 @@ public final class ManagedOllama implements AutoCloseable {
                 var state=Json.read(new String(line,StandardCharsets.UTF_8),JsonNode.class);
                 if (state.hasNonNull("error") || !state.path("status").isTextual()) throw new IOException("Model pull failed");
                 if (state.path("status").asText().equals("success")) { success=true; break; }
-                Map<String,Object> progress=new LinkedHashMap<>(); progress.put("model",model);
+                Map<String,Object> progress=new LinkedHashMap<>(); progress.put("model",identity);
                 if (state.has("total") || state.has("completed")) {
                     long completed=state.has("completed") ? state.path("completed").longValue() : 0;
                     if (!state.path("total").isIntegralNumber() || !state.path("total").canConvertToLong() || state.path("total").longValue()<0

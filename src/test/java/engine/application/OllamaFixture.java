@@ -27,7 +27,9 @@ public final class OllamaFixture implements AutoCloseable {
     volatile ProcessBuilder builder;
     volatile CountDownLatch stall;
     volatile CountDownLatch stallArchive;
-    volatile boolean incompatible,badPull,incompletePull,badArchive,wrongRange,ignoreRange;
+    volatile boolean incompatible,badPull,incompletePull,badArchive,wrongRange,ignoreRange,aliasRace;
+    volatile String version="0.35.0";
+    final AtomicInteger remoteForwards=new AtomicInteger();
     volatile String additionalProgress;
     public OllamaFixture() throws Exception {
         try (var socket=new java.net.ServerSocket(0,0,InetAddress.getLoopbackAddress())) { port=socket.getLocalPort(); }
@@ -64,7 +66,7 @@ public final class OllamaFixture implements AutoCloseable {
             try {
                 String path=exchange.getRequestURI().getPath();
                 if (incompatible) { send(exchange,"{\"unexpected\":\"BODY_SECRET_SENTINEL\"}"); return; }
-                if (path.equals("/api/version")) send(exchange,"{\"version\":\"0.35.0\"}");
+                if (path.equals("/api/version")) send(exchange,Json.write(Map.of("version",version)));
                 else if (path.equals("/api/tags")) send(exchange,Json.write(Map.of("models",models.values())));
                 else if (path.equals("/api/pull")) {
                     pulls.incrementAndGet(); var body=(Map<?,?>)Json.parse(new String(exchange.getRequestBody().readAllBytes(),StandardCharsets.UTF_8)); requests.add(body);
@@ -74,11 +76,20 @@ public final class OllamaFixture implements AutoCloseable {
                     var block=stall; if (block!=null) try { block.await(10,TimeUnit.SECONDS); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
                     if (badPull) exchange.getResponseBody().write("{\"error\":\"RAW_ERROR_SECRET_SENTINEL\"}\n".getBytes(StandardCharsets.UTF_8));
                     else if (!incompletePull) {
-                        String name=body.get("model").toString(); cache(name.contains(":") ? name : name+":latest",true);
+                        String name=body.get("model").toString();
+                        if (name.endsWith(":local")) name=name.substring(0,name.length()-6);
+                        cache(name.contains(":") ? name : name+":latest",true);
                         exchange.getResponseBody().write("{\"status\":\"success\"}\n".getBytes(StandardCharsets.UTF_8));
                     }
                 } else if (path.equals("/api/chat")) {
-                    chats.incrementAndGet(); requests.add((Map<?,?>)Json.parse(new String(exchange.getRequestBody().readAllBytes(),StandardCharsets.UTF_8)));
+                    chats.incrementAndGet(); var body=(Map<?,?>)Json.parse(new String(exchange.getRequestBody().readAllBytes(),StandardCharsets.UTF_8)); requests.add(body);
+                    if (aliasRace) {
+                        // The prior inventory was local; its alias changes before the server processes chat.
+                        if (body.get("model").toString().endsWith(":local")) {
+                            exchange.sendResponseHeaders(404,-1); return;
+                        }
+                        remoteForwards.incrementAndGet();
+                    }
                     send(exchange,"{\"done\":true,\"done_reason\":\"stop\",\"message\":{\"content\":\"Synthetic local speech; software QA only.\"}}");
                 } else { exchange.sendResponseHeaders(404,-1); }
             } finally { exchange.close(); }

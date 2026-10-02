@@ -6,12 +6,24 @@
 - Branch: `codex/dual-interface-integration`, created from refreshed `origin/main` at `a99269c`.
 - Recovered primary plan from previous chat `01a0f6c1-32c6-7a33-bf8c-6ad9fee837e5`; that chat ended in Plan mode without writing changes.
 - Preserved secondary plan from `9cbcb12`. Evaluation reference: `c41c4c2`, file-level reuse only.
-- T01–T15 software checkpoints verified locally; latest checkpoint title `T15: bound provider and local analysis response transport` (see Git log for local commit hash). External platform/human acceptance remains below.
+- T01–T16 software checkpoints verified locally; latest checkpoint title `T16: enforce explicit local source for Ollama requests` (see Git log for local commit hash). External platform/human acceptance remains below.
 - Existing untracked `UoA-P4P-2026-123.iml` belongs to the user; preserve it.
 
 ## Active task
 
-No unfinished code at the T15 checkpoint. Continue requirement-focused inspection; record the next task and acceptance checks before edits. External acceptance remains below.
+No unfinished code at the T16 checkpoint. Continue requirement-focused inspection; record the next task and acceptance checks before edits. External acceptance remains below.
+
+## T16 completed checkpoint
+
+**T16 — Enforce local-source intent on Ollama requests (REQ-01–02, 12–14, 20–22, 53, 55, 58).**
+
+Dependency: verified T15 `cf1cd47`. Official pinned v0.35.0 `internal/modelref/modelref.go` and `server/routes.go` review confirms explicit `:local` source intent rejects remote aliases within the chat handler. Current unqualified requests rely on an earlier inventory check, leaving a model-tag change between check/request able to route privately supplied input remotely on an external service. Cloud-suffix checks are also case-sensitive while upstream parsing is case-insensitive.
+
+Intended change: normalize owner model IDs (including an optional explicit local-source suffix), reject every cloud/nested source form before HTTP, and add explicit local-source intent to every chat/pull request. Require the documented pinned protocol baseline for compatible services; retain cache/returned model identity as separate metadata. Acceptance: controlled alias change after inventory must reject without a simulated remote forward/public speech; case/namespace/default-tag/source normalization and cached pull reuse; old service refusal without generation/pull/install; HTTP/menu/command regressions/full build/ancestry. Tests remain fake, with no external generation/model downloads. Next write focused source/race regressions before adapting routing and update progress after verification.
+
+T16 WIP: three pre-change regressions reproduced simulated alias-race forwarding, acceptance of an unreviewed older protocol and uppercase cloud-source acceptance (`target/T16-local-source-reproduction`). Explicit default-tag/local source normalization, case-insensitive/nested-source validation and minimum reviewed protocol checks implemented; remote response metadata also rejects. Cache/pull identity strips optional source intent without changing selected presets or returned model identity. Next run expanded wire/cache/full regressions and ancestry checks before a local checkpoint. No real forwarding or paid/model calls occurred; all servers/processes are fixtures.
+
+T16 verified 2026-10-02: full Java111/shaded build passes. Eight added tests plus expanded existing config/cache checks cover the simulated post-inventory alias race, older occupied service refusal, five model/source wire forms, returned identity separation and remote-metadata rejection. Chat/pull use explicit local-source intent; default tags/namespace/optional local suffix normalize without triggering extra cached pulls. Cloud/nested source forms reject before HTTP and saved preset validation. HTTP/menu/commands, cancellation/recovery and private metadata regressions pass; all six evaluation-only commits excluded and reference tips unchanged. No official runtime/model acquisition, actual remote forwarding, paid calls or push. Next inspect the remaining NLP readiness transport and base-setup snapshot paths before recording T17.
 
 ## T15 completed checkpoint
 
@@ -136,6 +148,7 @@ Verification: Maven verify passes 2 tests (HTTP demo/chair/replay and cancellati
 | T13 optional bootstrap recovery | Windows/portable fixtures verified | Genuine pinned Windows uv execution, archive/executable integrity/retry/preservation, locked extras wiring; Python17; native/pristine OS pending |
 | T14 local LLM setup/parity | Software verified with fixtures | Java91, bundled ZIP/gzip/zstd/JNI smoke, HTTP/menu/commands/browser explicit setup/model downloads, frozen settings/privacy, cache/range/cancel/restart and service ownership; genuine runtime/model/OS acceptance pending |
 | T15 bounded response transport | Software verified with fixtures | Java103, real loopback size/stall/cancel/error/retry/redirect checks and persisted partial analysis; strict UTF-8/shared deadline guard |
+| T16 explicit local source | Software verified with fixtures | Java111, simulated alias race, case/default-tag/source normalization, cache reuse, older protocol refusal and remote response rejection; pinned upstream source reviewed |
 
 ## Recovery procedure
 

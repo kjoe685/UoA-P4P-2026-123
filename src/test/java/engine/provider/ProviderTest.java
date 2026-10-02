@@ -9,6 +9,7 @@ import engine.utils.Json;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.CsvSource;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -114,6 +115,7 @@ class ProviderTest {
                 assertEquals(List.of("2023-06-01"), headers.get(0).get("Anthropic-version"));
             }
             case "ollama" -> {
+                assertEquals("qwen3:8b:local",body.path("model").asText());
                 assertFalse(body.path("stream").asBoolean());
                 assertTrue(body.path("truncate").isBoolean()); assertFalse(body.path("truncate").asBoolean());
                 assertTrue(body.path("shift").isBoolean()); assertFalse(body.path("shift").asBoolean());
@@ -187,5 +189,23 @@ class ProviderTest {
         assertThrows(IllegalArgumentException.class, () -> new OllamaChatManager(URI.create("http:/broken"), 16384));
         assertThrows(IllegalArgumentException.class, () -> new OllamaChatManager(URI.create("http://127.0.0.1:11434/path"), 16384));
         assertEquals(0, calls.get());
+    }
+    @ParameterizedTest @CsvSource({"qwen3,qwen3:latest:local","qwen3:8b,qwen3:8b:local","namespace/model:v1,namespace/model:v1:local",
+            "qwen3:local,qwen3:latest:local","qwen3:8b:LOCAL,qwen3:8b:local"})
+    void localSourceSuffixIsExplicitWithoutChangingReturnedModelIdentity(String selected,String wire) {
+        response=valid("ollama");
+        var request=new ChatRequest("private",List.of(new ChatMessage(ChatMessage.Role.USER,"Public evidence")),
+                new ModelConfig("ollama",selected,null,null,256,5),null);
+        var result=provider("ollama").complete(request);
+        assertEquals(wire,Json.read(bodies.get(0),JsonNode.class).path("model").asText());
+        assertEquals("returned-model",result.model()); assertEquals("Public words",result.requireCompletedText());
+    }
+    @Test void localAdapterRejectsRemoteResponseMetadataAndCloudCaseBeforeHttp() {
+        response=valid("ollama").replace("\"done\":true","\"remote_model\":\"REMOTE_SECRET_SENTINEL\",\"done\":true");
+        var error=assertThrows(IllegalStateException.class,() -> provider("ollama").complete(request("ollama","private",false,5)));
+        assertFalse(error.getMessage().contains("SENTINEL")); assertNull(error.getCause());
+        for (String model:List.of("x:CLOUD","x:8b-Cloud","x:cloud:local"))
+            assertThrows(IllegalArgumentException.class,() -> new ModelConfig("ollama",model,null,null,256,5));
+        assertEquals(1,calls.get());
     }
 }
