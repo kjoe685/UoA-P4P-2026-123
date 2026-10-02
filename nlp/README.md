@@ -2,6 +2,8 @@
 
 The browser **Set up local VADER** action, guided CLI choice 12, or `run.cmd cli local setup` installs optional managed Python and locked lightweight dependencies. It uses checksum-verified uv 0.12.16 and stores tools, environments, logs and cache under `.runtime/`. A basic debate needs none of these dependencies. Native Unix setup is implemented but remains unverified.
 
+If setup is interrupted, run the same setup action again. Verified downloads and complete installs are reused; incomplete or changed uv installs are preserved beside a verified replacement. Repeating VADER setup retains transformer dependencies installed by an earlier model setup. No model weights are downloaded by VADER setup.
+
 Setup and analysis run as durable jobs. Follow them in the browser's **Local analysis** panel or with `cli jobs` / `cli job ID`. Setup starts a loopback-only service. Later analyses start it on demand, without downloading dependencies or weights. An incompatible occupied port produces a failure; only a process owned by this backend is stopped at shutdown. Restart marks unfinished jobs interrupted and retains completed batches; no analysis reruns automatically.
 
 VADER 3.3.2 reports lexical positive/neutral/negative proportions and compound `[-1,1]`. These are not model probabilities, calibrated confidence or a measure of policy stance, party identity or argument quality. The ±0.05 compound cutoffs select labels. Parliamentary language, quotations, negation and sarcasm need genuine domain validation. Automated fixtures do not establish accuracy.

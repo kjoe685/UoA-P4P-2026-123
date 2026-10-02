@@ -6,10 +6,22 @@
 - Branch: `codex/dual-interface-integration`, created from refreshed `origin/main` at `a99269c`.
 - Recovered primary plan from previous chat `01a0f6c1-32c6-7a33-bf8c-6ad9fee837e5`; that chat ended in Plan mode without writing changes.
 - Preserved secondary plan from `9cbcb12`. Evaluation reference: `c41c4c2`, file-level reuse only.
-- T01–T12 software checkpoints verified locally; latest checkpoint title `T12: retain chair rulings through completion and cancellation` (see Git log for local commit hash). External platform/human acceptance remains below.
+- T01–T13 software checkpoints verified locally; latest checkpoint title `T13: recover interrupted optional NLP runtime setup` (see Git log for local commit hash). External platform/human acceptance remains below.
 - Existing untracked `UoA-P4P-2026-123.iml` belongs to the user; preserve it.
 
 ## Active task
+
+**T13 — Optional NLP bootstrap recovery verified (REQ-20–21, 31–33, 47, 53–56, 58).**
+
+Dependency: verified T12 checkpoint `4b69bb9`. Inspection found both optional setup scripts move an extracted uv directory into the existing installation directory without handling incomplete contents, which can nest the replacement and leave the expected executable absent. They also ignore a completed checksum-verified uv archive on retry. Intended change: reusable local bootstrap helpers that reuse verified downloads, stage extraction, preserve an incomplete directory beside its replacement and check the executable before selection; retain explicit setup and locked dependency selection through the existing shared service.
+
+Acceptance: Windows PowerShell5.1 fixtures with spaces, genuine pinned cached archive/no network, preserved incomplete markers, repeat reuse and corrupt/stale archive rejection; portable shell fixture tests of equivalent recovery and syntax (not a native Linux/macOS claim); existing offline NLP tests and unchanged Java72 evidence. No administrator installation, model-weight downloads, paid calls, owner-data rewrites or push. Next write focused offline installer recovery checks, then repair both setup paths and document their limits before a verified local commit.
+
+T13 WIP: Windows PowerShell5.1 genuine cached uv extraction/recovery/repeat, corrupt-cache refusal and missing-executable refusal pass; portable Git Bash fixture checks pass after adding its standard utilities to the isolated tool PATH. Python17 pass offline. Extended recovery to a truncated executable that still exists: Windows regression reproduced selection of the broken file. Helpers now write an archive/executable SHA256 identity only after verified extraction, check it before reuse, and preserve legacy/unmarked or changed files before replacement. No partial binary is executed to probe validity. Next verify the extended checks and setup wiring/locked optional-dependency selection, then document and commit. Java72 remains the unchanged backend evidence; native Unix is still pending.
+
+T13 verified 2026-10-02: Windows PowerShell5.1 offline harness passes nine recovery/integrity/wiring categories against the official pinned cached archive and actually runs verified uv0.12.16. Latest result `target/nlp-bootstrap-c34f68f9de794b268a9f71d45732d1e4/result.json`. Cached extraction/repeat, spaces, missing/truncated executable recovery, incomplete preservation, corrupt/stale cache rejection, bad-download checksum rejection and base/explicit/preserved model-extra argument selection pass. Equivalent portable fixtures pass under Git Bash (`target/nlp bootstrap portable.bR8DJW/result.txt`); a capture fixture initially lacked its uv-cache parent, now corrected. These tests install no packages and make no network/model calls. Python17 pass offline; Java72 backend evidence unchanged. PowerShell/shell parsing and diff/ancestry checks pass. Native/pristine OS and genuine human research acceptance remain pending; next continue requirement-based local inspection without claiming external completion.
+
+## T12 completed checkpoint
 
 **T12 — Chair lifecycle checkpoint verified (REQ-01–02, 46, 53, 55, 57).**
 
@@ -45,7 +57,7 @@ T11 final verification: 500/500 source/content checks pass; 131 original passage
 - Genuine human behavioural review for REQ-16–19 and real labels/adjudication for the 200-item pilot. Software cues, review preparation and scoring are implemented; synthetic scores never establish research accuracy. Latest disjoint genuine prepared file is ignored target/genuine-review-pilot-current-grounding.json (import explicitly). The older target/genuine-review-pilot.json and owner pilot2224fde6-83eb-455c-9e5c-aba790e4723e were preserved; the old artifact has19 overlaps after T11 grounding changes. Keep labels blank until real review and curate propositions/context/sampling before research use.
 - Account-specific cloud and local Ollama availability/model behaviour remain unverified. Routine tests use fake providers and no paid calls. Public university hosting/authentication remains future scope under REQ-58.
 
-No half-finished code remains after the verified T12 checkpoint. Preserve the unrelated .iml. One exploratory ZIP RecoveryTest had a transient ERROR that did not reproduce in six focused repeats or later full ZIP checks; the original failure logs remain in target/delivery-23fea5f924854757b21e2ce56afe387f. Investigate if it recurs; do not suppress tests or infer a cause from this run.
+No half-finished code remains after the verified T13 checkpoint. Preserve the unrelated .iml. One exploratory ZIP RecoveryTest had a transient ERROR that did not reproduce in six focused repeats or later full ZIP checks; the original failure logs remain in target/delivery-23fea5f924854757b21e2ce56afe387f. Investigate if it recurs; do not suppress tests or infer a cause from this run.
 
 ## Earlier checkpoint notes (historical)
 
@@ -89,6 +101,7 @@ Verification: Maven verify passes 2 tests (HTTP demo/chair/replay and cancellati
 | T09b pilot tools | Software verified; human labels pending | Java63/extractor6; genuine blank preparation, mock classifier privacy600 requests, browser preparation/refusal/synthetic reports |
 | T10 delivery | Software/isolated Windows verified; external platforms pending | Java64 cold ZIP, no tools on PATH, real CLI/menu UTF8 and ownership, caches/restart/repeat; final matrix/documentation |
 | T12 chair lifecycle | Verified | Java72; final-turn completion/cancellation/failure retention, next-topic/interjection context, late rejection and HTTP/command/menu/restart/export parity |
+| T13 optional bootstrap recovery | Windows/portable fixtures verified | Genuine pinned Windows uv execution, archive/executable integrity/retry/preservation, locked extras wiring; Python17; native/pristine OS pending |
 
 ## Recovery procedure
 
