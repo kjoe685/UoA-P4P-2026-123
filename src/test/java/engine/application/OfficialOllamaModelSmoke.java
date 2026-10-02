@@ -1,0 +1,155 @@
+package engine.application;
+
+import engine.TestFixtures;
+import engine.chat.*;
+import engine.config.*;
+import engine.evaluation.EvaluationStatus;
+import engine.evaluation.llm.LlmReport;
+import engine.provider.ProviderFactory;
+import engine.provider.ChatCompletionsProvider;
+import engine.transcript.*;
+import engine.utils.*;
+import java.net.*;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.*;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
+/** Explicit real selected-model acceptance; never a JUnit test or research validation. */
+public final class OfficialOllamaModelSmoke {
+    private OfficialOllamaModelSmoke() { }
+    public static void main(String[] args) throws Exception {
+        if (args.length != 4) throw new IllegalArgumentException("Use an isolated fixture root, port, stop signal and context limit");
+        Path root = Path.of(args[0]).toAbsolutePath().normalize();
+        Path target = Path.of("target").toAbsolutePath().normalize();
+        Path stopSignal = Path.of(args[2]).toAbsolutePath().normalize();
+        String profile = System.getenv("USERPROFILE");
+        if (!System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("win") || !root.startsWith(target)
+                || root.equals(target) || profile == null || !Path.of(profile).toAbsolutePath().normalize().equals(root.resolve("profile"))
+                || !root.equals(stopSignal.getParent())) throw new IllegalArgumentException("Use the isolated Windows runner model mode");
+        int port = Integer.parseInt(args[1]);
+        if (port < 1024 || port > 65535 || port == 11434 || occupied(port)) throw new IllegalArgumentException("Choose a free non-default test port");
+        if (!Files.isDirectory(root.resolve("config"))) TestFixtures.copyResources(root);
+        var initial = Json.read(Files.readString(root.resolve("config/engine.json")), EngineConfig.class);
+        // Bound this acceptance to exactly two ordinary calls; preserve the configured model preset.
+        var bounded = new EngineConfig(initial.schemaVersion(), initial.defaultRounds(), initial.defaultTopic(),
+                initial.agentModelPreset(), initial.evaluatorModelPreset(), initial.models(), initial.parties(), new InterruptionConfig(0,0,123));
+        AtomicFiles.write(root.resolve("config/engine.json"), Json.write(bounded));
+        var config = new OllamaConfig(1, URI.create("http://127.0.0.1:" + port), Integer.parseInt(args[3]), 60, 3600);
+        AtomicFiles.write(root.resolve("config/ollama.json"), Json.write(config));
+        String acceptanceId = UUID.randomUUID().toString();
+        Path diagnostics = root.resolve("diagnostics").resolve(acceptanceId);
+        Path log = root.resolve(".runtime/ollama-service-" + port + ".log");
+        long initialChatRequests = Files.exists(log) ? chatCount(log) : 0;
+        var runtime = new ManagedOllama(root); var factory = new ProviderFactory(root, runtime);
+        AtomicInteger modelCalls = new AtomicInteger();
+        var application = new DebateApplication(root, new RunStore(root.resolve("runs")), (model, capturedRuntime) -> {
+            require(model.provider().equals("ollama"), "Genuine acceptance must never select a cloud or demo provider");
+            var adapter = factory.forModel(model, capturedRuntime);
+            return request -> {
+                int attempt = modelCalls.incrementAndGet();
+                var messages = ChatCompletionsProvider.messages(request, true);
+                long estimated = Json.write(messages).getBytes(StandardCharsets.UTF_8).length + 256L + messages.size()*32L + model.maxCompletionTokens();
+                var diagnostic = new LinkedHashMap<String,Object>();
+                diagnostic.put("scope", request.outputSchema() == null ? "speech" : "blind-rubric");
+                diagnostic.put("conservativeRequestOutputEstimate", estimated); diagnostic.put("contextTokens", capturedRuntime.contextTokens());
+                diagnostic.put("requestSha256", Hashes.sha256(Json.write(request)));
+                Path record = diagnostics.resolve("attempt-" + attempt + ".json");
+                AtomicFiles.write(record, Json.write(diagnostic));
+                try {
+                    var response = adapter.complete(request);
+                    if (request.outputSchema() != null) AtomicFiles.write(diagnostics.resolve("rubric-response-" + attempt + ".json"), Json.write(response));
+                    return response;
+                } catch (RuntimeException error) {
+                    diagnostic.put("failure", error instanceof ContextBudgetExceededException ? "context_budget" : "provider_error");
+                    AtomicFiles.write(record, Json.write(diagnostic)); throw error;
+                }
+            };
+        }, null, runtime);
+        Thread cleanup = new Thread(application::close, "selected-model-acceptance-cleanup");
+        Runtime.getRuntime().addShutdownHook(cleanup);
+        var result = new LinkedHashMap<String,Object>(); result.put("state", "FAILED");
+        result.put("acceptanceId", acceptanceId); result.put("diagnostics", root.relativize(diagnostics).toString());
+        result.put("modelPreset", "qwen3-local"); result.put("model", bounded.models().get("qwen3-local").model());
+        result.put("contextTokens", config.contextTokens());
+        try {
+            require(OfficialOllamaSmoke.finish(application, application.setupOllama().id(), stopSignal).state() == BackgroundJob.State.COMPLETE,
+                    "Cached official runtime setup must complete");
+            System.out.println("Deliberately downloading only the configured local qwen3:8b preset");
+            var download = OfficialOllamaSmoke.finish(application, application.downloadOllamaModel("qwen3-local").id(), stopSignal);
+            AtomicFiles.write(root.resolve("model-download.json"), Json.write(download));
+            require(download.state() == BackgroundJob.State.COMPLETE, "Selected model setup failed; retain the cache and job");
+            var inventory = application.ollamaReadiness();
+            result.put("observedInventory", Json.parse(Json.write(inventory.get("models"))));
+            require(OfficialOllamaSmoke.finish(application, application.downloadOllamaModel("qwen3-local").id(), stopSignal).state() == BackgroundJob.State.COMPLETE,
+                    "Explicit repeat model setup must reuse the cache");
+            result.put("modelCacheReuse", true);
+            System.out.println("Generating a bounded genuine local sitting: two members, one round, zero grounding");
+            var sitting = application.start(Map.of("topics", List.of("Should New Zealand build more public housing?"), "rounds", 1,
+                    "members", List.of(Map.of("party", "LABOUR"), Map.of("party", "NATIONAL")), "groundingCount", 0,
+                    "agentModelPreset", "qwen3-local", "evaluatorModelPreset", "qwen3-local"));
+            result.put("runId", sitting.id());
+            long deadline = System.nanoTime() + TimeUnit.MINUTES.toNanos(12);
+            while (!sitting.isFinished()) {
+                if (Files.exists(stopSignal) || System.nanoTime() > deadline) {
+                    application.cancel(sitting.id()); throw new IllegalStateException("Local sitting stopped; committed evidence retained");
+                }
+                Thread.sleep(250);
+            }
+            Transcript evidence = sitting.transcript();
+            AtomicFiles.write(root.resolve("public-transcript.json"), Json.write(evidence));
+            AtomicFiles.write(root.resolve("public-transcript.txt"), application.textExport(sitting.id()));
+            result.put("sittingOutcome", evidence.outcome());
+            result.put("publicContributions", evidence.events().stream().filter(event -> event.type() == PublicEvent.Type.SPEECH).count());
+            require(evidence.outcome() == Transcript.Outcome.COMPLETE && result.get("publicContributions").equals(2L),
+                    "Actual local sitting must complete its two contributions; inspect retained public evidence");
+            long chatBefore = chatCount(log);
+            boolean rejected = false;
+            try {
+                factory.forModel(bounded.models().get("qwen3-local"), config).complete(new ChatRequest("Bounded local context acceptance",
+                        List.of(new ChatMessage(ChatMessage.Role.USER, "x".repeat(config.contextTokens()))), bounded.models().get("qwen3-local")));
+            } catch (IllegalArgumentException expected) { rejected = expected.getMessage().contains("context budget"); }
+            require(rejected && chatCount(log) == chatBefore, "Oversized context must be refused before real inference");
+            result.put("oversizedContextRefusedBeforeInference", true);
+            System.out.println("Evaluating saved public evidence with the independently selected local blind rubric");
+            var evaluation = OfficialOllamaSmoke.finish(application, application.evaluateLlm(sitting.id(), Map.of("modelPreset", "qwen3-local")).id(), stopSignal);
+            AtomicFiles.write(root.resolve("llm-job.json"), Json.write(evaluation));
+            var report = Json.read(Json.write(evaluation.result()), LlmReport.class);
+            AtomicFiles.write(root.resolve("llm-report.json"), Json.write(report));
+            result.put("rubricJobState", evaluation.state()); result.put("rubricJobId", evaluation.id());
+            if (!report.assessments().topics().isEmpty()) {
+                result.put("rubricTopicStatus", report.assessments().topics().get(0).status());
+                result.put("rubricError", report.assessments().topics().get(0).error());
+            }
+            require(evaluation.state() == BackgroundJob.State.COMPLETE && report.assessments().topics().size() == 1
+                    && report.assessments().topics().get(0).status() == EvaluationStatus.OK, "Actual blind rubric did not validate; retain the bounded failure/report");
+            var participants = report.assessments().topics().get(0).assessment().participants();
+            require(participants.size() == 2 && participants.stream().allMatch(participant -> participant.metrics().size() == 5), "Rubric must retain five separate metrics per participant");
+            result.put("separateRubricMetrics", 5); result.put("state", "PASS");
+        } finally {
+            application.close(); Runtime.getRuntime().removeShutdownHook(cleanup);
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+            while (occupied(port) && System.nanoTime() < deadline) Thread.sleep(50);
+            result.put("ownedPortReleased", !occupied(port));
+            result.put("providerAttempts", modelCalls.get());
+            if (Files.exists(log)) result.put("realChatHttpRequests", chatCount(log) - initialChatRequests);
+            result.put("researchValidity", "not assessed; requires genuine human review");
+            if (!Boolean.TRUE.equals(result.get("ownedPortReleased"))) result.put("state", "FAILED");
+            result.put("verifiedAt", java.time.Instant.now().toString());
+            AtomicFiles.write(root.resolve("model-result.json"), Json.write(result));
+            AtomicFiles.write(root.resolve("model-result-" + acceptanceId + ".json"), Json.write(result));
+        }
+        require(Boolean.TRUE.equals(result.get("ownedPortReleased")), "Selected-model acceptance must release its owned runtime");
+        System.out.println("Genuine selected local-model/cache/context/rubric acceptance PASS; no research accuracy claim");
+        System.out.println("Result: " + root.resolve("model-result.json"));
+    }
+    private static long chatCount(Path log) throws Exception {
+        try (var lines = Files.lines(log)) { return lines.filter(line -> line.contains("/api/chat") && line.contains("POST")).count(); }
+    }
+    private static boolean occupied(int port) {
+        try (var socket = new Socket()) { socket.connect(new InetSocketAddress("127.0.0.1", port), 250); return true; }
+        catch (java.io.IOException e) { return false; }
+    }
+    private static void require(boolean condition, String message) { if (!condition) throw new IllegalStateException(message); }
+}

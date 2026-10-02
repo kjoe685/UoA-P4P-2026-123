@@ -42,7 +42,7 @@ public final class OllamaChatManager implements ChatManager {
         // UTF-8 bytes plus per-message overhead are a deliberately conservative token upper estimate.
         long estimated = Json.write(messages).getBytes(StandardCharsets.UTF_8).length + 256L + messages.size() * 32L;
         if (estimated + request.model().maxCompletionTokens() > contextTokens)
-            throw new IllegalArgumentException("Request exceeds the conservative Ollama context budget");
+            throw new engine.chat.ContextBudgetExceededException();
         Map<String, Object> options = new LinkedHashMap<>();
         options.put("num_ctx", contextTokens);
         options.put("num_predict", request.model().maxCompletionTokens());

@@ -104,6 +104,28 @@ class RunLifecycleTest {
             assertTrue(app.textExport(run.id()).contains("Completed evidence"));
         }
     }
+    @Test void localContextFailureGivesOperatorGuidanceAndRetainsEarlierEvidenceAcrossRestart() throws Exception {
+        TestFixtures.copyResources(root); var calls=new AtomicInteger();
+        var store=new RunStore(root.resolve("runs")); String id; Transcript saved;
+        var local=new engine.config.ModelConfig("ollama","qwen3:8b",null,null,4096,5);
+        var adapter=new engine.provider.OllamaChatManager(java.net.URI.create("http://127.0.0.1:1"),1024);
+        try (var app=new DebateApplication(root,store,model -> request -> {
+            if (calls.incrementAndGet()==1) return completed("Earlier committed public evidence.");
+            return adapter.complete(new ChatRequest(request.systemInstructions(),request.messages(),local));
+        })) {
+            var run=app.start(TestFixtures.settings()); finish(run); id=run.id(); saved=run.transcript();
+            assertEquals(Transcript.Outcome.ERROR,saved.outcome()); assertEquals(2,calls.get());
+            String view=String.join("",run.awaitEvents(0,1));
+            assertTrue(view.contains("local context budget")); assertTrue(view.contains("Increase the configured context limit"));
+            assertTrue(view.contains("reduce grounding, rounds or output tokens"));
+            assertTrue(app.textExport(id).contains("Earlier committed public evidence."));
+            assertFalse(Json.write(saved).contains("context budget"));
+        }
+        try (var restarted=new DebateApplication(root,store,model -> { throw new AssertionError("Do not retry failed generation on recovery"); })) {
+            assertEquals(saved,restarted.find(id).transcript());
+            assertTrue(String.join("",restarted.find(id).awaitEvents(0,1)).contains("local context budget"));
+        }
+    }
     @Test void importedTranscriptsAreAssignedNewStorageIdsAndDoNotGenerate() throws Exception {
         TestFixtures.copyResources(root); AtomicInteger calls=new AtomicInteger();
         try (var app=new DebateApplication(root,new RunStore(root.resolve("runs")),model -> request -> { calls.incrementAndGet(); return completed("Public speech."); })) {

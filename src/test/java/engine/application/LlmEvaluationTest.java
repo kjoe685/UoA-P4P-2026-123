@@ -143,6 +143,28 @@ public class LlmEvaluationTest {
             assertTrue(report.assessments().topics().get(0).attempts().get(0).requestSha256().matches("[0-9a-f]{64}"));
         }
     }
+    @Test void localContextRefusalHasItsOwnSafeReportCodeAndDoesNotMasqueradeAsProviderFailure() throws Exception {
+        TestFixtures.copyResources(root); var resources=LlmEvaluationResources.load(root);
+        var local=new ModelConfig("ollama","qwen3:8b",null,null,4096,5);
+        var adapter=new engine.provider.OllamaChatManager(java.net.URI.create("http://127.0.0.1:1"),1024);
+        var calls=new AtomicInteger();
+        try (var jobs=new JobService(root.resolve("runs/jobs"))) {
+            var job=finish(jobs,new LlmEvaluationService(root,jobs,model -> request -> {
+                if (calls.incrementAndGet()==1) return new ChatResponse("{}","ollama","qwen3:8b",ChatResponse.CompletionStatus.COMPLETED,null,1);
+                return adapter.complete(request);
+            }).start(evidence(),local).id());
+            var report=(LlmReport)job.result(); var topic=report.assessments().topics().get(0);
+            assertEquals(BackgroundJob.State.FAILED,job.state()); assertEquals("context_budget_exceeded",topic.error());
+            assertEquals(2,calls.get()); assertEquals(2,topic.attempts().size()); assertNull(topic.assessment());
+            assertEquals(ChatResponse.CompletionStatus.COMPLETED,topic.attempts().get(0).completionStatus());
+            assertNull(topic.attempts().get(1).completionStatus()); assertNull(topic.attempts().get(1).usage());
+            try (var restarted=new JobService(root.resolve("runs/jobs"))) {
+                assertEquals(Json.parse(Json.write(report)),restarted.find(job.id()).result());
+            }
+        }
+        var untrusted=new LLMEvaluator(request -> { throw new IllegalArgumentException("Request exceeds the conservative Ollama context budget"); },local,resources);
+        assertEquals("provider_failed",untrusted.evaluate(evidence()).topics().get(0).error());
+    }
     /** Deliberately fake loopback backend for browser acceptance; no provider/network calls. */
     public static void main(String[] args) throws Exception {
         Path root=Path.of("target/llm-ui-fixture-"+UUID.randomUUID()); TestFixtures.copyResources(root);

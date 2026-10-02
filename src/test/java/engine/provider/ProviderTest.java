@@ -180,7 +180,8 @@ class ProviderTest {
     }
     @Test void localContextAndCapabilityFailuresHappenBeforeAnyCall() {
         var small = new OllamaChatManager(HttpClient.newHttpClient(), base, 1024);
-        assertThrows(IllegalArgumentException.class, () -> small.complete(request("ollama", "private", false, 10)));
+        var refusal=assertThrows(ContextBudgetExceededException.class, () -> small.complete(request("ollama", "private", false, 10)));
+        assertNull(refusal.getCause()); assertFalse(refusal.getMessage().contains("private"));
         assertThrows(IllegalArgumentException.class, () -> provider("grok").complete(request("gemini", "private", false, 10)));
         assertThrows(IllegalArgumentException.class, () -> new ModelConfig("grok", "grok-4.7", null, "medium", 100, 10));
         assertThrows(IllegalArgumentException.class, () -> new ModelConfig("gemini", "gemini/../secret", null, null, 100, 10));

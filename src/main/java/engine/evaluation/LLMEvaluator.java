@@ -73,7 +73,8 @@ public final class LLMEvaluator {
             try { response = Objects.requireNonNull(provider.complete(request)); }
             catch (RuntimeException e) {
                 attempts.add(new LlmAnalysisMetric.Attempt(model.provider(), model.model(), null, null, (System.nanoTime() - start) / 1_000_000,engine.utils.Hashes.sha256(Json.write(request))));
-                return failure(topic, Thread.currentThread().isInterrupted() ? "evaluation_interrupted" : "provider_failed", attempts);
+                return failure(topic, Thread.currentThread().isInterrupted() ? "evaluation_interrupted"
+                        : e instanceof engine.chat.ContextBudgetExceededException ? "context_budget_exceeded" : "provider_failed", attempts);
             }
             attempts.add(new LlmAnalysisMetric.Attempt(response.provider(), response.model(), response.status(), response.usage(), response.latencyMillis(),engine.utils.Hashes.sha256(Json.write(request))));
             if (response.status() != ChatResponse.CompletionStatus.COMPLETED)

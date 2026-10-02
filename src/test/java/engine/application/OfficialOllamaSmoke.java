@@ -86,7 +86,7 @@ public final class OfficialOllamaSmoke {
         System.out.println("Result: " + root.resolve("result.json"));
     }
 
-    private static BackgroundJob finish(DebateApplication application, String id, Path stopSignal) throws Exception {
+    static BackgroundJob finish(DebateApplication application, String id, Path stopSignal) throws Exception {
         long deadline = System.nanoTime() + TimeUnit.MINUTES.toNanos(65);
         String previous = "";
         for (;;) {
@@ -95,7 +95,10 @@ public final class OfficialOllamaSmoke {
                 throw new IllegalStateException("Official acceptance stopped; partial files and progress retained");
             }
             var job = application.background().find(id);
-            if (!job.progress().equals(previous)) { System.out.println(job.progress()); previous = job.progress(); }
+            String progress = job.progress();
+            if (job.result() instanceof Map<?,?> counters && counters.containsKey("completedBytes"))
+                progress += " (" + counters.get("completedBytes") + " / " + counters.get("totalBytes") + " bytes)";
+            if (!progress.equals(previous)) { System.out.println(progress); previous = progress; }
             if (job.terminal()) return job;
             if (System.nanoTime() > deadline) {
                 application.background().cancel(id);

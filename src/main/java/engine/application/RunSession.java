@@ -79,7 +79,8 @@ public final class RunSession implements EngineOutput {
             if (manager.isStopRequested()) result=Transcript.Outcome.ADJOURNED;
             else {
                 result=Transcript.Outcome.ERROR;
-                try { record(Map.of("type","error","message","Generation failed. Check provider configuration and retry.")); }
+                try { record(Map.of("type","error","message",e instanceof engine.chat.ContextBudgetExceededException
+                        ? engine.chat.ContextBudgetExceededException.GUIDANCE : "Generation failed. Check provider configuration and retry.")); }
                 catch (RuntimeException ignored) { }
             }
         } finally {

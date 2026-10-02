@@ -1,6 +1,9 @@
 param(
     [string]$ResumeFixture,
-    [int]$Port = 11439
+    [int]$Port = 11439,
+    [ValidateSet('Runtime','Model')][string]$Mode = 'Runtime',
+    [string]$RuntimeFixture,
+    [int]$ContextTokens = 16384
 )
 $ErrorActionPreference = 'Stop'
 $taskRepository = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
@@ -17,14 +20,28 @@ if ($ResumeFixture) {
 }
 $taskProfile = Join-Path $taskFixture 'profile'
 New-Item -ItemType Directory -Path $taskProfile -Force | Out-Null
+if ($RuntimeFixture) {
+    $taskSourceFixture = [IO.Path]::GetFullPath($RuntimeFixture)
+    if (!$taskSourceFixture.StartsWith($taskPrefix, [StringComparison]::OrdinalIgnoreCase)) { throw 'RuntimeFixture must stay inside this project target' }
+    $taskArchiveName = 'ollama-windows-amd64.zip'
+    $taskSourceArchive = Join-Path $taskSourceFixture ('.runtime/ollama-downloads/0.35.0/' + $taskArchiveName)
+    if (!(Test-Path -LiteralPath $taskSourceArchive -PathType Leaf)) { throw 'RuntimeFixture has no verified Windows x64 archive' }
+    $taskArchiveFolder = Join-Path $taskFixture '.runtime/ollama-downloads/0.35.0'
+    New-Item -ItemType Directory -Path $taskArchiveFolder -Force | Out-Null
+    $taskDestinationArchive = Join-Path $taskArchiveFolder $taskArchiveName
+    if (!(Test-Path -LiteralPath $taskDestinationArchive)) { Copy-Item -LiteralPath $taskSourceArchive -Destination $taskDestinationArchive }
+    # The shared installer verifies the copied archive against its existing size/SHA-256 pins.
+}
 $taskJava = Join-Path $taskRepository '.runtime/jdk-17.0.20.1+1/bin/java.exe'
 if (!(Test-Path -LiteralPath $taskJava -PathType Leaf)) { throw 'Build first using run.cmd or mvnw.cmd and the pinned managed JDK' }
-if (!(Test-Path -LiteralPath (Join-Path $taskTarget 'test-classes/engine/application/OfficialOllamaSmoke.class'))) {
+$taskMain = if ($Mode -eq 'Model') { 'OfficialOllamaModelSmoke' } else { 'OfficialOllamaSmoke' }
+if (!(Test-Path -LiteralPath (Join-Path $taskTarget ('test-classes/engine/application/' + $taskMain + '.class')))) {
     throw 'Compile test helpers first with mvnw.cmd test-compile'
 }
 if (!(Test-Path -LiteralPath (Join-Path $taskTarget 'virtual-parliament.jar'))) { throw 'Build the packaged application first with mvnw.cmd verify' }
 $taskStopSignal = Join-Path $taskFixture ('stop-' + [guid]::NewGuid().ToString('N') + '.requested')
-$taskArguments = '-Djava.io.tmpdir="' + $taskTarget + '" -cp "' + (Join-Path $taskTarget 'test-classes') + ';' + (Join-Path $taskTarget 'virtual-parliament.jar') + '" engine.application.OfficialOllamaSmoke "' + $taskFixture + '" ' + $Port + ' "' + $taskStopSignal + '"'
+$taskArguments = '-Djava.io.tmpdir="' + $taskTarget + '" -cp "' + (Join-Path $taskTarget 'test-classes') + ';' + (Join-Path $taskTarget 'virtual-parliament.jar') + '" engine.application.' + $taskMain + ' "' + $taskFixture + '" ' + $Port + ' "' + $taskStopSignal + '"'
+if ($Mode -eq 'Model') { $taskArguments += ' ' + $ContextTokens }
 $taskStart = New-Object Diagnostics.ProcessStartInfo
 $taskStart.FileName = $taskJava
 $taskStart.Arguments = $taskArguments
@@ -41,7 +58,8 @@ foreach ($taskKey in @($taskStart.EnvironmentVariables.Keys)) {
     }
 }
 Write-Output "Official runtime acceptance fixture: $taskFixture"
-Write-Output 'Explicitly downloads the pinned official archive only; no model weights or generation.'
+if ($Mode -eq 'Model') { Write-Output 'Explicit model mode downloads local qwen3:8b weights and performs bounded genuine local generation/rubric calls.' }
+else { Write-Output 'Explicitly downloads the pinned official archive only; no model weights or generation.' }
 $taskChild = [Diagnostics.Process]::Start($taskStart)
 [ordered]@{ pid = $taskChild.Id; fixture = $taskFixture; port = $Port; stopSignal = $taskStopSignal; startedAt = (Get-Date -Format o) } |
     ConvertTo-Json | Set-Content -LiteralPath (Join-Path $taskFixture 'process.json') -Encoding UTF8
