@@ -67,6 +67,15 @@ public final class Main {
                     default -> throw new IllegalArgumentException("corpus status | validate FILE | import FILE");
                 }
             }
+            case "ollama" -> {
+                requireArgs(args,2);
+                switch (args[1]) {
+                    case "status" -> output.println(get("/api/ollama-readiness"));
+                    case "setup" -> output.println(post("/api/ollama-setup","{}"));
+                    case "download" -> { requireArgs(args,3); output.println(post("/api/ollama-model-setup",Json.write(Map.of("modelPreset",args[2])))); }
+                    default -> throw new IllegalArgumentException("ollama status | setup | download MODEL_PRESET");
+                }
+            }
             case "local" -> {
                 requireArgs(args,2);
                 switch (args[1]) {
@@ -120,16 +129,26 @@ public final class Main {
                 requireArgs(args,2); String text=get(runPath(args[1])+(args[0].equals("transcript") ? "/transcript" : "/export"));
                 if (args.length>2) Files.writeString(Path.of(args[2]),text,StandardCharsets.UTF_8); else output.println(text);
             }
-            default -> throw new IllegalArgumentException("Commands: config, settings, assets, corpus status/validate/import, pilot list/import/show/prepare/evaluate, local status/setup, evaluate ID [METHODS], jobs, job ID, cancel-job ID, report ID [FILE], runs, start SETTINGS.json, import TRANSCRIPT.json, watch ID, ruling ID TEXT, cancel ID, transcript ID [FILE], export ID [FILE]");
+            default -> throw new IllegalArgumentException("Commands: config, settings, assets, corpus status/validate/import, pilot list/import/show/prepare/evaluate, local status/setup/download METHOD, ollama status/setup/download MODEL_PRESET, evaluate ID [METHODS], jobs, job ID, cancel-job ID, report ID [FILE], runs, start SETTINGS.json, import TRANSCRIPT.json, watch ID, ruling ID TEXT, cancel ID, transcript ID [FILE], export ID [FILE]");
         }
     }
     void menu() throws Exception {
         while (true) {
-            output.println("\n1 Start sitting\n2 Saved sittings\n3 Watch sitting\n4 Chair ruling\n5 Adjourn\n6 Export JSON\n7 Export text\n8 Import transcript\n9 Saved settings\n10 Advanced assets\n11 Start from saved settings\n12 Local evaluation setup\n13 Evaluate sitting\n14 Analysis jobs/reports\n15 LLM rubric evaluation\n16 Grounding corpus\n17 Human-review pilots\n0 Exit");
+            output.println("\n1 Start sitting\n2 Saved sittings\n3 Watch sitting\n4 Chair ruling\n5 Adjourn\n6 Export JSON\n7 Export text\n8 Import transcript\n9 Saved settings\n10 Advanced assets\n11 Start from saved settings\n12 Local evaluation setup\n13 Evaluate sitting\n14 Background jobs/reports\n15 LLM rubric evaluation\n16 Grounding corpus\n17 Human-review pilots\n18 Local LLM setup\n0 Exit");
             String choice=ask("Choice: ");
             if (choice.equals("0") || choice.isEmpty() && !input.hasNextLine()) return;
             try {
                 switch (choice) {
+                    case "18" -> {
+                        output.println(get("/api/ollama-readiness"));
+                        String action=ask("Local LLM: setup downloads the portable runtime, download caches a model (blank = return): ");
+                        if (action.equals("setup")) output.println(post("/api/ollama-setup","{}"));
+                        else if (action.equals("download")) {
+                            var config=(Map<?,?>)Json.parse(get("/api/config")); var models=(Map<?,?>)config.get("models");
+                            output.println("Ollama presets: "+models.entrySet().stream().filter(entry -> ((Map<?,?>)entry.getValue()).get("provider").equals("ollama")).map(entry -> entry.getKey().toString()).toList());
+                            output.println(post("/api/ollama-model-setup",Json.write(Map.of("modelPreset",ask("Ollama model preset: ")))));
+                        } else if (!action.isBlank()) throw new IllegalArgumentException("Choose setup or download");
+                    }
                     case "17" -> {
                         output.println(get("/api/pilots")); String action=ask("Pilot action: import, show, prepare, evaluate (blank = return): ");
                         if (action.isBlank()) break;

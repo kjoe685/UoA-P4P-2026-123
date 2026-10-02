@@ -168,6 +168,10 @@ async function initSetup(suppliedSettings = null) {
   setup.groundingCount = Number.isInteger(saved.groundingCount) ? saved.groundingCount : -1;
   $('#grounding-count').value=setup.groundingCount;
   const evaluatorOverride=$('#analysis-llm-model').value;
+  const localPreset=$('#ollama-model-preset').value;
+  const localModels=Object.entries(config.models).filter(([,model])=>model.provider==='ollama');
+  $('#ollama-model-preset').replaceChildren(...localModels.map(([id,model])=>el('option',{text:`${id} · ${model.model}`,attrs:{value:id,selected:localPreset===id}})));
+  $('#download-ollama-model').disabled=localModels.length===0;
   $('#analysis-llm-model').replaceChildren(el('option',{text:"Sitting's saved evaluator",attrs:{value:''}}),
     ...Object.entries(config.models).filter(([,model])=>model.provider!=='demo').map(([id,model])=>el('option',{text:`${id} · ${model.provider}`,attrs:{value:id,selected:evaluatorOverride===id}})));
   for (const [selector, key] of [['#agent-model', 'agentModelPreset'], ['#evaluator-model', 'evaluatorModelPreset']]) {
@@ -1038,6 +1042,27 @@ async function refreshLocalReadiness() {
   } catch(error) { $('#local-readiness').textContent=error.message; }
 }
 
+async function refreshOllamaReadiness() {
+  try {
+    const state=await api('/api/ollama-readiness');
+    $('#ollama-readiness').textContent=state.running ? `Ollama ${state.version} responds (${state.owned ? 'started by this backend' : 'existing service'}). Context budget: ${state.settings.contextTokens} tokens.`
+      : state.installed ? 'Portable runtime installed. Using a local model starts its service when needed.' : 'Portable runtime is not installed. Set up the runtime, then cache a local model.';
+    $('#ollama-runtime-size').textContent=`Runtime ${state.runtimePackage.version}: ${(state.runtimePackage.bytes/1e6).toFixed(0)} MB download if not already installed. Model weights are separate.`;
+    $('#ollama-models').replaceChildren(...state.models.map(model=>el('p',{className:'hint',text:`${model.name} · ${(model.bytes/1e9).toFixed(2)} GB · ${model.local ? 'local files cached' : 'remote alias; cannot be used for local generation'}`})));
+  } catch(error) { $('#ollama-readiness').textContent=error.message; }
+}
+
+async function setupOllama(downloadModel=false) {
+  const button=$(downloadModel ? '#download-ollama-model' : '#setup-ollama'); button.disabled=true;
+  try {
+    const {id}=await api(downloadModel ? '/api/ollama-model-setup' : '/api/ollama-setup',
+      {method:'POST',body:downloadModel ? {modelPreset:$('#ollama-model-preset').value} : {}});
+    $('#ollama-status').textContent=`${downloadModel ? 'Model download' : 'Runtime setup'} job ${id} queued. Open Background jobs to inspect progress or cancel.`;
+    await refreshJobs();
+  } catch(error) { $('#ollama-status').textContent=error.message; }
+  finally { button.disabled=downloadModel && $('#ollama-model-preset').options.length===0; }
+}
+
 async function setupLocal() {
   try {
     const {id}=await api('/api/local-setup',{method:'POST',body:{}});
@@ -1068,6 +1093,12 @@ async function openReport(id) {
     $('#analysis-status').textContent=job.progress;
     if (!result) { $('#analysis-report').replaceChildren(); return; }
     const contents=[el('h3',{text:`${job.kind} · ${job.state.toLowerCase()}`})];
+    if (job.kind.startsWith('ollama-')) {
+      if (result.message) contents.push(el('p',{text:result.message}));
+      if (result.running!==undefined) contents.push(el('p',{text:result.running ? `Ollama ${result.version} responds. ${result.owned ? 'This backend owns its service.' : 'An existing service is reused.'}` : 'Local service is unavailable or incompatible.'}));
+      if (result.totalBytes!=null) contents.push(el('p',{text:`Download progress: ${result.completedBytes || 0} / ${result.totalBytes} bytes.`}));
+      for (const model of result.models || []) contents.push(el('p',{text:`${model.name}: ${model.local ? 'local files cached' : 'remote alias refused'} · ${(model.bytes/1e9).toFixed(2)} GB. Cached files have not been behaviourally verified.`}));
+    }
     if (result.assessments) {
       const assessment=result.assessments;
       contents.push(el('p',{text:`Evaluator: ${assessment.model.provider} / ${assessment.model.model}. Rubric: ${assessment.rubric.version}. Scores remain separate; rhetorical tactics measures disruption.`}));
@@ -1098,13 +1129,16 @@ async function openReport(id) {
           ` (${Object.entries(chunk.scores).map(([label,score])=>`${label} ${score.toFixed(3)}`).join(', ')}; ${chunk.uncertainty?.abstained ? 'abstained' : 'uncalibrated scores'})`}`}));
       }
     }
-    contents.push(el('a',{text:'Download analysis JSON',attrs:{href:`/api/jobs/${encodeURIComponent(id)}/report?download=1`,download:`analysis-${id}.json`}}));
-    contents.push(el('details',{},el('summary',{text:'Evidence, provenance and separate scores'}),el('pre',{text:JSON.stringify(result,null,2)})));
+    contents.push(el('a',{text:'Download report JSON',attrs:{href:`/api/jobs/${encodeURIComponent(id)}/report?download=1`,download:`report-${id}.json`}}));
+    contents.push(el('details',{},el('summary',{text:job.kind.startsWith('ollama-') ? 'Local setup details' : 'Evidence, provenance and separate scores'}),el('pre',{text:JSON.stringify(result,null,2)})));
     $('#analysis-report').replaceChildren(...contents);
   } catch(error) { $('#analysis-status').textContent=error.message; }
 }
 
 function wireEvents() {
+  $('#refresh-ollama').addEventListener('click',refreshOllamaReadiness);
+  $('#setup-ollama').addEventListener('click',()=>setupOllama());
+  $('#download-ollama-model').addEventListener('click',()=>setupOllama(true));
   $('#setup-local').addEventListener('click',setupLocal);
   $('#pilot-file').addEventListener('change',importPilot);
   $('#pilot-id').addEventListener('change',selectPilot);
@@ -1113,7 +1147,7 @@ function wireEvents() {
   $('#evaluate-pilot').addEventListener('click',evaluatePilot);
   $('#setup-cardiff').addEventListener('click',()=>setupLocalModel('cardiff-sentiment'));
   $('#setup-deberta').addEventListener('click',()=>setupLocalModel('deberta-stance'));
-  $('#refresh-jobs').addEventListener('click',async()=>{await refreshJobs(); await refreshLocalReadiness();});
+  $('#refresh-jobs').addEventListener('click',async()=>{await refreshJobs(); await refreshLocalReadiness(); await refreshOllamaReadiness();});
   $('#evaluate-btn').addEventListener('click',evaluateSitting);
   $('#evaluate-llm-btn').addEventListener('click',async()=>{
     if (!sitting) return;
@@ -1191,7 +1225,7 @@ async function main() {
   await refreshSavedRuns();
   await refreshCorpus();
   await refreshPilots();
-  await refreshJobs(); await refreshLocalReadiness();
+  await refreshJobs(); await refreshLocalReadiness(); await refreshOllamaReadiness();
   setInterval(refreshJobs,3000);
 
   // Rejoin a sitting in progress after a page reload.

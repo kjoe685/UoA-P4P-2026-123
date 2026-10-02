@@ -2,6 +2,8 @@ package engine.provider;
 
 import engine.ChatManager;
 import engine.config.ModelConfig;
+import engine.config.OllamaConfig;
+import engine.application.ManagedOllama;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.net.URI;
@@ -15,18 +17,35 @@ public final class ProviderFactory {
     private final Function<String, String> environment;
     private final Path legacyOpenAiKey;
     private final Path openAiKey;
+    private Path root;
+    private ManagedOllama ollama;
     private final Map<String, ChatManager> providers = new ConcurrentHashMap<>();
     public ProviderFactory() { this(Path.of(".")); }
     public ProviderFactory(Path root) {
         this(System::getenv, root.resolve("keys/openAi/OpenAI_Key.txt"), root.resolve("keys/OpenAI_Key.txt"));
+        this.root=root;
     }
+    public ProviderFactory(Path root,ManagedOllama ollama) { this(root); this.ollama=ollama; }
     ProviderFactory(Function<String, String> environment, Path legacyOpenAiKey) {
         this(environment, null, legacyOpenAiKey);
     }
     ProviderFactory(Function<String, String> environment, Path openAiKey, Path legacyOpenAiKey) {
         this.environment = environment; this.openAiKey = openAiKey; this.legacyOpenAiKey = legacyOpenAiKey;
     }
-    public ChatManager forModel(ModelConfig model) { return providers.computeIfAbsent(model.provider(), this::create); }
+    public ChatManager forModel(ModelConfig model) {
+        return forModel(model,model.provider().equals("ollama") ? (root==null ? OllamaConfig.defaults().effective(environment) : OllamaConfig.load(root)) : null);
+    }
+    public ChatManager forModel(ModelConfig model,OllamaConfig config) {
+        if (!model.provider().equals("ollama")) return providers.computeIfAbsent(model.provider(),this::create);
+        OllamaConfig.requireLocalModel(model.model());
+        if (config==null) throw new IllegalArgumentException("Local runtime settings are required");
+        return providers.computeIfAbsent("ollama:"+engine.utils.Json.write(config),key -> {
+            var adapter=new OllamaChatManager(config.baseUrl(),config.contextTokens());
+            return ollama==null ? adapter : request -> {
+                ollama.ensureRunning(config); ollama.requireCachedModel(config,request.model().model()); return adapter.complete(request);
+            };
+        });
+    }
     private ChatManager create(String provider) {
         return switch (provider) {
             case "demo" -> new engine.demo.DemoChatManager();
@@ -34,19 +53,8 @@ public final class ProviderFactory {
             case "anthropic" -> new AnthropicChatManager(key("ANTHROPIC_API_KEY", false));
             case "gemini" -> new GeminiChatManager(key("GEMINI_API_KEY", false));
             case "grok" -> new GrokChatManager(key("XAI_API_KEY", false));
-            case "ollama" -> new OllamaChatManager(ollamaBase(), ollamaContext());
             default -> throw new IllegalArgumentException("Unsupported provider");
         };
-    }
-    private URI ollamaBase() {
-        String value = environment.apply("OLLAMA_BASE_URL");
-        try { return URI.create(value == null || value.isBlank() ? "http://127.0.0.1:11434" : value); }
-        catch (IllegalArgumentException e) { throw new IllegalArgumentException("Invalid Ollama base URL"); }
-    }
-    private int ollamaContext() {
-        String value = environment.apply("OLLAMA_CONTEXT_TOKENS");
-        try { return value == null || value.isBlank() ? 16384 : Integer.parseInt(value); }
-        catch (NumberFormatException e) { throw new IllegalArgumentException("Invalid Ollama context limit"); }
     }
     private String key(String name, boolean allowLegacy) {
         String value = environment.apply(name);

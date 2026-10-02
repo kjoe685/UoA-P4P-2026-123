@@ -33,9 +33,23 @@
   </header>
 
   <main>
+    <details class="card local-llm">
+      <summary class="card-title">Local LLM setup</summary>
+      <p class="hint">Use Ollama for local debate and rubric evaluation. An existing compatible local service can be reused. Setup and model downloads are explicit; model files can require several GB. Cached files do not establish model behaviour or research accuracy.</p>
+      <p id="ollama-readiness" class="hint" role="status"></p>
+      <button id="refresh-ollama" type="button" class="btn btn-secondary">Refresh local LLM status</button>
+      <button id="setup-ollama" type="button" class="btn btn-secondary">Set up portable Ollama runtime</button>
+      <p id="ollama-runtime-size" class="hint"></p>
+      <label for="ollama-model-preset" class="field-label">Local model to cache</label>
+      <select id="ollama-model-preset"></select>
+      <button id="download-ollama-model" type="button" class="btn btn-secondary">Download selected local model</button>
+      <div id="ollama-models" aria-label="Cached local models"></div>
+      <p class="hint">Select the cached model in your sitting or evaluator settings. Start with fewer grounding excerpts if the request exceeds the configured context budget. Setup progress and cancellation are available in Background jobs below. Advanced configuration includes local LLM settings.</p>
+      <p id="ollama-status" class="hint" role="status"></p>
+    </details>
     <section class="card local-analysis" aria-labelledby="analysis-title">
       <div class="saved-head"><h2 id="analysis-title" class="card-title">Local analysis</h2>
-        <button id="refresh-jobs" type="button" class="btn btn-secondary">Refresh analysis</button></div>
+        <button id="refresh-jobs" type="button" class="btn btn-secondary">Refresh jobs and setup</button></div>
       <p class="hint">VADER reports lexical sentiment for each sentence. Scores describe wording; they do not establish political stance or argument quality.</p>
       <p id="local-readiness" class="hint" role="status"></p>
       <button id="setup-local" type="button" class="btn btn-secondary">Set up local VADER</button>
@@ -49,6 +63,7 @@
       </fieldset>
       <p class="hint">Cardiff reports uncalibrated class scores. It was trained on tweets and needs parliamentary domain validation.</p>
       <p class="hint">DeBERTa compares support, opposition and unrelated wording for each topic's policy proposition. Topics without a proposition report insufficient evidence. Uncertainty can cause abstention. These scores do not establish party identity, hidden intent or reasoning quality.</p>
+      <h3>Background jobs</h3>
       <div id="analysis-jobs" class="saved-list"></div>
       <label for="analysis-llm-model" class="field-label">LLM evaluator override</label>
       <select id="analysis-llm-model"><option value="">Sitting's saved evaluator</option></select>

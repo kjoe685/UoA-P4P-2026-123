@@ -13,7 +13,7 @@ public final class AssetService {
     private final List<String> paths;
     public AssetService(Path root) {
         this.root=root.toAbsolutePath().normalize();
-        List<String> names=new ArrayList<>(List.of("config/engine.json","config/local-evaluation.json","nlp/config/models.json","data/hansard/excerpts.json"));
+        List<String> names=new ArrayList<>(List.of("config/engine.json","config/ollama.json","config/local-evaluation.json","nlp/config/models.json","data/hansard/excerpts.json"));
         for (TemplateName name:TemplateName.values()) names.add("prompts/"+name.fileName());
         names.addAll(List.of("config/llm-evaluation.json","evaluation/rubric.json","prompts/EvaluatorPrompt.txt","prompts/EvaluatorCue.txt","prompts/EvaluatorRepair.txt"));
         paths=List.copyOf(names);
@@ -37,6 +37,7 @@ public final class AssetService {
         if (text==null || text.isBlank() || text.length()>1_000_000) throw new IllegalArgumentException("Asset needs 1–1000000 characters");
         if (name.equals("config/llm-evaluation.json") || name.equals("evaluation/rubric.json") || name.startsWith("prompts/Evaluator"))
             engine.evaluation.llm.LlmEvaluationResources.load(root,Map.of(name,text));
+        else if (name.equals("config/ollama.json")) engine.utils.Json.read(text,engine.config.OllamaConfig.class);
         else if (name.equals("nlp/config/models.json")) new ManagedNlp(root).validateConfiguration(text);
         else if (name.equals("config/local-evaluation.json")) engine.utils.Json.read(text,engine.evaluation.local.LocalEvaluationConfig.class);
         else ConfigurationSnapshot.load(root,Map.of(name,text));

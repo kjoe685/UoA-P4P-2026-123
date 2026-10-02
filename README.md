@@ -20,6 +20,8 @@ For OpenAI, set `OPENAI_API_KEY` or copy `keys/openAi/OpenAI_Key_TEMPLATE.txt` t
 
 Anthropic, Gemini, Grok and local Ollama adapters are also integrated. Select a preset and configure the provider as described in the [configuration reference](docs/configuration.md). These integrations have mock protocol coverage; live access and model behaviour remain unverified. Do not install Python or NLP models for a basic debate.
 
+For local LLMs, open **Local LLM setup**, explicitly set up the portable Ollama runtime, then download a configured local model. Existing compatible Ollama services can be reused. An installed managed runtime starts when a local model is used and stops with its owning backend. Start with a small grounding count to stay within the context budget. The same controls are available in guided choice18 and `cli ollama status|setup|download PRESET`; see [local LLM setup](docs/ollama-setup.md). Runtime/model downloads can require several GB; routine verification uses tiny fixtures and fake inference.
+
 Save and load reusable settings in setup. **Advanced configuration** edits model/profile/interruptions JSON, prompts and grounding; validation precedes each save. Existing sittings retain their frozen resources.
 
 Grounding includes 100 genuine ParlSpeech excerpts per supported party. Choose zero, a shared count, or member overrides. Advanced configuration previews and imports validated corpus files; see [grounding and provenance](docs/grounding.md) for the reproducible extraction policy and its sampling limits.

@@ -10,10 +10,10 @@ Model presets include the deterministic demo, OpenAI, Anthropic, Gemini, Grok an
 | Anthropic | `ANTHROPIC_API_KEY` |
 | Gemini | `GEMINI_API_KEY` |
 | Grok | `XAI_API_KEY` |
-| Ollama | Install Ollama and explicitly pull the selected model yourself. `OLLAMA_BASE_URL` defaults to `http://127.0.0.1:11434`, restricted to loopback HTTP. `OLLAMA_CONTEXT_TOKENS` defaults to 16384. |
+| Ollama | **Local LLM setup**, guided choice18 or `cli ollama setup` installs the pinned portable runtime; `cli ollama download PRESET` explicitly caches a model. Existing compatible loopback services can be reused. See [local LLM setup](ollama-setup.md). |
 | Demonstration | No keys, downloads or model service. Fixed sample speeches. |
 
-Restart the backend after changing credentials or Ollama environment settings. Ollama generation is serialized and refuses a request that exceeds a conservative UTF-8-based context estimate; it does not silently discard conversation or grounding. Cloud transports never follow redirects and retry only one short rate-limit rejection. Truncated, refused, malformed or unsupported responses do not become speeches.
+Restart the backend after changing credentials or Ollama environment settings. `config/ollama.json` is editable without recompiling and captures loopback address, context budget, startup and download timeouts. `OLLAMA_BASE_URL` / `OLLAMA_CONTEXT_TOKENS` override the corresponding file settings. Each sitting, evaluator and setup job freezes its effective settings. Ollama generation is serialized and refuses a request that exceeds a conservative UTF-8-based context estimate; truncation and shifting are explicitly disabled on the wire. Reduce grounding or rounds, or raise the context budget within your machine/model's limits. Cloud transports never follow redirects and retry only one short rate-limit rejection. Truncated, refused, malformed or unsupported responses do not become speeches.
 
 Protocol review on 2026-10-02 used the official [Claude structured-output documentation](https://platform.claude.com/docs/en/build-with-claude/structured-outputs), [Gemini generateContent reference](https://ai.google.dev/api/generate-content), [Grok chat-completions reference](https://docs.x.ai/developers/rest-api-reference/inference/chat-completions) and [Ollama chat reference](https://docs.ollama.com/api/chat). The retained Grok adapter uses the documented Chat Completions endpoint; xAI recommends Responses for new integrations. Presets are editable examples. Mock tests establish protocol handling and privacy, not account-specific live access or model quality.
 
@@ -50,7 +50,7 @@ run.cmd cli assets validate prompts/BasePrompt.txt edited-base.txt
 run.cmd cli assets save prompts/BasePrompt.txt edited-base.txt
 ```
 
-Unix uses `sh run.sh cli` with the same arguments. Read the listed asset before editing; preserve required placeholders. The editor includes `config/engine.json`, prompt templates, `data/hansard/excerpts.json`, local-analysis configuration and LLM rubric/configuration/prompts. Guided choice15 and `cli evaluate-llm RUN_ID [PRESET]` submit blind rubric jobs. See the [LLM evaluation guide](../evaluation/README.md) for budgets, separate metrics and evidence validation.
+Unix uses `sh run.sh cli` with the same arguments. Read the listed asset before editing; preserve required placeholders. The editor includes `config/engine.json`, `config/ollama.json`, prompt templates, `data/hansard/excerpts.json`, local-analysis configuration and LLM rubric/configuration/prompts. Local LLM settings require no Python dependency. Guided choice15 and `cli evaluate-llm RUN_ID [PRESET]` submit blind rubric jobs. See the [LLM evaluation guide](../evaluation/README.md) for budgets, separate metrics and evidence validation.
 
 Each `runs/<UUID>/` contains `setup.json` (private frozen configuration and resolved prompts), `transcript.json` (schema 2 public evidence), and `view.json` (owner presentation/progress events). Only the public transcript and derived public text are exported. Imported public transcripts get new storage IDs and unknown private assignments. Do not publish the private run directory.
 

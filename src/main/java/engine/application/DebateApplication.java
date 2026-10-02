@@ -10,6 +10,7 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Function;
+import java.util.function.BiFunction;
 
 /** Shared application operations. Neither adapter constructs agents or owns persistence. */
 public final class DebateApplication implements AutoCloseable {
@@ -20,10 +21,11 @@ public final class DebateApplication implements AutoCloseable {
     private final SettingsService settings;
     private final JobService background;
     private final ManagedNlp nlp;
+    private final ManagedOllama ollama;
     private final LocalEvaluationService evaluation;
     private final PilotService pilots;
     private final LlmEvaluationService llmEvaluation;
-    private final Function<ModelConfig,ChatManager> providers;
+    private final BiFunction<ModelConfig,OllamaConfig,ChatManager> providers;
     private final Map<String,RunSession> sessions=new ConcurrentHashMap<>();
     private final ThreadPoolExecutor jobs;
     public DebateApplication(Path root,RunStore store,Function<ModelConfig,ChatManager> providers) {
@@ -31,7 +33,12 @@ public final class DebateApplication implements AutoCloseable {
     }
     public DebateApplication(Path root,RunStore store,Function<ModelConfig,ChatManager> providers,
                              Function<engine.evaluation.local.LocalEvaluationConfig,engine.evaluation.local.NlpClient> analysisClients) {
+        this(root,store,(model,config) -> providers.apply(model),analysisClients,new ManagedOllama(root));
+    }
+    public DebateApplication(Path root,RunStore store,BiFunction<ModelConfig,OllamaConfig,ChatManager> providers,
+                             Function<engine.evaluation.local.LocalEvaluationConfig,engine.evaluation.local.NlpClient> analysisClients,ManagedOllama ollama) {
         this.root=root; this.store=store; this.providers=providers;
+        this.ollama=ollama;
         this.assets=new AssetService(root); this.settings=new SettingsService(root.resolve("runs/settings"));
         this.corpus=new CorpusService(assets);
         this.background=new JobService(root.resolve("runs/jobs")); this.nlp=new ManagedNlp(root);
@@ -50,8 +57,8 @@ public final class DebateApplication implements AutoCloseable {
         }
     }
     public static DebateApplication local(Path root) {
-        var factory=new engine.provider.ProviderFactory(root);
-        return new DebateApplication(root,new RunStore(root.resolve("runs")),factory::forModel);
+        var ollama=new ManagedOllama(root); var factory=new engine.provider.ProviderFactory(root,ollama);
+        return new DebateApplication(root,new RunStore(root.resolve("runs")),factory::forModel,null,ollama);
     }
     public ConfigurationSnapshot configuration() { return ConfigurationSnapshot.load(root); }
     public AssetService assets() { return assets; }
@@ -59,6 +66,25 @@ public final class DebateApplication implements AutoCloseable {
     public PilotService pilots() { return pilots; }
     public SettingsService settings() { return settings; }
     public JobService background() { return background; }
+    public Map<String,Object> ollamaReadiness() { return ollama.readiness(OllamaConfig.load(root)); }
+    public BackgroundJob setupOllama() {
+        var config=OllamaConfig.load(root);
+        return background.submit("ollama-setup",null,Map.of("localRuntime",config),context -> {
+            ollama.install(config,context); context.checkCancelled(); context.update("Starting managed local LLM service",null);
+            ollama.ensureRunning(config); context.update("Local runtime responds; model downloads remain explicit",ollama.readiness(config)); return true;
+        });
+    }
+    public BackgroundJob downloadOllamaModel(String preset) {
+        var config=OllamaConfig.load(root); EngineConfig settings;
+        try { settings=Json.read(java.nio.file.Files.readString(root.resolve("config/engine.json")),EngineConfig.class); }
+        catch (java.io.IOException e) { throw new IllegalArgumentException("Cannot read model presets"); }
+        var model=settings.models().get(preset);
+        if (model==null || !model.provider().equals("ollama")) throw new IllegalArgumentException("Choose an Ollama model preset");
+        OllamaConfig.requireLocalModel(model.model());
+        return background.submit("ollama-model-setup",null,Map.of("modelPreset",preset,"model",model,"localRuntime",config),context -> {
+            ollama.download(config,model.model(),context); return true;
+        });
+    }
     public Map<String,Object> localReadiness() { return nlp.readiness(evaluation.configuration()); }
     public BackgroundJob setupLocalNlp() {
         var config=evaluation.configuration();
@@ -93,7 +119,7 @@ public final class DebateApplication implements AutoCloseable {
         catch (java.io.IOException e) { throw new IllegalArgumentException("Cannot read model presets"); }
         var model=current.models().get(preset);
         if (model==null) throw new IllegalArgumentException("Unknown evaluator model preset");
-        return llmEvaluation.start(session.transcript(),model);
+        return llmEvaluation.start(session.transcript(),model,OllamaConfig.load(root));
     }
     public synchronized RunSession start(Map<String,Object> body) {
         if (jobs.getActiveCount()+jobs.getQueue().size()>=6) throw new IllegalStateException("Debate job limit reached");
@@ -111,7 +137,7 @@ public final class DebateApplication implements AutoCloseable {
             String prompt=prompts.assemblePersonaPrompt(identity.name(),profile,member.strategy(),grounding);
             resolved.put(identity.id(),prompt);
             var model=snapshot.config().models().get(member.modelPreset());
-            agents.add(new Agent(identity,member.strategy(),providers.apply(model),prompt,grounding,model));
+            agents.add(new Agent(identity,member.strategy(),providers.apply(model,snapshot.ollama()),prompt,grounding,model));
         }
         Map<String,String> contents=new LinkedHashMap<>(snapshot.sourceContents()), hashes=new LinkedHashMap<>(snapshot.sourceHashes());
         String selection=Json.writeCanonical(Map.of("policy","first-N-in-corpus-order-v1","corpusSha256",snapshot.sourceHashes().get("data/hansard/excerpts.json"),
@@ -160,5 +186,6 @@ public final class DebateApplication implements AutoCloseable {
         jobs.shutdown();
         try { if (!jobs.awaitTermination(5,TimeUnit.SECONDS)) jobs.shutdownNow(); }
         catch (InterruptedException e) { jobs.shutdownNow(); Thread.currentThread().interrupt(); }
+        ollama.close();
     }
 }

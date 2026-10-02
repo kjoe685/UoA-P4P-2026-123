@@ -37,8 +37,7 @@ public final class OllamaChatManager implements ChatManager {
     }
     @Override public ChatResponse complete(ChatRequest request) {
         ProviderCapabilities.check(request, "ollama");
-        if (request.model().model().endsWith(":cloud") || request.model().model().endsWith("-cloud"))
-            throw new IllegalArgumentException("Select a local Ollama model");
+        engine.config.OllamaConfig.requireLocalModel(request.model().model());
         var messages = ChatCompletionsProvider.messages(request, true);
         // UTF-8 bytes plus per-message overhead are a deliberately conservative token upper estimate.
         long estimated = Json.write(messages).getBytes(StandardCharsets.UTF_8).length + 256L + messages.size() * 32L;
@@ -51,6 +50,7 @@ public final class OllamaChatManager implements ChatManager {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("model", request.model().model()); body.put("messages", messages);
         body.put("stream", false); body.put("options", options);
+        body.put("truncate",false); body.put("shift",false);
         if (request.outputSchema() != null) body.put("format", request.outputSchema().value());
         boolean acquired = false;
         long start = System.nanoTime();

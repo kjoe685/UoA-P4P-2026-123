@@ -115,6 +115,8 @@ class ProviderTest {
             }
             case "ollama" -> {
                 assertFalse(body.path("stream").asBoolean());
+                assertTrue(body.path("truncate").isBoolean()); assertFalse(body.path("truncate").asBoolean());
+                assertTrue(body.path("shift").isBoolean()); assertFalse(body.path("shift").asBoolean());
                 assertEquals(16384, body.path("options").path("num_ctx").asInt());
                 assertEquals(4096, body.path("options").path("num_predict").asInt());
                 assertTrue(body.path("format").isObject());

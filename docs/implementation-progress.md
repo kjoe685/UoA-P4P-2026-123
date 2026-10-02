@@ -6,10 +6,30 @@
 - Branch: `codex/dual-interface-integration`, created from refreshed `origin/main` at `a99269c`.
 - Recovered primary plan from previous chat `01a0f6c1-32c6-7a33-bf8c-6ad9fee837e5`; that chat ended in Plan mode without writing changes.
 - Preserved secondary plan from `9cbcb12`. Evaluation reference: `c41c4c2`, file-level reuse only.
-- T01–T13 software checkpoints verified locally; latest checkpoint title `T13: recover interrupted optional NLP runtime setup` (see Git log for local commit hash). External platform/human acceptance remains below.
+- T01–T14 software checkpoints verified locally; latest checkpoint title `T14: integrate managed local LLM setup across interfaces` (see Git log for local commit hash). External platform/human acceptance remains below.
 - Existing untracked `UoA-P4P-2026-123.iml` belongs to the user; preserve it.
 
 ## Active task
+
+No unfinished implementation remains after T14. Continue requirement-focused inspection, preserving the software/external-acceptance distinction. The next task must record its requirement IDs and acceptance checks before edits.
+
+## T14 completed checkpoint
+
+**T14 — Complete local LLM setup operations through all interfaces (REQ-10–13, 20–22, 47, 49–50, 53–58).**
+
+Dependency: verified T13 checkpoint `917412f`. Further requirement review confirms model-facing strategy text is already external; compiled enum instructions are owner help only. It exposes a genuine setup parity gap: `docs/configuration.md` still sends Ollama users outside the application to install/start the service and pull models, whereas the primary fresh-machine plan requires optional readiness, downloads and service setup through both interfaces and automatic owned startup.
+
+Intended change: non-secret editable local LLM settings frozen for each generation/evaluation/setup operation; shared readiness, explicit managed runtime and model download jobs; automatic startup of an installed owned runtime, with no automatic install/model download/cloud fallback; browser, guided and command controls. Use checksum-pinned official portable runtime artifacts under ignored .runtime, with staged safe extraction and owned process cleanup. Reuse an external compatible loopback server without stopping it. Keep operational metadata outside public transcripts and agent/evaluator input.
+
+Acceptance: fake loopback Ollama protocol only, no live generation or paid calls; runtime archive checksum/size/path/link rejection and interrupted/cache recovery using tiny fixtures; readiness never generates/pulls; explicit streamed pulls retain progress and cancel safely; model selection/credential/configuration privacy and frozen settings; owned startup/shutdown and incompatible occupied-port refusal; HTTP/commands/menu parity and browser QA; regression tests and six-commit ancestry checks before local checkpoints. Genuine Ollama/package/platform execution remains separately unverified unless actually performed. Next implement the settings/package/runtime core and focused fake tests, then adapters/UI and delivery checks. Official release metadata reviewed 2026-10-02: Ollama v0.35.0, Windows amd64 archive1,461,196,158bytes; Linux amd64/arm64 use zstd tar. No runtime/model artifact has been downloaded by this task.
+
+T14 WIP: official archive-reader dependencies compile after permitted Maven dependency retrieval. Settings/configuration snapshots, staged checksum/size-pinned ZIP/gzip/zstd extraction, resumed runtime download and body cancellation/deadlines implemented. Shared local runtime owner probes version/inventory without generation, rejects occupied incompatible ports/remote aliases, starts only installed binaries with cloud disabled, and closes only owned processes. Browser/HTTP/commands/menu now expose explicit runtime/model setup and readiness. No actual Ollama artifact or model weights downloaded. Next run tiny-archive/loopback/service-ownership/frozen-settings regressions, correct findings and visually verify browser parity before a local checkpoint.
+
+T14 verification update: first full Java90/build passes; expanded fixture checks include runtime transfer cancellation/retry, ignored/wrong Range and bad download checksum. Browser runtime setup, selected-model cache, saved job reporting/reload and synthetic local sitting pass against isolated fake backend session30164 on18088 (`target/ollama-browser-d291b9c06a844ee58b7ce0040297aac0`). Screenshot saved in thread visualization directory, no genuine LLM availability claim. New review found byte-count validation was incorrectly throttled with progress writes; focused regression reproduced acceptance of completed>total. Validation now runs for every record. Next verify this correction/full suite, record packaged archive-reader smoke, stop owned QA backend and commit T14. No paid calls, actual runtime/model downloads, owner-data rewrites or push.
+
+T14 verified 2026-10-02: final Java91/full shaded build passes. Rapid malformed progress now rejects every invalid byte-count record without saving raw messages. ZIP/gzip/zstd reader smoke passes using only test helper + packaged JAR, including actual bundled zstd JNI on this Windows host (`target/ollama-package-smoke-d1f983f1654a47769f8922f51d366084`). Browser/API/commands/menu runtime/model setup, selected cached fake generation, report/reload and private metadata separation verified. Screenshot `parliament-ollama-setup.jpg` is in this thread's visualization directory. Fake package/process/HTTP checks establish software behaviour only; official Ollama package execution, model weights/generation, native/pristine OS and research accuracy remain unverified. Source/diff checks pass; six evaluation-only commits excluded and reference tips unchanged. Owned fake QA backend stopped before checkpoint; unrelated .iml and owner data preserved. Next inspect remaining primary-plan edge contracts, record a task before edits, and commit verified increments locally.
+
+## T13 completed checkpoint
 
 **T13 — Optional NLP bootstrap recovery verified (REQ-20–21, 31–33, 47, 53–56, 58).**
 
@@ -57,7 +77,7 @@ T11 final verification: 500/500 source/content checks pass; 131 original passage
 - Genuine human behavioural review for REQ-16–19 and real labels/adjudication for the 200-item pilot. Software cues, review preparation and scoring are implemented; synthetic scores never establish research accuracy. Latest disjoint genuine prepared file is ignored target/genuine-review-pilot-current-grounding.json (import explicitly). The older target/genuine-review-pilot.json and owner pilot2224fde6-83eb-455c-9e5c-aba790e4723e were preserved; the old artifact has19 overlaps after T11 grounding changes. Keep labels blank until real review and curate propositions/context/sampling before research use.
 - Account-specific cloud and local Ollama availability/model behaviour remain unverified. Routine tests use fake providers and no paid calls. Public university hosting/authentication remains future scope under REQ-58.
 
-No half-finished code remains after the verified T13 checkpoint. Preserve the unrelated .iml. One exploratory ZIP RecoveryTest had a transient ERROR that did not reproduce in six focused repeats or later full ZIP checks; the original failure logs remain in target/delivery-23fea5f924854757b21e2ce56afe387f. Investigate if it recurs; do not suppress tests or infer a cause from this run.
+No half-finished code remains after the verified T14 checkpoint. Preserve the unrelated .iml. One exploratory ZIP RecoveryTest had a transient ERROR that did not reproduce in six focused repeats or later full ZIP checks; the original failure logs remain in target/delivery-23fea5f924854757b21e2ce56afe387f. Investigate if it recurs; do not suppress tests or infer a cause from this run.
 
 ## Earlier checkpoint notes (historical)
 
@@ -102,6 +122,7 @@ Verification: Maven verify passes 2 tests (HTTP demo/chair/replay and cancellati
 | T10 delivery | Software/isolated Windows verified; external platforms pending | Java64 cold ZIP, no tools on PATH, real CLI/menu UTF8 and ownership, caches/restart/repeat; final matrix/documentation |
 | T12 chair lifecycle | Verified | Java72; final-turn completion/cancellation/failure retention, next-topic/interjection context, late rejection and HTTP/command/menu/restart/export parity |
 | T13 optional bootstrap recovery | Windows/portable fixtures verified | Genuine pinned Windows uv execution, archive/executable integrity/retry/preservation, locked extras wiring; Python17; native/pristine OS pending |
+| T14 local LLM setup/parity | Software verified with fixtures | Java91, bundled ZIP/gzip/zstd/JNI smoke, HTTP/menu/commands/browser explicit setup/model downloads, frozen settings/privacy, cache/range/cancel/restart and service ownership; genuine runtime/model/OS acceptance pending |
 
 ## Recovery procedure
 

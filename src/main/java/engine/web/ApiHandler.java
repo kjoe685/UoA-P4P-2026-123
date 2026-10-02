@@ -42,6 +42,19 @@ public final class ApiHandler implements HttpHandler {
             if (parts.length==5 && parts[4].equals("prepare")) { require(method,"POST"); sendJson(exchange,201,application.pilots().prepare(parts[3],body(exchange))); return; }
             if (parts.length==5 && parts[4].equals("evaluate")) { require(method,"POST"); sendJson(exchange,202,Map.of("id",application.pilots().evaluate(parts[3],body(exchange)).id())); return; }
         }
+        if (parts.length==3 && parts[2].equals("ollama-readiness")) {
+            require(method,"GET"); sendJson(exchange,200,application.ollamaReadiness()); return;
+        }
+        if (parts.length==3 && parts[2].equals("ollama-setup")) {
+            require(method,"POST"); if (!body(exchange).isEmpty()) throw new IllegalArgumentException("Runtime setup needs an empty object");
+            sendJson(exchange,202,Map.of("id",application.setupOllama().id())); return;
+        }
+        if (parts.length==3 && parts[2].equals("ollama-model-setup")) {
+            require(method,"POST"); var value=body(exchange);
+            if (!value.keySet().equals(Set.of("modelPreset")) || !(value.get("modelPreset") instanceof String preset))
+                throw new IllegalArgumentException("Provide an Ollama model preset");
+            sendJson(exchange,202,Map.of("id",application.downloadOllamaModel(preset).id())); return;
+        }
         if (parts.length==3 && parts[2].equals("local-readiness")) {
             require(method,"GET"); sendJson(exchange,200,application.localReadiness()); return;
         }
@@ -143,7 +156,7 @@ public final class ApiHandler implements HttpHandler {
             var profile=entry.getValue(); parties.add(Map.of("id",entry.getKey().name(),"name",profile.displayName(),"ideology",profile.ideology(),"groundingAvailable",snapshot.excerpts().getExcerpts(entry.getKey()).size()));
         });
         Map<String,Object> result=new LinkedHashMap<>();
-        result.put("credentialHelp","Cloud providers need their own API key. Ollama needs a running local server and an installed model. See docs/configuration.md.");
+        result.put("credentialHelp","Cloud providers need their own API key. Use Local LLM setup for explicit Ollama runtime and model downloads. See docs/configuration.md.");
         result.put("defaultProvider",settings.agentModel().provider()); result.put("defaultTopic",settings.defaultTopic());
         result.put("defaultRounds",settings.defaultRounds()); result.put("maxRounds",10); result.put("maxTopics",10);
         result.put("parties",parties);

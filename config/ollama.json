@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "baseUrl": "http://127.0.0.1:11434",
+  "contextTokens": 16384,
+  "startupTimeoutSeconds": 30,
+  "downloadTimeoutSeconds": 7200
+}

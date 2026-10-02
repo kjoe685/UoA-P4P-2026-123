@@ -19,6 +19,9 @@ Accepted chair rulings enter the public evidence before the next contribution, i
 | Grounding status/preview/validated atomic import | Advanced corpus controls | 16 | `corpus status/validate/import` / `/api/corpus` |
 | Optional dependency/cache/service readiness | Local analysis | 12 | `local status` / `GET /api/local-readiness` |
 | Explicit VADER setup and pinned Cardiff/DeBERTa setup | Local analysis setup buttons | 12 | `local setup`, `local download METHOD` / `POST /api/local-setup`, `POST /api/local-model-setup` |
+| Local LLM runtime/service/cache readiness (no generation/download) | Local LLM setup, Refresh | 18 | `ollama status` / `GET /api/ollama-readiness` |
+| Explicit portable local LLM runtime setup/start | Local LLM setup, runtime button | 18 | `ollama setup` / `POST /api/ollama-setup` |
+| Explicit configured local model cache download/reuse | Local LLM setup, model choice/download | 18 | `ollama download PRESET` / `POST /api/ollama-model-setup` |
 | Separate local methods on saved public evidence | Open sitting, method checkboxes, Analyze | 13 | `evaluate ID [METHODS]` / `POST …/evaluate` |
 | Independent LLM rubric evaluation | Open sitting, evaluator override, Evaluate | 15 | `evaluate-llm ID [PRESET]` / `POST …/evaluate-llm` |
 | Browse/read/cancel jobs; reopen/export reports | Local analysis jobs, Open report, Cancel, Download | 14 | `jobs`, `job ID`, `cancel-job ID`, `report ID [FILE]` / `/api/jobs`, `/api/jobs/ID`, `/cancel`, `/report` |
@@ -26,7 +29,7 @@ Accepted chair rulings enter the public evidence before the next contribution, i
 | Prepare 200 blank review items with exclusions/disjoint debates | Prepare pilot, seed | 17 | `pilot prepare ID [SEED]` / `POST …/prepare` |
 | Separate local pilot reports against declared human/synthetic labels | Run selected local methods on pilot | 17; 14 reports | `pilot evaluate ID [METHODS]` / `POST …/evaluate` |
 
-Windows prefixes commands with `run.cmd cli`; Unix uses `sh run.sh cli`. File exports in commands/menu write UTF-8. Browser attachment routes return equivalent JSON/text. Credentials are server environment/files only and are not fields in saved settings. The advanced model-service editor requires explicit optional NLP setup before Python schema validation; this requirement is shared by all interfaces. Local analysis and LLM reports stay separate from public debate exports and agent input.
+Windows prefixes commands with `run.cmd cli`; Unix uses `sh run.sh cli`. File exports in commands/menu write UTF-8. Browser attachment routes return equivalent JSON/text. Credentials are server environment/files only and are not fields in saved settings. The advanced NLP model-service editor requires explicit optional NLP setup before Python schema validation; `config/ollama.json` does not. These requirements are shared by all interfaces. Local setup progress and analysis/LLM reports stay separate from public debate exports and agent input.
 
 ## Evidence and practical limits
 

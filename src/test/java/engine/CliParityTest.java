@@ -15,6 +15,44 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class CliParityTest {
     @TempDir Path root;
+    @Test void localLlmRuntimeAndModelSetupHaveBrowserCommandAndGuidedParity() throws Exception {
+        TestFixtures.copyResources(root);
+        try (var fixture=new OllamaFixture(); var manager=fixture.manager(root)) {
+            Files.writeString(root.resolve("config/ollama.json"),Json.write(fixture.config()));
+            var factory=new engine.provider.ProviderFactory(root,manager);
+            try (var app=new DebateApplication(root,new RunStore(root.resolve("runs")),factory::forModel,null,manager)) {
+                var server=WebServer.start(0,app);
+                try {
+                    String base="http://localhost:"+server.getAddress().getPort(); var bytes=new ByteArrayOutputStream(); var output=new PrintStream(bytes); var cli=new Main(base,new Scanner(""),output);
+                    cli.command(new String[]{"ollama","status"}); assertTrue(bytes.toString().contains("\"installed\":false")); bytes.reset();
+                    var http=java.net.http.HttpClient.newHttpClient();
+                    var installRequest=java.net.http.HttpRequest.newBuilder(java.net.URI.create(base+"/api/ollama-setup")).header("Content-Type","application/json")
+                            .POST(java.net.http.HttpRequest.BodyPublishers.ofString("{}")).build();
+                    var response=http.send(installRequest,java.net.http.HttpResponse.BodyHandlers.ofString()); assertEquals(202,response.statusCode());
+                    String installId=(String)((Map<?,?>)Json.parse(response.body())).get("id"); finishJob(app,installId); assertEquals(BackgroundJob.State.COMPLETE,app.background().find(installId).state());
+                    cli.command(new String[]{"ollama","download","qwen3-local"}); String modelId=(String)((Map<?,?>)Json.parse(bytes.toString())).get("id"); bytes.reset(); finishJob(app,modelId);
+                    assertEquals(BackgroundJob.State.COMPLETE,app.background().find(modelId).state());
+                    new Main(base,new Scanner("18\ndownload\nqwen3-local\n18\nsetup\n0\n"),output).menu();
+                    for (var job:app.background().list()) finishJob(app,job.id());
+                    assertEquals(4,app.background().list().size()); assertTrue(app.background().list().stream().allMatch(job -> job.state()==BackgroundJob.State.COMPLETE));
+                    assertTrue(bytes.toString().contains("qwen3:8b")); assertTrue(bytes.toString().contains("Ollama presets: [qwen3-local]"));
+                    var run=app.start(Map.of("topics",List.of("Software QA"),"rounds",1,"groundingCount",0,"agentModelPreset","qwen3-local","members",List.of(Map.of("party","LABOUR"))));
+                    cli.command(new String[]{"watch",run.id()}); assertEquals(Transcript.Outcome.COMPLETE,run.transcript().outcome());
+                    assertTrue(Json.write(run.transcript()).contains("Synthetic local speech")); assertFalse(Json.write(run.transcript()).contains("runtimePackage"));
+                    assertEquals("Choose an Ollama model preset",assertThrows(IllegalStateException.class,() -> cli.command(new String[]{"ollama","download","demo"})).getMessage());
+                    var bad=java.net.http.HttpRequest.newBuilder(java.net.URI.create(base+"/api/ollama-model-setup")).header("Content-Type","application/json")
+                            .POST(java.net.http.HttpRequest.BodyPublishers.ofString("{\"modelPreset\":\"qwen3-local\",\"apiKey\":\"SECRET_SENTINEL\"}")).build();
+                    var invalid=http.send(bad,java.net.http.HttpResponse.BodyHandlers.ofString()); assertEquals(400,invalid.statusCode()); assertFalse(invalid.body().contains("SENTINEL"));
+                    Path report=root.resolve("local-setup-report.json"); cli.command(new String[]{"report",modelId,report.toString()}); assertTrue(Files.readString(report).contains("qwen3:8b"));
+                } finally { server.stop(0); ((ExecutorService)server.getExecutor()).shutdownNow(); }
+            }
+        }
+    }
+    private static void finishJob(DebateApplication app,String id) throws Exception {
+        long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(10);
+        while (!app.background().find(id).terminal() && System.nanoTime()<deadline) Thread.sleep(10);
+        assertTrue(app.background().find(id).terminal());
+    }
     @Test void browserCommandAndMenuRulingsSurviveTheFinalProviderResponse() throws Exception {
         TestFixtures.copyResources(root);
         CountDownLatch entered=new CountDownLatch(1), release=new CountDownLatch(1);
