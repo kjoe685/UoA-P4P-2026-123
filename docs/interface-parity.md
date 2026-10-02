@@ -8,6 +8,8 @@ Ordinary terminal API responses have a30-second deadline through the body read a
 
 Incoming API JSON and browser corpus/pilot/transcript files require valid UTF-8. The shared JSON boundary rejects unpaired Unicode surrogates in values/keys before mapping or storage; valid Māori, emoji, combining marks and replacement characters retain their exact text. Files with malformed encoding must be corrected rather than silently rewritten during import. Developer file-decoding fixtures run with `node scripts/verify-file-decoding.cjs`; ordinary use needs no Node installation.
 
+Public transcript import accepts up to64MiB of UTF-8 JSON through browser, commands and guided choice8, matching the terminal transfer ceiling so larger sittings can round-trip. Ordinary API request bodies remain limited to2MiB. Oversized declared lengths are rejected before the body is read; chunked requests remain bounded during reading. Imports validate the public schema before storage, assign a new run ID and preserve committed evidence/time/outcome; importing a running transcript marks it interrupted without resuming generation.
+
 Terminal event watching has a30-second header timeout and16MiB encoded-line limit, requires UTF-8 JSON event objects and rejects other response types. Interruption closes a stalled stream. Valid debate streams have no total duration limit; keep-alives and replay continue through the same watch command/guided choice3.
 
 | Operation | Browser | Guided choice | Scriptable command / shared endpoint |

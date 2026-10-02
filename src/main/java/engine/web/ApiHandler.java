@@ -130,7 +130,7 @@ public final class ApiHandler implements HttpHandler {
         }
         if (parts.length==4 && parts[2].equals("debates") && parts[3].equals("import")) {
             require(method,"POST");
-            var source=Json.read(Json.write(body(exchange)),engine.transcript.Transcript.class);
+            var source=Json.read(Json.write(body(exchange,64*1024*1024)),engine.transcript.Transcript.class);
             var session=application.importTranscript(source);
             sendJson(exchange,201,Map.of("id",session.id())); return;
         }
@@ -192,12 +192,22 @@ public final class ApiHandler implements HttpHandler {
         catch (IOException e) { /* A disconnected reader does not stop the sitting. */ }
     }
     @SuppressWarnings("unchecked")
-    private static Map<String,Object> body(HttpExchange exchange) throws IOException {
+    private static Map<String,Object> body(HttpExchange exchange) throws IOException { return body(exchange,2*1024*1024); }
+    @SuppressWarnings("unchecked")
+    private static Map<String,Object> body(HttpExchange exchange,int limit) throws IOException {
         String contentType=exchange.getRequestHeaders().getFirst("Content-Type");
         if (contentType==null || !contentType.toLowerCase(Locale.ROOT).startsWith("application/json"))
             throw new IllegalArgumentException("Use application/json");
-        byte[] data=exchange.getRequestBody().readNBytes(2*1024*1024+1);
-        if (data.length>2*1024*1024) throw new IllegalArgumentException("Request body is too large");
+        String declared=exchange.getRequestHeaders().getFirst("Content-Length");
+        if (declared!=null) {
+            long length;
+            try { length=Long.parseLong(declared); }
+            catch (NumberFormatException e) { throw new IllegalArgumentException("Invalid request content length"); }
+            if (length<0) throw new IllegalArgumentException("Invalid request content length");
+            if (length>limit) throw new IllegalArgumentException("Request body is too large");
+        }
+        byte[] data=exchange.getRequestBody().readNBytes(limit+1);
+        if (data.length>limit) throw new IllegalArgumentException("Request body is too large");
         String text;
         try { text=StandardCharsets.UTF_8.newDecoder().decode(ByteBuffer.wrap(data)).toString(); }
         catch (CharacterCodingException e) { throw new IllegalArgumentException("Request body must be valid UTF-8"); }

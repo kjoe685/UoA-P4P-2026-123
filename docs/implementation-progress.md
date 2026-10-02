@@ -6,9 +6,21 @@
 - Branch: `codex/dual-interface-integration`, created from refreshed `origin/main` at `a99269c`.
 - Recovered primary plan from previous chat `01a0f6c1-32c6-7a33-bf8c-6ad9fee837e5`; that chat ended in Plan mode without writing changes.
 - Preserved secondary plan from `9cbcb12`. Evaluation reference: `c41c4c2`, file-level reuse only.
-- T01–T25 checkpoints verified locally; latest checkpoint title `T25: validate captured transformer abstention thresholds` (see Git log for local commit hash). Application checkpoint T25 passes Java147/shaded build; Python19 passed at T24 and is unchanged. External platform/model/human acceptance remains below.
+- T01–T26 checkpoints verified locally; latest checkpoint title `T26: preserve large transcript import round trips` (see Git log for local commit hash). Application checkpoint T26 passes Java150/shaded build; Python19 passed at T24 and is unchanged. External platform/model/human acceptance remains below.
 - Existing untracked `UoA-P4P-2026-123.iml` belongs to the user; preserve it.
 - [Acceptance status](acceptance-status.md) maps all58 requirement IDs to current evidence and remaining platform/model/human checks. Historical WIP entries below are superseded by completed checkpoint records, not tasks to repeat.
+
+## T26 completed checkpoint
+
+**T26 — Preserve large transcript round trips across interfaces (REQ-01–02, 46, 49–50, 53, 55, 58).**
+
+Dependency: T25 `31e84c7`. Public exports and terminal reads support files above2MiB, while the shared transcript import route inherits the generic2MiB request cap. Larger valid sittings therefore export successfully but fail reimport through browser, commands and guided choice8. Give public transcript import the existing64MiB terminal transfer ceiling, retaining the2MiB limit for ordinary setup/settings/assets operations. Check declared lengths before reading and retain bounded strict UTF-8/scalar JSON validation for chunked requests.
+
+Acceptance: a >2MiB valid synthetic export reproduces import failure before changes, then round-trips through HTTP/commands/menu with exact roster/topics/events/time/outcome and fresh storage IDs; restart retains the imported evidence without provider calls. Oversized declared/chunked ordinary bodies and oversized import declarations fail without storage changes; private/malformed large transcripts remain rejected with static diagnostics. Next add before-change transfer regression, then adjust the shared route/read bound and test/document/checkpoint. No owner files, real generation, model setup, labels or paid calls.
+
+T26 WIP: before-change loopback export/import regression demonstrates >2MiB valid Unicode evidence is refused; declared-length no-body probe stalls rather than rejecting before read (`target/T26-transfer-reproduction`). Import now uses64MiB while other routes retain2MiB; length declarations are checked before bounded reads, including strict UTF-8/JSON validation afterward. Next focused transfer/Unicode/recovery/command checks, then full build and checkpoint. Tests use isolated synthetic data only.
+
+T26 verified 2026-10-02: focusedJava17/fullJava150/shaded build pass. Three added loopback regressions cover >2MiB Unicode export/reimport with declared/chunked bodies, command and guided choice8/file exports, fresh IDs/exact evidence and restart without inference; large private/trailing-invalid inputs remain refused without storage mutations. Oversized import/ordinary declarations now respond400 before sending bodies; chunked ordinary requests retain2MiB refusal. Public import ceiling64MiB matches terminal transfer; no user flags required. Diff/ancestry/reference checks pass, owneriml preserved. No owner run changes, real generation, paid calls/downloads/push. Next audit replacement decoding in captured source resources and managed local-runtime JSON/progress.
 
 ## T25 completed checkpoint
 
@@ -214,7 +226,7 @@ T11 final verification: 500/500 source/content checks pass; 131 original passage
 - Genuine human behavioural review for REQ-16–19 and real labels/adjudication for the 200-item pilot. Software cues, review preparation and scoring are implemented; synthetic scores never establish research accuracy. Latest disjoint genuine prepared file is ignored target/genuine-review-pilot-current-grounding.json (import explicitly). The older target/genuine-review-pilot.json and owner pilot2224fde6-83eb-455c-9e5c-aba790e4723e were preserved; the old artifact has19 overlaps after T11 grounding changes. Keep labels blank until real review and curate propositions/context/sampling before research use.
 - Account-specific cloud and local Ollama availability/model behaviour remain unverified. Routine tests use fake providers and no paid calls. Public university hosting/authentication remains future scope under REQ-58.
 
-No half-finished code remains after the verified T25 checkpoint. Preserve the unrelated .iml. One exploratory ZIP RecoveryTest had a transient ERROR that did not reproduce in six focused repeats or later full ZIP checks; the original failure logs remain in target/delivery-23fea5f924854757b21e2ce56afe387f. Investigate if it recurs; do not suppress tests or infer a cause from this run.
+No half-finished code remains after the verified T26 checkpoint. Preserve the unrelated .iml. One exploratory ZIP RecoveryTest had a transient ERROR that did not reproduce in six focused repeats or later full ZIP checks; the original failure logs remain in target/delivery-23fea5f924854757b21e2ce56afe387f. Investigate if it recurs; do not suppress tests or infer a cause from this run.
 
 ## Earlier checkpoint notes (historical)
 
@@ -271,6 +283,7 @@ Verification: Maven verify passes 2 tests (HTTP demo/chair/replay and cancellati
 | T23 acceptance/recovery ledger | Documentation verified | All58 IDs exactly once; linked evidence/remaining checks, historical WIP supersession and current/isolated test evidence distinguished |
 | T24 local provenance identity | Java142/Python19/build verified | One-read source identity, implementation0.3.0, stale-batch/pilot refusal and retained committed evidence; unchanged dependency pins/offline lock49 |
 | T25 captured transformer decisions | Java147/build verified | Threshold/parameter/abstention validation; exact equality/ties and retained valid batches/methods; invalid pilot cases count as failures |
+| T26 large public transcript transfer | Java150/build verified | >2MiB HTTP/commands/menu/restart round trips;64MiB import/2MiB ordinary caps, early length refusal and private/invalid import protection |
 
 ## Recovery procedure
 
