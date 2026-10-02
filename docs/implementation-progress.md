@@ -6,10 +6,22 @@
 - Branch: `codex/dual-interface-integration`, created from refreshed `origin/main` at `a99269c`.
 - Recovered primary plan from previous chat `01a0f6c1-32c6-7a33-bf8c-6ad9fee837e5`; that chat ended in Plan mode without writing changes.
 - Preserved secondary plan from `9cbcb12`. Evaluation reference: `c41c4c2`, file-level reuse only.
-- T01–T11 software checkpoints verified locally; latest checkpoint title `T11: audit and repair all Hansard grounding excerpts` (see Git log for local commit hash). External platform/human acceptance remains below.
+- T01–T12 software checkpoints verified locally; latest checkpoint title `T12: retain chair rulings through completion and cancellation` (see Git log for local commit hash). External platform/human acceptance remains below.
 - Existing untracked `UoA-P4P-2026-123.iml` belongs to the user; preserve it.
 
 ## Active task
+
+**T12 — Chair lifecycle checkpoint verified (REQ-01–02, 46, 53, 55, 57).**
+
+Dependency: verified T11 checkpoint `18da0b6`. Recovered the earlier implementation and Hansard-review chats; both completed, and no unfinished code remains. The automation memory predates T11 and will be reconciled. A source audit found that the scheduler drains chair rulings only before each ordinary speech: a ruling accepted during the final provider response can be silently lost on completion or cancellation.
+
+Intended change: close chair submission and drain already accepted rulings when generation finishes, including cancellation/failure; preserve the existing next-turn queue and reject late submissions. Use the shared backend for browser/menu/commands. Acceptance: deterministic blocked fake provider reproduces final-turn loss; completion/cancellation/failure retain accepted rulings exactly once in public evidence and replay; late submissions reject; next-turn outbound input sees the public ruling; saved transcript/export/restart agree; regression tests and six-commit ancestry checks pass. No paid calls, live availability claims, owner-data rewrites or pushes. Next write the focused regression before changing the scheduler, then repair the lifecycle and commit a verified local checkpoint.
+
+T12 WIP: focused regression reproduced missing accepted rulings for completion, cancellation and provider failure (3 failures/4 tests). Scheduler now closes submission and flushes accepted decisions before terminal evidence; cancellation interrupts only active generation under the publication lock, and the session avoids taking locks in inverse order. Focused chair/lifecycle/cancellation suite passes 10 tests. Extended the same fix to flush before interjections and atomically before changing topic, so the next speaker receives public chair context and a late ruling keeps its original topic. Next run expanded regressions and HTTP/command/menu parity, then full verification/ancestry before commit. Initial direct Maven invocation tried an inaccessible default C:/.m2 repository; use the managed JDK/Maven plus `-Dmaven.repo.local=.maven-cache`. No paid calls.
+
+T12 verified 2026-10-02: Java72 pass with seven new chair/parity regressions. Accepted final-turn rulings survive completion/cancellation/provider failure exactly once; cancelled responses are discarded; late submissions reject; topic transitions and interjections preserve public chair context; browser HTTP, scriptable commands and guided menu persist the same Unicode decisions and exports. Restart reopens evidence without creating providers. Diff checks pass; all six evaluation-only commits remain excluded and reference tips stay `9cbcb12`/`c41c4c2`. No owner-data rewrites, paid calls or push. Next continue requirement-focused inspection of remaining local-delivery contracts; external native/pristine OS and genuine human research acceptance remain pending.
+
+## T11 completed checkpoint
 
 **T11 — Hansard audit and repairs verified (REQ-01–02, 05, 11, 42–43, 53–55, 57; historical ethics R06).**
 
@@ -33,7 +45,7 @@ T11 final verification: 500/500 source/content checks pass; 131 original passage
 - Genuine human behavioural review for REQ-16–19 and real labels/adjudication for the 200-item pilot. Software cues, review preparation and scoring are implemented; synthetic scores never establish research accuracy. Latest disjoint genuine prepared file is ignored target/genuine-review-pilot-current-grounding.json (import explicitly). The older target/genuine-review-pilot.json and owner pilot2224fde6-83eb-455c-9e5c-aba790e4723e were preserved; the old artifact has19 overlaps after T11 grounding changes. Keep labels blank until real review and curate propositions/context/sampling before research use.
 - Account-specific cloud and local Ollama availability/model behaviour remain unverified. Routine tests use fake providers and no paid calls. Public university hosting/authentication remains future scope under REQ-58.
 
-No half-finished code remains after the verified T11 checkpoint. Preserve the unrelated .iml. One exploratory ZIP RecoveryTest had a transient ERROR that did not reproduce in six focused repeats or later full ZIP checks; the original failure logs remain in target/delivery-23fea5f924854757b21e2ce56afe387f. Investigate if it recurs; do not suppress tests or infer a cause from this run.
+No half-finished code remains after the verified T12 checkpoint. Preserve the unrelated .iml. One exploratory ZIP RecoveryTest had a transient ERROR that did not reproduce in six focused repeats or later full ZIP checks; the original failure logs remain in target/delivery-23fea5f924854757b21e2ce56afe387f. Investigate if it recurs; do not suppress tests or infer a cause from this run.
 
 ## Earlier checkpoint notes (historical)
 
@@ -76,6 +88,7 @@ Verification: Maven verify passes 2 tests (HTTP demo/chair/replay and cancellati
 | T09a targeted cues | Software verified; human review pending | Java56, current-topic/public-ID targets, own position history and actual mock HTTP privacy |
 | T09b pilot tools | Software verified; human labels pending | Java63/extractor6; genuine blank preparation, mock classifier privacy600 requests, browser preparation/refusal/synthetic reports |
 | T10 delivery | Software/isolated Windows verified; external platforms pending | Java64 cold ZIP, no tools on PATH, real CLI/menu UTF8 and ownership, caches/restart/repeat; final matrix/documentation |
+| T12 chair lifecycle | Verified | Java72; final-turn completion/cancellation/failure retention, next-topic/interjection context, late rejection and HTTP/command/menu/restart/export parity |
 
 ## Recovery procedure
 

@@ -22,7 +22,6 @@ public final class RunSession implements EngineOutput {
     private Long endedAt;
     private Transcript.Outcome outcome;
     private DebateManager manager;
-    private volatile Thread worker;
     private boolean finished;
 
     public RunSession(String id,List<Agent> agents,ConfigurationSnapshot snapshot,PrivateSetup setup,RunStore store) {
@@ -72,7 +71,6 @@ public final class RunSession implements EngineOutput {
         return new RunSession(transcript,setup,view,store);
     }
     public void run() {
-        worker=Thread.currentThread();
         Transcript.Outcome result=Transcript.Outcome.COMPLETE;
         try {
             manager.run();
@@ -98,11 +96,13 @@ public final class RunSession implements EngineOutput {
     public synchronized boolean isFinished() { return finished; }
     public void adjourn() {
         if (manager!=null) manager.requestStop();
-        Thread running=worker; if (running!=null) running.interrupt();
     }
-    public synchronized void addSpeakerRuling(String ruling) {
-        if (finished) throw new IllegalStateException("The House has already adjourned");
+    public void addSpeakerRuling(String ruling) {
+        synchronized (this) {
+            if (finished) throw new IllegalStateException("The House has already adjourned");
+        }
         if (ruling==null || ruling.isBlank() || ruling.trim().length()>500) throw new IllegalArgumentException("Rulings need 1–500 characters");
+        // Never hold the session monitor while taking the scheduler's publication lock.
         manager.addSpeakerRuling(ruling.trim());
     }
     public synchronized boolean hasMoreEvents(int index) { return !finished || index<view.size(); }

@@ -2,6 +2,8 @@
 
 Browser controls and both terminal modes call the same loopback backend. Commands attach to an existing server; the guided menu can start an owned backend on port 8080 and stops only that backend when it exits. Set `PARLIAMENT_URL` to attach to another local port. A missing input/output file returns the guided menu to operation selection.
 
+Accepted chair rulings enter the public evidence before the next contribution, including interjections. They retain the topic on which they were queued. Rulings accepted during the final response are retained before the terminal event, also on cancellation or provider failure; submissions after generation closes are rejected. Cancelled model responses remain discarded.
+
 | Operation | Browser | Guided choice | Scriptable command / shared endpoint |
 |---|---|---|---|
 | Inspect model/party/default choices and credential help | Sitting setup | 1, prompts | `config` / `GET /api/config` |

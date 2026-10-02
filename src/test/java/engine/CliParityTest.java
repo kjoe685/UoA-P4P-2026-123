@@ -10,11 +10,45 @@ import org.junit.jupiter.api.io.TempDir;
 import java.nio.file.*;
 import java.io.*;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 class CliParityTest {
     @TempDir Path root;
+    @Test void browserCommandAndMenuRulingsSurviveTheFinalProviderResponse() throws Exception {
+        TestFixtures.copyResources(root);
+        CountDownLatch entered=new CountDownLatch(1), release=new CountDownLatch(1);
+        try (var app=new DebateApplication(root,new RunStore(root.resolve("runs")),model -> request -> {
+            entered.countDown();
+            try { release.await(10,TimeUnit.SECONDS); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+            return new engine.chat.ChatResponse("Final public speech.","demo","demo",engine.chat.ChatResponse.CompletionStatus.COMPLETED,null,0);
+        })) {
+            var server=WebServer.start(0,app);
+            try {
+                String base="http://localhost:"+server.getAddress().getPort();
+                var run=app.start(Map.of("topics",List.of("Housing"),"rounds",1,"members",List.of(Map.of("party","LABOUR"))));
+                assertTrue(entered.await(5,TimeUnit.SECONDS));
+                var http=java.net.http.HttpClient.newHttpClient();
+                var browserRequest=java.net.http.HttpRequest.newBuilder(java.net.URI.create(base+"/api/debates/"+run.id()+"/speaker"))
+                        .header("Content-Type","application/json").POST(java.net.http.HttpRequest.BodyPublishers.ofString(Json.write(Map.of("message","Browser ruling.")))).build();
+                assertEquals(202,http.send(browserRequest,java.net.http.HttpResponse.BodyHandlers.ofString()).statusCode());
+                var bytes=new ByteArrayOutputStream(); var output=new PrintStream(bytes,true,java.nio.charset.StandardCharsets.UTF_8);
+                var cli=new Main(base,new Scanner(""),output);
+                cli.command(new String[]{"ruling",run.id(),"Command ruling."});
+                new Main(base,new Scanner("4\n"+run.id()+"\nGuided ruling: ā.\n0\n"),output).menu();
+                release.countDown(); cli.command(new String[]{"watch",run.id()});
+                assertEquals(Transcript.Outcome.COMPLETE,run.transcript().outcome());
+                assertEquals(List.of("Browser ruling.","Command ruling.","Guided ruling: ā."),run.transcript().events().stream()
+                        .filter(event -> event.type()==engine.transcript.PublicEvent.Type.CHAIR_RULING).map(engine.transcript.PublicEvent::text).toList());
+                Path exported=root.resolve("chair-public.json"); cli.command(new String[]{"transcript",run.id(),exported.toString()});
+                assertEquals(run.transcript(),Json.read(Files.readString(exported),Transcript.class));
+                assertEquals(409,http.send(browserRequest,java.net.http.HttpResponse.BodyHandlers.ofString()).statusCode());
+                assertThrows(IllegalStateException.class,() -> cli.command(new String[]{"ruling",run.id(),"Too late."}));
+                bytes.reset(); new Main(base,new Scanner("4\n"+run.id()+"\nToo late.\n0\n"),output).menu();
+                assertTrue(bytes.toString(java.nio.charset.StandardCharsets.UTF_8).contains("Operation unavailable"));
+            } finally { release.countDown(); server.stop(0); ((ExecutorService)server.getExecutor()).shutdownNow(); }
+        }
+    }
     @Test void missingImportFileReturnsToMenuAndAllowsTheNextOperation() throws Exception {
         TestFixtures.copyResources(root);
         try (var app=new DebateApplication(root,new RunStore(root.resolve("runs")),model -> { fail("Missing file cannot construct providers"); return null; })) {
