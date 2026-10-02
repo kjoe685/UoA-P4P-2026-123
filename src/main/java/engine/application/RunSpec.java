@@ -34,9 +34,7 @@ public record RunSpec(List<Topic> topics, int rounds, List<Member> members, Stri
         }
         if (topics.isEmpty()) topics.add(new Topic("topic-1",config.defaultTopic(),null));
         if (topics.size()>10) throw new IllegalArgumentException("Choose at most 10 topics");
-        Object roundValue=body.getOrDefault("rounds",config.defaultRounds());
-        if (!(roundValue instanceof Number number) || number.doubleValue()!=number.intValue() || number.intValue()<1 || number.intValue()>10)
-            throw new IllegalArgumentException("Rounds must be an integer between 1 and 10");
+        int rounds=integer(body.getOrDefault("rounds",config.defaultRounds()),1,10,"Rounds must be an integer between 1 and 10");
         String preset=string(body,"agentModelPreset",config.agentModelPreset());
         // Compatibility with T02 setup. Model preset selection supersedes this in T05.
         if (body.containsKey("provider") && !body.containsKey("agentModelPreset")) {
@@ -63,7 +61,7 @@ public record RunSpec(List<Topic> topics, int rounds, List<Member> members, Stri
             members.add(new Member(party,strategy,modelPreset,raw.get("groundingCount")==null ? null : count(raw.get("groundingCount"))));
         }
         if (members.isEmpty()) throw new IllegalArgumentException("Select at least one party");
-        return new RunSpec(topics,number.intValue(),members,preset,judge,count(body.getOrDefault("groundingCount",-1)));
+        return new RunSpec(topics,rounds,members,preset,judge,count(body.getOrDefault("groundingCount",-1)));
     }
     public Map<String,Object> settings() {
         Map<String,Object> result=new LinkedHashMap<>();
@@ -79,9 +77,14 @@ public record RunSpec(List<Topic> topics, int rounds, List<Member> members, Stri
         return result;
     }
     private static int count(Object raw) {
-        if (!(raw instanceof Number value) || value.doubleValue()!=value.intValue() || value.intValue()< -1 || value.intValue()>1000)
-            throw new IllegalArgumentException("Grounding count must be -1 (all) or an integer from 0 to 1000");
-        return value.intValue();
+        return integer(raw,-1,1000,"Grounding count must be -1 (all) or an integer from 0 to 1000");
+    }
+    private static int integer(Object raw,int minimum,int maximum,String message) {
+        // Floating JSON may already have rounded/underflowed before this boundary.
+        if (!(raw instanceof Integer) && !(raw instanceof Long)) throw new IllegalArgumentException(message);
+        long value=((Number)raw).longValue();
+        if (value<minimum || value>maximum) throw new IllegalArgumentException(message);
+        return (int)value;
     }
     private static void requirePreset(EngineConfig config,String preset) {
         if (!config.models().containsKey(preset)) throw new IllegalArgumentException("Unknown model preset");

@@ -6,9 +6,23 @@
 - Branch: `codex/dual-interface-integration`, created from refreshed `origin/main` at `a99269c`.
 - Recovered primary plan from previous chat `01a0f6c1-32c6-7a33-bf8c-6ad9fee837e5`; that chat ended in Plan mode without writing changes.
 - Preserved secondary plan from `9cbcb12`. Evaluation reference: `c41c4c2`, file-level reuse only.
-- T01–T33 checkpoints verified locally; latest checkpoint title `T33: normalize terminal backend addresses` (see Git log for local commit hash). Application checkpoint T33 passes Java171/shaded build; latest isolated Windows ZIP remains T32/Java167. Python19 passed at T24 and is unchanged. External platform/model/human acceptance remains below.
+- T01–T34 checkpoints verified locally; latest checkpoint title `T34: validate exact integer sitting counts` (see Git log for local commit hash). Application checkpoint T34 passes Java174/shaded build; latest isolated Windows ZIP remains T32/Java167. Python19 passed at T24 and is unchanged. External platform/model/human acceptance remains below.
 - Existing untracked `UoA-P4P-2026-123.iml` belongs to the user; preserve it.
 - [Acceptance status](acceptance-status.md) maps all58 requirement IDs to current evidence and remaining platform/model/human checks. Historical WIP entries below are superseded by completed checkpoint records, not tasks to repeat.
+
+## T34 completed checkpoint
+
+**T34 — Reject rounded floating-point sitting counts before saving or starting (REQ-11, 42–43, 46, 53–55, 57–58).**
+
+Dependency: T33 `a4ddfdb`. Reviewed model-preset reads capture validated immutable settings before queueing; no adaptation is needed there. Shared `RunSpec` checks counts by comparing a parsed number's double/int values. Fractional JSON such as `1.0000000000000000001` or `1e-400` can round to an integer, silently changing round/global/member grounding treatment. Accept JSON integer values only, then check their full-width bounds before converting to int, consistent with existing pilot-seed/config integer validation.
+
+Acceptance: exact fractional/exponent inputs are refused through HTTP start and saved settings, scriptable settings/start and guided imports without provider construction, durable writes or replacement of an existing valid file. Global/member grounding and rounds share static diagnostics; ordinary integer defaults, -1/all, zero, explicit long values and maximum counts remain supported. Next add retained before-change precision regressions, update shared count validation/documentation, run focused/full tests and commit locally. Fake providers and isolated resources only; no owner state changes, live inference, downloads, paid calls or push.
+
+T34 WIP: all three before-change regressions fail (`target/T34-count-reproduction/before.xml`): exact fractional rounds start a sitting with HTTP201, underflowed global grounding overwrites saved settings with HTTP200, and shared validation accepts rounded counts. `RunSpec` now shares JSON-integer type/full-width-bound checks before int conversion; static existing diagnostics/defaults are retained. Next focused count/grounding/settings/command/menu/recovery checks, then fullJava174/shaded build and checkpoint. Only isolated fake fixtures were touched.
+
+T34 focusedJava29 pass: decimal/exponent counts, including rounding/underflow and full-width overflow, fail before providers, run storage or settings replacement. Commands and guided settings/overrides recover while preserving the existing file. Normal defaults/integer-long/all/zero/maximum validation and grounding/sitting/recovery/interface checks pass. Next fullJava174/shaded build, then verified docs/ancestry checks and local checkpoint.
+
+T34 verified 2026-10-02: focusedJava29/fullJava174/shaded build pass. Three regressions cover precise fractional/exponent counts and full-width integer bounds, HTTP refusal before providers/run storage, and browser endpoint/command/guided settings and override refusal preserving existing bytes. Normal integer defaults/all/zero/maximum and explicit long settings remain valid. All existing software checks pass. Latest isolated ZIP remains T32/167, Python19 unchanged. Diff/58-ID/link/ancestry/reference checks pass; owneriml and genuine blank artifact preserved. No actual inference, downloads, paid calls or push. Next correct a newly identified frontend file-import gap: transcript chooser retains its old2MiB limit despite the T26 backend64MiB ceiling, and transcript/pilot JSON.parse/stringify rewrites numeric/duplicate-key source before strict backend validation. Record that separate task before edits.
 
 ## T33 completed checkpoint
 
@@ -324,7 +338,7 @@ T11 final verification: 500/500 source/content checks pass; 131 original passage
 - Genuine human behavioural review for REQ-16–19 and real labels/adjudication for the 200-item pilot. Software cues, review preparation and scoring are implemented; synthetic scores never establish research accuracy. Latest disjoint genuine prepared file is ignored target/genuine-review-pilot-current-grounding.json (import explicitly). The older target/genuine-review-pilot.json and owner pilot2224fde6-83eb-455c-9e5c-aba790e4723e were preserved; the old artifact has19 overlaps after T11 grounding changes. Keep labels blank until real review and curate propositions/context/sampling before research use.
 - Account-specific cloud and local Ollama availability/model behaviour remain unverified. Routine tests use fake providers and no paid calls. Public university hosting/authentication remains future scope under REQ-58.
 
-No half-finished code remains after the verified T33 checkpoint. Preserve the unrelated .iml. One exploratory ZIP RecoveryTest had a transient ERROR that did not reproduce in six focused repeats or later full ZIP checks; the original failure logs remain in target/delivery-23fea5f924854757b21e2ce56afe387f. Investigate if it recurs; do not suppress tests or infer a cause from this run.
+No half-finished code remains after the verified T34 checkpoint. Preserve the unrelated .iml. One exploratory ZIP RecoveryTest had a transient ERROR that did not reproduce in six focused repeats or later full ZIP checks; the original failure logs remain in target/delivery-23fea5f924854757b21e2ce56afe387f. Investigate if it recurs; do not suppress tests or infer a cause from this run.
 
 ## Earlier checkpoint notes (historical)
 
@@ -389,6 +403,7 @@ Verification: Maven verify passes 2 tests (HTTP demo/chair/replay and cancellati
 | T31 pilot split source content | Java164/build verified | Full-speech hashes disjoint across calibration/held-out even under different IDs; refusal before import/preparation writes, same-split content allowed; genuine blank artifact unchanged |
 | T32 owned backend startup | Root/ZIP Java167/build/package/launcher verified | Bind before durable recovery; duplicate child preserves live files, factory failure releases Java17 selector/socket, shared browser/menu owned cleanup |
 | T33 terminal backend address | Java171/build verified | Normalize loopback root slash/case for commands/events/guided use; sanitized invalid address refusal before requests/writes, actual child entry-point check; latest ZIP remains T32/167 |
+| T34 exact sitting counts | Java174/build verified | JSON integer types/full-width bounds prevent rounded rounds/global/member grounding; HTTP/commands/guided refusal before providers/writes and previous settings preservation |
 
 ## Recovery procedure
 
