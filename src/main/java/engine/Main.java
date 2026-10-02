@@ -6,6 +6,7 @@ import engine.utils.AtomicFiles;
 import engine.web.WebServer;
 import java.io.*;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.http.*;
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
@@ -24,7 +25,24 @@ public final class Main {
     public Main(String base,Scanner input,PrintStream output) { this(base,input,output,Duration.ofSeconds(30)); }
     Main(String base,Scanner input,PrintStream output,Duration timeout) {
         if (timeout.isZero() || timeout.isNegative()) throw new IllegalArgumentException("Terminal timeout must be positive");
-        this.base=base; this.input=input; this.output=output; this.requestTimeout=timeout;
+        this.base=backendAddress(base); this.input=input; this.output=output; this.requestTimeout=timeout;
+    }
+    private static String backendAddress(String value) {
+        try {
+            if (value==null) throw new IllegalArgumentException();
+            URI uri=new URI(value);
+            String host=uri.getHost()==null ? "" : uri.getHost().toLowerCase(Locale.ROOT);
+            String path=uri.getRawPath(); int port=uri.getPort();
+            if (!"http".equalsIgnoreCase(uri.getScheme())
+                    || !Set.of("localhost","127.0.0.1","[::1]","[0:0:0:0:0:0:0:1]").contains(host)
+                    || uri.getRawUserInfo()!=null || uri.getRawQuery()!=null || uri.getRawFragment()!=null
+                    || path!=null && !path.isEmpty() && !path.equals("/")
+                    || port==0 || port>65535 || uri.getRawAuthority().endsWith(":"))
+                throw new IllegalArgumentException();
+            return new URI("http",null,host,port,null,null,null).toASCIIString();
+        } catch (URISyntaxException | IllegalArgumentException e) {
+            throw new IllegalArgumentException("PARLIAMENT_URL must be a loopback HTTP root address with a valid port and no credentials, query or fragment");
+        }
     }
     public static void main(String[] args) throws Exception {
         System.setOut(new PrintStream(System.out,true,StandardCharsets.UTF_8));
@@ -35,7 +53,7 @@ public final class Main {
             if (args.length==0) {
                 try { cli.get("/api/config"); }
                 catch (IOException e) {
-                    if (!base.equals("http://localhost:8080")) throw new IllegalStateException("Start the configured server before opening the menu");
+                    if (!cli.base.equals("http://localhost:8080")) throw new IllegalStateException("Start the configured server before opening the menu");
                     owned=WebServer.startLocal(8080,Path.of("."));
                     cli.output.println("Started the local backend. It will stop when this menu exits.");
                 }

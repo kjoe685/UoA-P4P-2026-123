@@ -6,9 +6,25 @@
 - Branch: `codex/dual-interface-integration`, created from refreshed `origin/main` at `a99269c`.
 - Recovered primary plan from previous chat `01a0f6c1-32c6-7a33-bf8c-6ad9fee837e5`; that chat ended in Plan mode without writing changes.
 - Preserved secondary plan from `9cbcb12`. Evaluation reference: `c41c4c2`, file-level reuse only.
-- T01–T32 checkpoints verified locally; latest checkpoint title `T32: protect active state during failed backend startup` (see Git log for local commit hash). Application checkpoint T32 and its isolated Windows ZIP both pass Java167/shaded build. Python19 passed at T24 and is unchanged. External platform/model/human acceptance remains below.
+- T01–T33 checkpoints verified locally; latest checkpoint title `T33: normalize terminal backend addresses` (see Git log for local commit hash). Application checkpoint T33 passes Java171/shaded build; latest isolated Windows ZIP remains T32/Java167. Python19 passed at T24 and is unchanged. External platform/model/human acceptance remains below.
 - Existing untracked `UoA-P4P-2026-123.iml` belongs to the user; preserve it.
 - [Acceptance status](acceptance-status.md) maps all58 requirement IDs to current evidence and remaining platform/model/human checks. Historical WIP entries below are superseded by completed checkpoint records, not tasks to repeat.
+
+## T33 completed checkpoint
+
+**T33 — Validate and normalize the shared terminal backend address (REQ-01–02, 45–50, 53–55, 57–58).**
+
+Dependency: T32 `145083a`. `PARLIAMENT_URL` is documented as another local backend port, but the terminal concatenates arbitrary input directly with API/event paths. A root trailing slash creates incorrect double-slash routes; malformed URLs can fail with the configured text in diagnostics. Validate the loopback HTTP root address once, remove the optional root slash, and use the normalized address for requests, events and default guided ownership decisions. Refuse credentials, non-root paths, queries/fragments, invalid ports and non-local addresses with one static diagnostic before HTTP or file writes; public hosting remains future scope.
+
+Acceptance: a trailing-slash address reaches the actual shared backend for commands, guided operations, events and Unicode exports; invalid configured addresses fail without echoing sentinels, requests or writes. Supported loopback forms and case normalization remain usable. Retain existing default/menu ownership and transport limits. Next write before-change regressions, update the shared terminal constructor/ownership check and interface guidance, run focused/full checks, then commit locally. Fake providers and isolated fixtures only; no owner data changes, live inference, downloads, paid calls or push.
+
+T33 WIP: before-change loopback regressions return HTTP400 for trailing-slash commands/case variants and an unsanitized URI diagnostic for an invalid address (`target/T33-address-reproduction/before.xml`). The shared terminal constructor now validates/normalizes the documented loopback HTTP root, and the default guided ownership check uses that normalized address. Commands and event paths share it. Next focused address/transport/event/parity/startup/recovery tests, then full build and local checkpoint; no acceptance claimed until checks pass.
+
+T33 focusedJava30 pass. Trailing-slash/case addresses reach shared commands, Unicode exports, live/replayed events and guided operations; invalid inputs preserve the existing export with static diagnostics. Added an actual terminal child entry-point check for normalized environment input and credential-bearing address refusal before requests. Next repeat focused checks including this entry point, then fullJava171/shaded build and local checkpoint. Latest isolated ZIP remains T32/Java167 until another delivery fixture is run; no launcher code changed.
+
+T33 focusedJava31 pass including actual terminal child entry-point environment normalization/refusal. Existing transport deadlines, bounded writes, event cancellation, browser/command/menu parity, startup ownership and recovery remain green. Next fullJava171/shaded build, review current ledger/source/branch boundaries and commit verified files; no current ZIP171 claim.
+
+T33 verified 2026-10-02: focusedJava31/fullJava171/shaded build pass. Four regressions cover trailing-slash commands/events/guided Unicode exports against the shared backend, invalid address refusal preserving an existing export without diagnostics echo, accepted loopback/case forms, and actual child entry-point environment normalization/refusal. Existing default ownership/transport/recovery tests remain green. Latest delivery is still T32/ZIP167; unchanged launcher files do not require a repeated cold download for this address contract. Diff/58-ID/documentation-link/ancestry/reference checks pass; genuine blank artifact hash unchanged, owneriml preserved. No owner data edits, actual inference/runtime/model downloads, paid calls or push. Next inspect snapshot consistency of model preset reads at the shared application boundary, then external acceptance.
 
 ## T32 completed checkpoint
 
@@ -308,7 +324,7 @@ T11 final verification: 500/500 source/content checks pass; 131 original passage
 - Genuine human behavioural review for REQ-16–19 and real labels/adjudication for the 200-item pilot. Software cues, review preparation and scoring are implemented; synthetic scores never establish research accuracy. Latest disjoint genuine prepared file is ignored target/genuine-review-pilot-current-grounding.json (import explicitly). The older target/genuine-review-pilot.json and owner pilot2224fde6-83eb-455c-9e5c-aba790e4723e were preserved; the old artifact has19 overlaps after T11 grounding changes. Keep labels blank until real review and curate propositions/context/sampling before research use.
 - Account-specific cloud and local Ollama availability/model behaviour remain unverified. Routine tests use fake providers and no paid calls. Public university hosting/authentication remains future scope under REQ-58.
 
-No half-finished code remains after the verified T32 checkpoint. Preserve the unrelated .iml. One exploratory ZIP RecoveryTest had a transient ERROR that did not reproduce in six focused repeats or later full ZIP checks; the original failure logs remain in target/delivery-23fea5f924854757b21e2ce56afe387f. Investigate if it recurs; do not suppress tests or infer a cause from this run.
+No half-finished code remains after the verified T33 checkpoint. Preserve the unrelated .iml. One exploratory ZIP RecoveryTest had a transient ERROR that did not reproduce in six focused repeats or later full ZIP checks; the original failure logs remain in target/delivery-23fea5f924854757b21e2ce56afe387f. Investigate if it recurs; do not suppress tests or infer a cause from this run.
 
 ## Earlier checkpoint notes (historical)
 
@@ -372,6 +388,7 @@ Verification: Maven verify passes 2 tests (HTTP demo/chair/replay and cancellati
 | T30 optional stance target projection | Java161/build verified | Null/empty/Unicode-whitespace targets remain missing; mixed valid/missing HTTP/API/restart evidence preserved, exact public topics untouched |
 | T31 pilot split source content | Java164/build verified | Full-speech hashes disjoint across calibration/held-out even under different IDs; refusal before import/preparation writes, same-split content allowed; genuine blank artifact unchanged |
 | T32 owned backend startup | Root/ZIP Java167/build/package/launcher verified | Bind before durable recovery; duplicate child preserves live files, factory failure releases Java17 selector/socket, shared browser/menu owned cleanup |
+| T33 terminal backend address | Java171/build verified | Normalize loopback root slash/case for commands/events/guided use; sanitized invalid address refusal before requests/writes, actual child entry-point check; latest ZIP remains T32/167 |
 
 ## Recovery procedure
 
