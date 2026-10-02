@@ -44,6 +44,7 @@ public record PilotDataset(int schemaVersion,String evidenceType,Source source,L
         if (!evidenceType.equals("synthetic_fixture") && (source.doi().isBlank() || source.url().isBlank())) throw new IllegalArgumentException("Genuine-source pilot needs a DOI and URL");
         if (reviewed && rows.size()<200) throw new IllegalArgumentException("Reviewed pilot needs at least 200 items");
         Set<String> ids=new HashSet<>(), texts=new HashSet<>(), calibration=new HashSet<>(), held=new HashSet<>();
+        Set<String> calibrationHashes=new HashSet<>(), heldHashes=new HashSet<>();
         Map<String,String> debates=new HashMap<>(), hashes=new HashMap<>(), targets=new HashMap<>();
         for (var row:rows) {
             if (!ids.add(row.id()) || !texts.add(normalized(row.text()))) throw new IllegalArgumentException("Duplicate pilot ID or text");
@@ -54,11 +55,13 @@ public record PilotDataset(int schemaVersion,String evidenceType,Source source,L
                 if (row.reviewer().isBlank() || !SENTIMENT.contains(row.sentiment()) || !STANCE.contains(row.stance()) || row.split().isBlank())
                     throw new IllegalArgumentException("Every reviewed item needs a reviewer pseudonym, split and both labels");
             } else if (!row.reviewer().isEmpty() || !row.sentiment().isEmpty() || !row.stance().isEmpty()) throw new IllegalArgumentException("Unreviewed preparation cannot contain gold labels or reviewers");
-            if (row.split().equals("calibration")) calibration.add(row.sourceDebateId());
-            if (row.split().equals("held_out")) held.add(row.sourceDebateId());
+            if (row.split().equals("calibration")) { calibration.add(row.sourceDebateId()); calibrationHashes.add(row.sourceSpeechSha256()); }
+            if (row.split().equals("held_out")) { held.add(row.sourceDebateId()); heldHashes.add(row.sourceSpeechSha256()); }
         }
         if (!Collections.disjoint(calibration,held) || reviewed && (calibration.isEmpty() || held.isEmpty()))
             throw new IllegalArgumentException("Calibration and held-out source debates must be disjoint and nonempty");
+        if (!Collections.disjoint(calibrationHashes,heldHashes))
+            throw new IllegalArgumentException("Source speech content cannot cross calibration and held-out splits");
     }
     public static String normalized(String text) { return Normalizer.normalize(text,Normalizer.Form.NFKC).replaceAll("(?U)\\s+"," ").strip().toLowerCase(Locale.ROOT); }
     private static void text(String text,int max) { if (text==null || text.isBlank() || text.length()>max || text.indexOf('\0')>=0) throw new IllegalArgumentException("Invalid pilot text field"); }

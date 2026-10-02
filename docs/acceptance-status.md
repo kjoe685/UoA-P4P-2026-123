@@ -1,8 +1,8 @@
 # Acceptance status
 
-This ledger covers every requirement in the [primary plan](implementation-plan.md) as of 2026-10-02, application checkpoint T30 with T29 delivery verification (see Git log for local commit hashes). It records evidence and remaining acceptance, without replacing the plan. The [progress log](implementation-progress.md) retains detailed checks, failures and recovery artifacts; historical WIP entries are superseded by its current checkpoint and verified table.
+This ledger covers every requirement in the [primary plan](implementation-plan.md) as of 2026-10-02, application checkpoint T31 with T29 delivery verification (see Git log for local commit hashes). It records evidence and remaining acceptance, without replacing the plan. The [progress log](implementation-progress.md) retains detailed checks, failures and recovery artifacts; historical WIP entries are superseded by its current checkpoint and verified table.
 
-The current application passes **161 Java tests and the shaded build**, with19 Python tests passed at T24 (unchanged by T25–T30). T29 isolated Windows ZIP passes159 tests, packaged synthetic archive/JNI checks and launcher workflows; T30's optional-target mapping change was subsequently verified in the repository. T29's result explicitly records cachedJavaArchive=true/resumedFixture=true after an initial sandbox network refusal; Maven/dependencies were acquired fresh. T10 used fresh official Java/Maven/dependency downloads; T20's historical ZIP127 also reused verified Java. Extractor11 checks are recorded at their relevant checkpoints. T27's updated source Python0.3.0/Java health protocol smoke passed without loading analyzers; it establishes compatibility only. These counts describe software verification, not model availability or research accuracy.
+The current application passes **164 Java tests and the shaded build**, with19 Python tests passed at T24 (unchanged by T25–T31). T29 isolated Windows ZIP passes159 tests, packaged synthetic archive/JNI checks and launcher workflows; T30–T31 optional-target mapping and pilot content-split changes were subsequently verified in the repository. T29's result explicitly records cachedJavaArchive=true/resumedFixture=true after an initial sandbox network refusal; Maven/dependencies were acquired fresh. T10 used fresh official Java/Maven/dependency downloads; T20's historical ZIP127 also reused verified Java. Extractor11 checks are recorded at their relevant checkpoints. T27's updated source Python0.3.0/Java health protocol smoke passed without loading analyzers; it establishes compatibility only. These counts describe software verification, not model availability or research accuracy.
 
 | Requirement | Current evidence | Remaining acceptance |
 |---|---|---|
@@ -36,7 +36,7 @@ The current application passes **161 Java tests and the shaded build**, with19 P
 | REQ-28 | T06/T07/T09b reports retain independent scales | None identified in software scope |
 | REQ-29 | T06/T07/T09b original per-method scores/provenance retained | None identified in software scope |
 | REQ-30 | T06/T07/T09b independent metrics; no aggregate quality result | None identified in software scope |
-| REQ-31 | T06a explicit local VADER setup/default analysis | Human-labelled sentiment validation |
+| REQ-31 | T06a explicit local VADER setup/default analysis; T31 pilot source-hash split separation | Human-labelled sentiment validation |
 | REQ-32 | T06c/T30 separate local DeBERTa stance, explicit targets and missing optional propositions | Human-labelled target/stance validation |
 | REQ-33 | T06 pinned CPU/open-model setup and offline smoke evidence | Native/pristine platform checks |
 | REQ-34 | T06/T07/T09b sentiment, stance and observable rubric scopes separated | Research interpretation; hidden intent is not inferred |
@@ -60,7 +60,7 @@ The current application passes **161 Java tests and the shaded build**, with19 P
 | REQ-52 | Primary plan starts with the full requirement inventory | Historical requirement fulfilled |
 | REQ-53 | T04–T14 interface matrix; shared command/menu/API/browser QA; T26 large public round trips | Real runtime/model and native interface acceptance |
 | REQ-54 | T05–T14 advanced assets/settings/analysis/runtime/pilot controls | Actual optional runtime setup on target platforms |
-| REQ-55 | T01–T30 task records, recovery log, memory and local checkpoints | Keep recording before lengthy operations/interruption |
+| REQ-55 | T01–T31 task records, recovery log, memory and local checkpoints | Keep recording before lengthy operations/interruption |
 | REQ-56 | T10 cold Windows ZIP; T13 genuine cached uv; T20/T29 refreshed ZIP | Pristine Windows and native Linux/macOS |
 | REQ-57 | Six evaluation-only commits excluded; reference tips unchanged | Repeat ancestry/ref checks at checkpoints |
 | REQ-58 | Local software/interfaces implemented; services/adapters/storage separated | Genuine local runtime acceptance; later hosting remains deferred |
@@ -70,7 +70,7 @@ The current application passes **161 Java tests and the shaded build**, with19 P
 1. Validate the official pinned Ollama package/service on an appropriate machine, including the upstream standard user-home signing-key behavior documented in [ollama-setup.md](ollama-setup.md). Then perform deliberate model/cache/context checks. Routine automated checks remain fake; fixture inventory/generation does not establish genuine availability.
 2. Run ZIP/launcher/optional setup acceptance on pristine Windows and native Linux/macOS. Git Bash fixture success on Windows establishes neither Unix binary execution nor another operating system.
 3. Have people review real debate behaviour using the fixed scenarios in [debate-behaviour.md](debate-behaviour.md). Synthetic speeches/concessions establish wiring only.
-4. Curate the existing200-item genuine blank pilot described in [pilot-study.md](pilot-study.md), including source context/propositions, both gold labels, reviewer declarations and debate-separated splits. Its current-grounding artifact has zero source-speech/hash overlap; older preserved pilot material has19 overlaps. Do not invent labels or reuse overlapping material for scoring.
+4. Curate the existing200-item genuine blank pilot described in [pilot-study.md](pilot-study.md), including source context/propositions, both gold labels, reviewer declarations and debate-separated splits. Its current-grounding artifact has zero grounding source-speech/hash overlap and zero full-speech hash overlap between calibration and held-out groups; older preserved pilot material has19 grounding overlaps. Do not invent labels or reuse overlapping material for scoring.
 5. Check cloud access only for an explicitly selected account/model with deliberate spending authorization. The adapters' fake protocol checks and retained preset names do not prove account-specific availability.
 
 Future automations should first reconcile new user messages, changed files and newer checkpoints. Repeat or broaden verification when a changed contract, failure or unresolved concern warrants it. The remaining acceptance above requires actual platforms, model access or human work; it is not a reason to manufacture new features, labels or accuracy claims.

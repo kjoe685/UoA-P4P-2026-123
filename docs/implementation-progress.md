@@ -6,9 +6,21 @@
 - Branch: `codex/dual-interface-integration`, created from refreshed `origin/main` at `a99269c`.
 - Recovered primary plan from previous chat `01a0f6c1-32c6-7a33-bf8c-6ad9fee837e5`; that chat ended in Plan mode without writing changes.
 - Preserved secondary plan from `9cbcb12`. Evaluation reference: `c41c4c2`, file-level reuse only.
-- T01–T30 checkpoints verified locally; latest checkpoint title `T30: preserve stance batches with blank optional targets` (see Git log for local commit hash). Application checkpoint T30 passes Java161/shaded build; T29 isolated Windows ZIP passes Java159/shaded build. Python19 passed at T24 and is unchanged. External platform/model/human acceptance remains below.
+- T01–T31 checkpoints verified locally; latest checkpoint title `T31: refuse pilot source content overlap across splits` (see Git log for local commit hash). Application checkpoint T31 passes Java164/shaded build; T29 isolated Windows ZIP passes Java159/shaded build. Python19 passed at T24 and is unchanged. External platform/model/human acceptance remains below.
 - Existing untracked `UoA-P4P-2026-123.iml` belongs to the user; preserve it.
 - [Acceptance status](acceptance-status.md) maps all58 requirement IDs to current evidence and remaining platform/model/human checks. Historical WIP entries below are superseded by completed checkpoint records, not tasks to repeat.
+
+## T31 completed checkpoint
+
+**T31 — Refuse full-speech content overlap between pilot splits (REQ-11, 27–34, 46, 53–55, 57–58).**
+
+Dependency: T30 `7c9ad81`. Pilot validation enforces disjoint declared debate IDs and consistent speech-ID metadata, but different speech IDs can declare the same full-speech hash on both sides. Distinct sampled sentences then pass text deduplication while sharing source content between calibration and held-out results. Compare declared full-speech hashes across splits as well as debate IDs, retaining same-split repeated source content. Apply the same constructor invariant to reviewed imports and generated blank preparations before saving.
+
+Acceptance: reviewed API/import overlap and a preparation with source content forced across both groups fail before writes/inference with sanitized errors; existing source data remains unchanged. Same-split repeated source hashes remain valid, and ordinary deterministic preparation/metrics/partial results still pass. Independently check the preserved genuine blank artifact for source-hash separation without creating labels or editing it. Next add before-change regressions, extend shared dataset validation, document curator repair, then focused/full checks and local checkpoint. Do not reinterpret or rewrite saved preparation policy/labels, owner files, historical reports; no actual inference, downloads or paid calls.
+
+T31 WIP: before-change reviewed/import and preparation regressions accept cross-split full-speech content (two failures; same-split control passes, `target/T31-pilot-content-reproduction/before.xml`). Shared dataset validation now checks split hash disjointness before save. The genuine preserved blank artifact retains SHA25649d40436964c90f6b3e1238dd6374618a414df3a362f2689c937e9eab5384637,200 items/zero labels and zero cross-split hash overlap (`genuine-blank-check.json` in the reproduction directory). Documentation gives the curator repair without changing selection policy or owner data. Next focused pilot/provenance/threshold/recovery/command tests, then full build and checkpoint.
+
+T31 verified 2026-10-02: focusedJava29/fullJava164/shaded build pass. Three added regressions cover reviewed direct/API overlap refusal before persistence/inference with static diagnostics, generated cross-split content refusal preserving original source/file count, and repeated full-speech hashes within one split remaining valid. Ordinary deterministic preparation, metrics, privacy, cancellation/recovery and interface parity pass. Genuine blank artifact hash unchanged;72 calibration/128 held-out speech hashes, zero overlap/labels. Python19 from T24 is unchanged. Diff/ancestry/reference/58-ID/link checks pass, owneriml preserved; no user run/pilot/report edits, actual inference, model downloads, paid calls or push. No unfinished implementation remains. Next external acceptance in the ledger: explicit upgraded VADER setup, genuine runtime/platform checks, behavioural review and human pilot curation. New automation runs should reconcile changes/messages before starting another requirement-focused task.
 
 ## T30 completed checkpoint
 
@@ -278,7 +290,7 @@ T11 final verification: 500/500 source/content checks pass; 131 original passage
 - Genuine human behavioural review for REQ-16–19 and real labels/adjudication for the 200-item pilot. Software cues, review preparation and scoring are implemented; synthetic scores never establish research accuracy. Latest disjoint genuine prepared file is ignored target/genuine-review-pilot-current-grounding.json (import explicitly). The older target/genuine-review-pilot.json and owner pilot2224fde6-83eb-455c-9e5c-aba790e4723e were preserved; the old artifact has19 overlaps after T11 grounding changes. Keep labels blank until real review and curate propositions/context/sampling before research use.
 - Account-specific cloud and local Ollama availability/model behaviour remain unverified. Routine tests use fake providers and no paid calls. Public university hosting/authentication remains future scope under REQ-58.
 
-No half-finished code remains after the verified T30 checkpoint. Preserve the unrelated .iml. One exploratory ZIP RecoveryTest had a transient ERROR that did not reproduce in six focused repeats or later full ZIP checks; the original failure logs remain in target/delivery-23fea5f924854757b21e2ce56afe387f. Investigate if it recurs; do not suppress tests or infer a cause from this run.
+No half-finished code remains after the verified T31 checkpoint. Preserve the unrelated .iml. One exploratory ZIP RecoveryTest had a transient ERROR that did not reproduce in six focused repeats or later full ZIP checks; the original failure logs remain in target/delivery-23fea5f924854757b21e2ce56afe387f. Investigate if it recurs; do not suppress tests or infer a cause from this run.
 
 ## Earlier checkpoint notes (historical)
 
@@ -340,6 +352,7 @@ Verification: Maven verify passes 2 tests (HTTP demo/chair/replay and cancellati
 | T28 evaluator/durable encoding | Java159/build verified | Strict blind resource source/candidates and pre-filesystem atomic writer validation; exact valid Unicode/hash/frozen request control |
 | T29 latest isolated Windows ZIP | ZIP Java159/build/package/launcher verified | Fresh Maven/dependencies; cached pinned Java, explicit resumed fixture after sandbox refusal; optional runtimes absent, UTF-8/ownership/restart/recovery pass |
 | T30 optional stance target projection | Java161/build verified | Null/empty/Unicode-whitespace targets remain missing; mixed valid/missing HTTP/API/restart evidence preserved, exact public topics untouched |
+| T31 pilot split source content | Java164/build verified | Full-speech hashes disjoint across calibration/held-out even under different IDs; refusal before import/preparation writes, same-split content allowed; genuine blank artifact unchanged |
 
 ## Recovery procedure
 
