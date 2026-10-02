@@ -31,7 +31,9 @@ public final class OfficialOllamaModelSmoke {
                 || !root.equals(stopSignal.getParent())) throw new IllegalArgumentException("Use the isolated Windows runner model mode");
         int port = Integer.parseInt(args[1]);
         if (port < 1024 || port > 65535 || port == 11434 || occupied(port)) throw new IllegalArgumentException("Choose a free non-default test port");
-        Path sourcePath = args.length == 5 ? Path.of(args[4]).toRealPath() : null;
+        boolean behaviour=args.length==5 && args[4].equals("--behaviour");
+        Path sourcePath = args.length == 5 && !behaviour ? Path.of(args[4]).toRealPath() : null;
+        require(!behaviour || Files.isDirectory(root.resolve(".runtime/ollama-models")),"Behaviour preparation requires an existing isolated model cache");
         Transcript source = null; String sourceHash = null;
         if (sourcePath != null) {
             require(sourcePath.startsWith(target.toRealPath()) && !sourcePath.equals(root.resolve("public-transcript.json"))
@@ -46,7 +48,7 @@ public final class OfficialOllamaModelSmoke {
         }
         if (!Files.isDirectory(root.resolve("config"))) TestFixtures.copyResources(root);
         var initial = Json.read(Files.readString(root.resolve("config/engine.json")), EngineConfig.class);
-        // Bound this acceptance to exactly two ordinary calls; preserve the configured model preset.
+        // Bound ordinary contributions and preserve the configured model preset.
         var bounded = new EngineConfig(initial.schemaVersion(), initial.defaultRounds(), initial.defaultTopic(),
                 initial.agentModelPreset(), initial.evaluatorModelPreset(), initial.models(), initial.parties(), new InterruptionConfig(0,0,123));
         AtomicFiles.write(root.resolve("config/engine.json"), Json.write(bounded));
@@ -96,14 +98,14 @@ public final class OfficialOllamaModelSmoke {
         result.put("acceptanceId", acceptanceId); result.put("diagnostics", root.relativize(diagnostics).toString());
         result.put("modelPreset", "qwen3-local"); result.put("model", bounded.models().get("qwen3-local").model());
         result.put("contextTokens", config.contextTokens());
-        result.put("scope", sourcePath == null ? "new-sitting-and-blind-rubric" : "retained-public-evidence-blind-rubric");
+        result.put("scope", behaviour ? "four-speech-public-human-review-preparation" : sourcePath == null ? "new-sitting-and-blind-rubric" : "retained-public-evidence-blind-rubric");
         if (sourcePath != null) result.put("sourceSha256", sourceHash);
         try {
             require(OfficialOllamaSmoke.finish(application, application.setupOllama().id(), stopSignal).state() == BackgroundJob.State.COMPLETE,
                     "Cached official runtime setup must complete");
             // Owned startup replaces its operational log; measure this invocation after that replacement.
             initialChatRequests = Files.exists(log) ? chatCount(log) : 0;
-            if (sourcePath == null) {
+            if (sourcePath == null && !behaviour) {
                 System.out.println("Deliberately downloading only the configured local qwen3:8b preset");
                 var download = OfficialOllamaSmoke.finish(application, application.downloadOllamaModel("qwen3-local").id(), stopSignal);
                 AtomicFiles.write(root.resolve("model-download.json"), Json.write(download));
@@ -125,8 +127,8 @@ public final class OfficialOllamaModelSmoke {
                 require(imported.events().equals(source.events()) && imported.roster().equals(source.roster()) && imported.topics().equals(source.topics())
                         && imported.startedAt() == source.startedAt() && imported.endedAt().equals(source.endedAt()), "Imported public evidence must stay exact");
             } else {
-                System.out.println("Generating a bounded genuine local sitting: two members, one round, zero grounding");
-                sitting = application.start(Map.of("topics", List.of("Should New Zealand build more public housing?"), "rounds", 1,
+                System.out.println("Generating a bounded genuine local sitting: two members, "+(behaviour ? "two rounds" : "one round")+", zero grounding");
+                sitting = application.start(Map.of("topics", List.of("Should New Zealand build more public housing?"), "rounds", behaviour ? 2 : 1,
                         "members", List.of(Map.of("party", "LABOUR"), Map.of("party", "NATIONAL")), "groundingCount", 0,
                         "agentModelPreset", "qwen3-local", "evaluatorModelPreset", "qwen3-local"));
             }
@@ -142,10 +144,24 @@ public final class OfficialOllamaModelSmoke {
             AtomicFiles.write(root.resolve("public-transcript.json"), Json.write(evidence));
             AtomicFiles.write(root.resolve("public-transcript-" + acceptanceId + ".json"), Json.write(evidence));
             AtomicFiles.write(root.resolve("public-transcript.txt"), application.textExport(sitting.id()));
+            AtomicFiles.write(root.resolve("public-transcript-"+acceptanceId+".txt"), application.textExport(sitting.id()));
             result.put("sittingOutcome", evidence.outcome());
             result.put("publicContributions", evidence.events().stream().filter(event -> event.type() == PublicEvent.Type.SPEECH).count());
-            require(evidence.outcome() == Transcript.Outcome.COMPLETE && result.get("publicContributions").equals(2L),
-                    "Actual local sitting must complete its two contributions; inspect retained public evidence");
+            require(evidence.outcome() == Transcript.Outcome.COMPLETE && result.get("publicContributions").equals(behaviour ? 4L : 2L),
+                    "Actual local sitting must complete its bounded contributions; inspect retained public evidence");
+            if (behaviour) {
+                require(modelCalls.get()==4 && chatCount(log)-initialChatRequests==4,"Behaviour preparation must make exactly four speech calls");
+                prepareHumanReview(root,acceptanceId,evidence);
+                result.put("publicTranscriptSha256",Hashes.sha256(Json.write(evidence))); result.put("humanJudgments","blank");
+                result.put("rubricJobSubmitted",false); application.close();
+                long stopped=System.nanoTime()+TimeUnit.SECONDS.toNanos(10);
+                while (occupied(port) && System.nanoTime()<stopped) Thread.sleep(50);
+                try (var reopened=new DebateApplication(root,new RunStore(root.resolve("runs")),model -> request -> { throw new AssertionError("Review recovery must not generate"); })) {
+                    require(evidence.equals(reopened.find(sitting.id()).transcript()),"Genuine public review evidence must reopen unchanged");
+                    require(!Boolean.TRUE.equals(reopened.ollamaReadiness().get("running")),"Review recovery must not start inference");
+                }
+                result.put("publicEvidenceRecovery",true); result.put("state","PASS");
+            } else {
             long chatBefore = chatCount(log);
             boolean rejected = false;
             try {
@@ -170,6 +186,7 @@ public final class OfficialOllamaModelSmoke {
             var participants = report.assessments().topics().get(0).assessment().participants();
             require(participants.size() == 2 && participants.stream().allMatch(participant -> participant.metrics().size() == 5), "Rubric must retain five separate metrics per participant");
             result.put("separateRubricMetrics", 5); result.put("state", "PASS");
+            }
         } finally {
             application.close(); Runtime.getRuntime().removeShutdownHook(cleanup);
             long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
@@ -195,6 +212,21 @@ public final class OfficialOllamaModelSmoke {
     }
     private static long chatCount(Path log) throws Exception {
         try (var lines = Files.lines(log)) { return lines.filter(line -> line.contains("/api/chat") && line.contains("POST")).count(); }
+    }
+    private static void prepareHumanReview(Path root,String id,Transcript evidence) throws Exception {
+        var previous=new ArrayList<PublicEvent>(); var rows=new ArrayList<Map<String,Object>>();
+        for (var event:evidence.events()) {
+            if (event.speaker()==null || event.type()!=PublicEvent.Type.SPEECH) continue;
+            var own=previous.stream().filter(turn -> turn.speaker().id().equals(event.speaker().id())).toList();
+            var other=previous.stream().filter(turn -> turn.speaker().party()!=event.speaker().party()).toList();
+            var row=new LinkedHashMap<String,Object>(); row.put("turnId",event.id()); row.put("participantId",event.speaker().id());
+            row.put("latestOtherPartyTurnId",other.isEmpty() ? null : other.get(other.size()-1).id());
+            row.put("previousOwnTurnIds",own.stream().map(PublicEvent::id).toList());
+            for (String field:List.of("specificClaimResponse","positionContinuity","reasonedConcession","reviewer","reviewNotes")) row.put(field,null);
+            rows.add(row); previous.add(event);
+        }
+        AtomicFiles.write(root.resolve("human-review-"+id+".json"),Json.write(Map.of("schemaVersion",1,"runId",evidence.runId(),
+                "publicTranscriptSha256",Hashes.sha256(Json.write(evidence)),"scope","public pointers for human review; no judgments or private setup","turns",rows)));
     }
     private static boolean occupied(int port) {
         try (var socket = new Socket()) { socket.connect(new InetSocketAddress("127.0.0.1", port), 250); return true; }

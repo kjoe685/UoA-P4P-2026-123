@@ -1,7 +1,7 @@
 param(
     [string]$ResumeFixture,
     [int]$Port = 11439,
-    [ValidateSet('Runtime','Model')][string]$Mode = 'Runtime',
+    [ValidateSet('Runtime','Model','Behaviour')][string]$Mode = 'Runtime',
     [string]$RuntimeFixture,
     [int]$ContextTokens = 16384,
     [string]$PublicTranscript
@@ -10,6 +10,7 @@ $ErrorActionPreference = 'Stop'
 $taskRepository = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $taskTarget = Join-Path $taskRepository 'target'
 $taskPrefix = $taskTarget + [IO.Path]::DirectorySeparatorChar
+if ($Mode -eq 'Behaviour' -and (!$ResumeFixture -or $PublicTranscript)) { throw 'Behaviour requires an existing ResumeFixture cache and no PublicTranscript' }
 if ($PublicTranscript) {
     if ($Mode -ne 'Model' -or !$ResumeFixture) { throw 'PublicTranscript requires Model mode and an existing ResumeFixture model cache' }
     $taskPublicSource = [IO.Path]::GetFullPath($PublicTranscript)
@@ -42,14 +43,15 @@ if ($RuntimeFixture) {
 }
 $taskJava = Join-Path $taskRepository '.runtime/jdk-17.0.20.1+1/bin/java.exe'
 if (!(Test-Path -LiteralPath $taskJava -PathType Leaf)) { throw 'Build first using run.cmd or mvnw.cmd and the pinned managed JDK' }
-$taskMain = if ($Mode -eq 'Model') { 'OfficialOllamaModelSmoke' } else { 'OfficialOllamaSmoke' }
+$taskMain = if ($Mode -ne 'Runtime') { 'OfficialOllamaModelSmoke' } else { 'OfficialOllamaSmoke' }
 if (!(Test-Path -LiteralPath (Join-Path $taskTarget ('test-classes/engine/application/' + $taskMain + '.class')))) {
     throw 'Compile test helpers first with mvnw.cmd test-compile'
 }
 if (!(Test-Path -LiteralPath (Join-Path $taskTarget 'virtual-parliament.jar'))) { throw 'Build the packaged application first with mvnw.cmd verify' }
 $taskStopSignal = Join-Path $taskFixture ('stop-' + [guid]::NewGuid().ToString('N') + '.requested')
 $taskArguments = '-Djava.io.tmpdir="' + $taskTarget + '" -cp "' + (Join-Path $taskTarget 'test-classes') + ';' + (Join-Path $taskTarget 'virtual-parliament.jar') + '" engine.application.' + $taskMain + ' "' + $taskFixture + '" ' + $Port + ' "' + $taskStopSignal + '"'
-if ($Mode -eq 'Model') { $taskArguments += ' ' + $ContextTokens }
+if ($Mode -ne 'Runtime') { $taskArguments += ' ' + $ContextTokens }
+if ($Mode -eq 'Behaviour') { $taskArguments += ' --behaviour' }
 if ($PublicTranscript) { $taskArguments += ' "' + $taskPublicSource + '"' }
 $taskStart = New-Object Diagnostics.ProcessStartInfo
 $taskStart.FileName = $taskJava
@@ -67,7 +69,8 @@ foreach ($taskKey in @($taskStart.EnvironmentVariables.Keys)) {
     }
 }
 Write-Output "Official runtime acceptance fixture: $taskFixture"
-if ($PublicTranscript) { Write-Output 'Explicit evidence mode reuses local qwen3:8b cache and evaluates retained public evidence without new speeches or model downloads.' }
+if ($Mode -eq 'Behaviour') { Write-Output 'Explicit behaviour preparation reuses local cache for four ordinary speeches and blank public human-review pointers; no downloads or scoring.' }
+elseif ($PublicTranscript) { Write-Output 'Explicit evidence mode reuses local qwen3:8b cache and evaluates retained public evidence without new speeches or model downloads.' }
 elseif ($Mode -eq 'Model') { Write-Output 'Explicit model mode downloads local qwen3:8b weights and performs bounded genuine local generation/rubric calls.' }
 else { Write-Output 'Explicitly downloads the pinned official archive only; no model weights or generation.' }
 $taskChild = [Diagnostics.Process]::Start($taskStart)
