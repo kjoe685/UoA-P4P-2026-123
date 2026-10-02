@@ -161,6 +161,56 @@ public class LlmEvaluationTest {
         assertEquals(EvaluationStatus.OK,result.topics().get(0).status()); assertEquals(2,calls.get());
         assertEquals(legacy,requests.get(1).messages().get(3).content());
     }
+    @Test void publicEligibilityUsesTurnOrderAndFreezesTheCueWithoutInventingScores() throws Exception {
+        TestFixtures.copyResources(root); var resources=LlmEvaluationResources.load(root); var original=evidence();
+        var roster=new ArrayList<>(original.roster()); roster.add(new Participant("c","Synthetic noncontributor",Party.GREEN,"Green"));
+        var source=new Transcript(2,original.runId(),original.startedAt(),original.endedAt(),roster,original.topics(),original.events(),original.outcome());
+        var calls=new AtomicInteger(); List<ChatRequest> requests=new ArrayList<>();
+        try (var jobs=new JobService(root.resolve("runs/jobs"))) {
+            var job=finish(jobs,new LlmEvaluationService(root,jobs,model -> request -> {
+                requests.add(request);
+                if (calls.incrementAndGet()==1) {
+                    new AssetService(root).update("prompts/EvaluatorCue.txt","NEXT_CUE_QA_SENTINEL",true);
+                    return new ChatResponse("{}","openai","gpt-4o-mini",ChatResponse.CompletionStatus.COMPLETED,null,1);
+                }
+                return fake(request,resources.rubric());
+            }).start(source,MODEL).id());
+            assertEquals(BackgroundJob.State.COMPLETE,job.state()); assertEquals(2,calls.get());
+            String cue=requests.get(0).messages().get(1).content();
+            assertTrue(cue.contains("\"participantId\":\"a\",\"ownTurnCount\":2,\"insufficientEvidenceMetrics\":[]"));
+            assertTrue(cue.contains("\"participantId\":\"b\",\"ownTurnCount\":1,\"insufficientEvidenceMetrics\":[\"consistency\"]"));
+            assertTrue(cue.contains("\"participantId\":\"c\",\"ownTurnCount\":0,\"insufficientEvidenceMetrics\":"+Json.write(resources.rubric().metrics().stream().map(LlmRubric.Metric::id).toList())));
+            assertTrue(cue.contains("\"otherTurnId\":\"turn-2\",\"responseTurnId\":\"turn-10\""));
+            assertTrue(cue.contains("\"otherTurnId\":\"turn-10\",\"responseTurnId\":\"turn-11\""));
+            assertEquals(cue,requests.get(1).messages().get(1).content());
+            for (String forbidden:List.of("NEXT_CUE_QA_SENTINEL","{{EVIDENCE_ELIGIBILITY}}","resolvedPrompts","grounding","strategy","PRIVATE_SETUP_SENTINEL","\"score\":")) assertFalse(cue.contains(forbidden));
+            assertEquals(resources.sourceHashes(),((LlmReport)job.result()).assessments().sourceHashes());
+        }
+    }
+    @Test void publicEligibilityFollowsEditableMinimumEvidenceAndIsTopicScoped() throws Exception {
+        TestFixtures.copyResources(root); var initial=LlmEvaluationResources.load(root);
+        new AssetService(root).update("evaluation/rubric.json",Json.write(initial.rubric()).replace("\"minimumParticipantTurns\":2","\"minimumParticipantTurns\":3"),true);
+        var resources=LlmEvaluationResources.load(root); var calls=new AtomicInteger(); List<ChatRequest> requests=new ArrayList<>();
+        var original=evidence(); var events=new ArrayList<>(original.events());
+        events.add(new PublicEvent("turn-12","topic-2",PublicEvent.Type.SPEECH,original.roster().get(0),"Different topic opening."));
+        events.add(new PublicEvent("turn-13","topic-2",PublicEvent.Type.SPEECH,original.roster().get(0),"Different topic continuation."));
+        var source=new Transcript(2,original.runId(),original.startedAt(),original.endedAt(),original.roster(),original.topics(),events,original.outcome());
+        var result=new LLMEvaluator(request -> { requests.add(request); calls.incrementAndGet(); return fake(request,resources.rubric()); },MODEL,resources).evaluate(source);
+        assertEquals(EvaluationStatus.OK,result.topics().get(0).status()); assertEquals(2,calls.get());
+        String cue=requests.get(0).messages().get(1).content();
+        assertTrue(cue.contains("\"participantId\":\"a\",\"ownTurnCount\":2,\"insufficientEvidenceMetrics\":[\"consistency\"]"));
+        for (String otherTopic:List.of("topic-2","turn-12","turn-13")) assertFalse(cue.contains(otherTopic));
+        assertEquals(EvaluationStatus.OK,result.topics().get(1).status());
+    }
+    @Test void legacyCueRemainsExactAndUnknownCueParametersFailBeforeSave() throws Exception {
+        TestFixtures.copyResources(root); var assets=new AssetService(root); String legacy="Legacy editable cue";
+        assets.update("prompts/EvaluatorCue.txt",legacy,true);
+        assertThrows(IllegalArgumentException.class,() -> assets.update("prompts/EvaluatorCue.txt","{{UNKNOWN_PARAMETER}}",true));
+        assertEquals(legacy,assets.read("prompts/EvaluatorCue.txt"));
+        var resources=LlmEvaluationResources.load(root); List<ChatRequest> requests=new ArrayList<>();
+        var result=new LLMEvaluator(request -> { requests.add(request); return fake(request,resources.rubric()); },MODEL,resources).evaluate(evidence());
+        assertEquals(EvaluationStatus.OK,result.topics().get(0).status()); assertEquals(legacy,requests.get(0).messages().get(1).content());
+    }
     @Test void durableJobsFreezeResourcesAndRetainTopicsOnCancellationAndRestart() throws Exception {
         TestFixtures.copyResources(root); var resources=LlmEvaluationResources.load(root); var source=evidence(); var events=new ArrayList<>(source.events());
         events.add(new PublicEvent("turn-12","topic-2",PublicEvent.Type.SPEECH,source.roster().get(0),"Second evidence."));
@@ -203,7 +253,7 @@ public class LlmEvaluationTest {
             assertEquals(EvaluationStatus.OK,report.assessments().topics().get(0).status());
             assertEquals("provider_failed",report.assessments().topics().get(1).error());
             assertEquals(2,calls.get()); assertFalse(Json.write(job).contains("SECRET_EXCEPTION_SENTINEL"));
-            assertEquals("llm-rubric-schema2-v2",report.assessments().implementationVersion());
+            assertEquals("llm-rubric-schema2-v3",report.assessments().implementationVersion());
             assertTrue(report.assessments().topics().get(0).attempts().get(0).requestSha256().matches("[0-9a-f]{64}"));
         }
     }

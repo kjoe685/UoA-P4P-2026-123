@@ -21,7 +21,17 @@ public record LlmEvaluationResources(LlmEvaluationConfig config, LlmRubric rubri
                                      Map<String, String> sourceHashes) {
     public LlmEvaluationResources {
         sourceHashes = Map.copyOf(sourceHashes);
+        cueTemplate(cue);
         repairTemplate(repairPrompt);
+    }
+    public String renderCue(List<LlmEvidenceEligibility.ParticipantAvailability> eligibility) {
+        var values = cue.contains("{{EVIDENCE_ELIGIBILITY}}")
+                ? Map.of("EVIDENCE_ELIGIBILITY", Json.write(eligibility)) : Map.<String,String>of();
+        return cueTemplate(cue).render(values);
+    }
+    private static PromptTemplate cueTemplate(String text) {
+        return new PromptTemplate("EvaluatorCue.txt", text,
+                text != null && text.contains("{{EVIDENCE_ELIGIBILITY}}") ? Set.of("EVIDENCE_ELIGIBILITY") : Set.of());
     }
     public String renderRepair(List<LlmResponseValidator.ValidationCode> codes) {
         var values = repairPrompt.contains("{{VALIDATION_FAILURES}}")
@@ -41,7 +51,7 @@ public record LlmEvaluationResources(LlmEvaluationConfig config, LlmRubric rubri
         var rubric = Json.read(read(root, "evaluation/rubric.json", hashes,replacements), LlmRubric.class);
         String system = new PromptTemplate("EvaluatorPrompt.txt", read(root, "prompts/EvaluatorPrompt.txt", hashes,replacements), Set.of("RUBRIC"))
                 .render(Map.of("RUBRIC", Json.writeCanonical(rubric)));
-        String cue = new PromptTemplate("EvaluatorCue.txt", read(root, "prompts/EvaluatorCue.txt", hashes,replacements), Set.of()).render(Map.of());
+        String cue = read(root, "prompts/EvaluatorCue.txt", hashes,replacements);
         String repair = read(root, "prompts/EvaluatorRepair.txt", hashes,replacements);
         return new LlmEvaluationResources(config, rubric, system, cue, repair, hashes);
     }

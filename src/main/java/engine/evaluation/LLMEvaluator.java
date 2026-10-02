@@ -20,7 +20,7 @@ import java.util.Objects;
 /** One isolated assessment of all participants per topic, with at most one budgeted repair. */
 public final class LLMEvaluator {
     public static final String ID = "llm-rubric";
-    public static final String IMPLEMENTATION_VERSION = "llm-rubric-schema2-v2";
+    public static final String IMPLEMENTATION_VERSION = "llm-rubric-schema2-v3";
     private final ChatManager provider;
     private final ModelConfig model;
     private final LlmEvaluationResources resources;
@@ -63,7 +63,7 @@ public final class LLMEvaluator {
         String instructions = resources.systemPrompt() + "\n" + schema.json();
         List<ChatMessage> messages = new ArrayList<>(List.of(
                 new ChatMessage(ChatMessage.Role.USER, Json.write(Map.of("topic", identity, "participants", roster, "events", events))),
-                new ChatMessage(ChatMessage.Role.USER, resources.cue())));
+                new ChatMessage(ChatMessage.Role.USER, resources.renderCue(LlmEvidenceEligibility.forTopic(topic, events, roster, resources.rubric())))));
         for (int attempt = 0; attempt <= resources.config().maxRepairAttempts(); attempt++) {
             if (Thread.currentThread().isInterrupted()) return failure(topic, "evaluation_interrupted", attempts);
             var request = new ChatRequest(instructions, messages, model, ProviderCapabilities.structuredOutput(model) ? schema : null);
