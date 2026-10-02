@@ -3,3 +3,4 @@
 mvnw text eol=lf
 *.cmd text eol=crlf
 data/hansard/excerpts.json text eol=lf
+docs/implementation-history.md -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
