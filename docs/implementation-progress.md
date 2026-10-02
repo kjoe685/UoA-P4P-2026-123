@@ -6,9 +6,21 @@
 - Branch: `codex/dual-interface-integration`, created from refreshed `origin/main` at `a99269c`.
 - Recovered primary plan from previous chat `01a0f6c1-32c6-7a33-bf8c-6ad9fee837e5`; that chat ended in Plan mode without writing changes.
 - Preserved secondary plan from `9cbcb12`. Evaluation reference: `c41c4c2`, file-level reuse only.
-- T01–T24 checkpoints verified locally; latest checkpoint title `T24: bind NLP provenance to frozen source settings` (see Git log for local commit hash). Application checkpoint T24 passes Java142/Python19/shaded build. External platform/model/human acceptance remains below.
+- T01–T25 checkpoints verified locally; latest checkpoint title `T25: validate captured transformer abstention thresholds` (see Git log for local commit hash). Application checkpoint T25 passes Java147/shaded build; Python19 passed at T24 and is unchanged. External platform/model/human acceptance remains below.
 - Existing untracked `UoA-P4P-2026-123.iml` belongs to the user; preserve it.
 - [Acceptance status](acceptance-status.md) maps all58 requirement IDs to current evidence and remaining platform/model/human checks. Historical WIP entries below are superseded by completed checkpoint records, not tasks to repeat.
+
+## T25 completed checkpoint
+
+**T25 — Validate transformer abstention against captured thresholds (REQ-11, 27–29, 31–34, 53–55, 57–58).**
+
+Dependency: T24 `e213300`. Generic evidence validation checks the scores/uncertainty arithmetic and equates the `uncertain` label with the returned abstention flag, but never compares that decision with the frozen `minScore`/`minMargin`. A result can therefore suppress strong classifications or score weak classifications despite claiming the correct source identity. Apply the configured decision rule to each transformer chunk before it reaches debate/pilot reports, including threshold equality and tied scores. Validate the reported threshold parameters against the captured values. VADER retains its distinct compound rule and scale.
+
+Acceptance: controlled transformer responses reproduce both false abstention and false confident-label acceptance; correct threshold-edge/tied outcomes remain valid; changed active thresholds stay frozen; mismatches become explicit failures retaining previous batches/methods; synthetic pilot metrics retain failures rather than scoring invalid predictions. Commands/menu/API continue through shared validation, with fake inference only. Next add reproductions and implement shared captured-threshold validation, then focused/full checks and a local checkpoint. No owner data, real models, labels, downloads or paid calls.
+
+T25 WIP: before-change failures reproduced false abstention/confident predictions for both transformer methods, low-margin acceptance, contradictory threshold parameters and invalid later-batch/pilot scoring (`target/T25-threshold-reproduction`). Split parameter validation into an independent fifth regression so an earlier decision failure cannot mask it. Shared result validation now recomputes the abstention rule from exact scores and frozen thresholds, compares reported threshold parameters, and returns static errors. Next focused analysis/pilot/command tests, then complete Java verification and checkpoint. VADER semantics unchanged; no owner files or inference.
+
+T25 verified 2026-10-02: focusedJava30/fullJava147/shaded build pass. Five added controlled regressions cover Cardiff/DeBERTa false abstention/confidence, exact threshold equality/ties/low-margin decisions, contradictory/invalid recorded thresholds, active snapshot edits with retained VADER/first transformer batch, and synthetic pilot failure/coverage accounting. Static failures discard invalid result provenance; successful earlier methods/batches survive. Python19 from T24 remains valid with no Python changes. Diff/ancestry/reference checks pass; no owner data/model calls/paid calls/downloads/push. Next inspect transcript import/export size parity using a valid large synthetic export, before recording further changes.
 
 ## T24 completed checkpoint
 
@@ -202,7 +214,7 @@ T11 final verification: 500/500 source/content checks pass; 131 original passage
 - Genuine human behavioural review for REQ-16–19 and real labels/adjudication for the 200-item pilot. Software cues, review preparation and scoring are implemented; synthetic scores never establish research accuracy. Latest disjoint genuine prepared file is ignored target/genuine-review-pilot-current-grounding.json (import explicitly). The older target/genuine-review-pilot.json and owner pilot2224fde6-83eb-455c-9e5c-aba790e4723e were preserved; the old artifact has19 overlaps after T11 grounding changes. Keep labels blank until real review and curate propositions/context/sampling before research use.
 - Account-specific cloud and local Ollama availability/model behaviour remain unverified. Routine tests use fake providers and no paid calls. Public university hosting/authentication remains future scope under REQ-58.
 
-No half-finished code remains after the verified T24 checkpoint. Preserve the unrelated .iml. One exploratory ZIP RecoveryTest had a transient ERROR that did not reproduce in six focused repeats or later full ZIP checks; the original failure logs remain in target/delivery-23fea5f924854757b21e2ce56afe387f. Investigate if it recurs; do not suppress tests or infer a cause from this run.
+No half-finished code remains after the verified T25 checkpoint. Preserve the unrelated .iml. One exploratory ZIP RecoveryTest had a transient ERROR that did not reproduce in six focused repeats or later full ZIP checks; the original failure logs remain in target/delivery-23fea5f924854757b21e2ce56afe387f. Investigate if it recurs; do not suppress tests or infer a cause from this run.
 
 ## Earlier checkpoint notes (historical)
 
@@ -258,6 +270,7 @@ Verification: Maven verify passes 2 tests (HTTP demo/chair/replay and cancellati
 | T22 durable-ID/download privacy | Software verified with fixtures | Java139, static canonical storage validation, sanitized error downloads/no attachment, valid pilot files and command/menu preservation |
 | T23 acceptance/recovery ledger | Documentation verified | All58 IDs exactly once; linked evidence/remaining checks, historical WIP supersession and current/isolated test evidence distinguished |
 | T24 local provenance identity | Java142/Python19/build verified | One-read source identity, implementation0.3.0, stale-batch/pilot refusal and retained committed evidence; unchanged dependency pins/offline lock49 |
+| T25 captured transformer decisions | Java147/build verified | Threshold/parameter/abstention validation; exact equality/ties and retained valid batches/methods; invalid pilot cases count as failures |
 
 ## Recovery procedure
 

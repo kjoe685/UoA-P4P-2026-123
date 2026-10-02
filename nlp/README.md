@@ -22,6 +22,8 @@ Every result preserves source text and Unicode code-point offsets, sentence/chun
 
 Local service implementation0.3.0 binds readiness and each result's `configSha256` to the exact UTF-8 settings bytes loaded once. Java requires that hash, implementation version and selected model/revision to match the job's captured settings before saving debate or pilot results. A stale or mismatched result becomes a sanitized method/batch failure while earlier committed evidence survives. Run **Set up local VADER** once after upgrading to refresh the changed local package/lock identity; existing cached model weights are retained. Older external services need updating/restarting; existing saved reports remain readable with their original provenance. Formatting changes produce distinct source hashes.
 
+For Cardiff and DeBERTa, Java also checks the reported threshold parameters and recomputes abstention from each chunk's score distribution: abstain when the maximum is below `minScore` or the top-two margin is below `minMargin`. Equality meets the threshold. The decision must match the captured settings even after edits; contradictory `uncertain` or confident labels fail that batch/item. Invalid pilot predictions remain failures in coverage and confusion reports. VADER continues to use its separate compound cutoffs.
+
 From a running backend:
 
 ```text

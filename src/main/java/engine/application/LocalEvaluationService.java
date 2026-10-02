@@ -70,13 +70,37 @@ public final class LocalEvaluationService {
     static void validateProvenance(NlpResponse.Method result,String method,String settings) {
         var provenance=result.provenance(); if (provenance==null) return;
         String model="vaderSentiment", revision="3.3.2";
+        Map<?,?> source=null;
         if (!method.equals("vader-sentiment")) {
-            var source=(Map<?,?>)Json.parse(settings); var spec=(Map<?,?>)source.get(method.equals("cardiff-sentiment") ? "cardiff" : "deberta");
+            source=(Map<?,?>)Json.parse(settings); var spec=(Map<?,?>)source.get(method.equals("cardiff-sentiment") ? "cardiff" : "deberta");
             model=(String)spec.get("modelId"); revision=(String)spec.get("revision");
         }
         if (!model.equals(provenance.modelId()) || !revision.equals(provenance.revision())
                 || !NlpResponse.IMPLEMENTATION_VERSION.equals(provenance.implementationVersion())
                 || !Hashes.sha256(settings).equals(provenance.configSha256()))
-            throw new IllegalStateException("Local response provenance does not match captured configuration");
+            throw invalidProvenance();
+        if (source!=null) {
+            if (!(source.get("minScore") instanceof Number score) || !(source.get("minMargin") instanceof Number margin))
+                throw invalidProvenance();
+            double minScore=score.doubleValue(), minMargin=margin.doubleValue();
+            if (!unit(minScore) || !unit(minMargin)
+                    || Double.compare(minScore,reportedThreshold(provenance.parameters().get("minScore")))!=0
+                    || Double.compare(minMargin,reportedThreshold(provenance.parameters().get("minMargin")))!=0)
+                throw invalidProvenance();
+            for (var item:result.items()) for (var chunk:item.chunks()) {
+                var ordered=chunk.scores().values().stream().sorted(Comparator.reverseOrder()).toList();
+                boolean abstain=ordered.get(0)<minScore || ordered.get(0)-ordered.get(1)<minMargin;
+                if (chunk.uncertainty()==null || chunk.uncertainty().abstained()!=abstain) throw invalidProvenance();
+            }
+        }
+    }
+    private static boolean unit(double value) { return Double.isFinite(value) && value>=0 && value<=1; }
+    private static double reportedThreshold(String text) {
+        try { double value=Double.parseDouble(text); if (unit(value)) return value; }
+        catch (RuntimeException ignored) { }
+        throw invalidProvenance();
+    }
+    private static IllegalStateException invalidProvenance() {
+        return new IllegalStateException("Local response provenance or decision does not match captured configuration");
     }
 }
