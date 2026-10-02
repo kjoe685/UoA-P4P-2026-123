@@ -2,9 +2,10 @@ package engine.evaluation.llm;
 
 import engine.prompt.PromptTemplate;
 import engine.utils.Json;
+import engine.utils.Utf8;
 import java.nio.file.Path;
 import java.nio.file.Files;
-import java.nio.charset.StandardCharsets;
+import java.nio.charset.CharacterCodingException;
 import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -33,10 +34,12 @@ public record LlmEvaluationResources(LlmEvaluationConfig config, LlmRubric rubri
     }
     private static String read(Path root, String relative, Map<String, String> hashes,Map<String,String> replacements) {
         try {
-            byte[] bytes = replacements.containsKey(relative) ? replacements.get(relative).getBytes(StandardCharsets.UTF_8) : Files.readAllBytes(root.resolve(relative));
+            byte[] bytes = replacements.containsKey(relative) ? Utf8.encode(replacements.get(relative)) : Files.readAllBytes(root.resolve(relative));
+            String text=Utf8.decode(bytes);
             hashes.put(relative, sha256(bytes));
-            return new String(bytes, StandardCharsets.UTF_8);
-        } catch (IOException e) { throw new IllegalArgumentException("Cannot read LLM evaluation resource: " + relative); }
+            return text;
+        } catch (CharacterCodingException e) { throw new IllegalArgumentException("LLM evaluation resource must contain valid UTF-8/Unicode text: " + relative); }
+        catch (IOException e) { throw new IllegalArgumentException("Cannot read LLM evaluation resource: " + relative); }
     }
     public static String sha256(byte[] bytes) {
         try { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes)); }

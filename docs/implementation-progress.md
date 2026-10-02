@@ -6,9 +6,23 @@
 - Branch: `codex/dual-interface-integration`, created from refreshed `origin/main` at `a99269c`.
 - Recovered primary plan from previous chat `01a0f6c1-32c6-7a33-bf8c-6ad9fee837e5`; that chat ended in Plan mode without writing changes.
 - Preserved secondary plan from `9cbcb12`. Evaluation reference: `c41c4c2`, file-level reuse only.
-- T01–T27 checkpoints verified locally; latest checkpoint title `T27: preserve UTF-8 resource and local runtime integrity` (see Git log for local commit hash). Application checkpoint T27 passes Java155/shaded build; Python19 passed at T24 and is unchanged. External platform/model/human acceptance remains below.
+- T01–T28 checkpoints verified locally; latest checkpoint title `T28: preserve evaluator and durable text encoding` (see Git log for local commit hash). Application checkpoint T28 passes Java159/shaded build; Python19 passed at T24 and is unchanged. External platform/model/human acceptance remains below.
 - Existing untracked `UoA-P4P-2026-123.iml` belongs to the user; preserve it.
 - [Acceptance status](acceptance-status.md) maps all58 requirement IDs to current evidence and remaining platform/model/human checks. Historical WIP entries below are superseded by completed checkpoint records, not tasks to repeat.
+
+## T28 completed checkpoint
+
+**T28 — Preserve evaluator source and durable text encoding (REQ-02, 05–06, 09–11, 27, 35–41, 46, 53–55, 57–58).**
+
+Dependency: T27 `4c6b994`. The independent blind-evaluation resource loader still replacement-decodes source bytes and replacement-encodes candidate prompts. Its hash can therefore identify original bytes while model-facing text is rewritten. The shared atomic writer also silently rewrites unpaired surrogate strings. Reuse the strict codec for evaluator resources and reject malformed durable text before creating directories or temporary files; preserve existing destinations and original valid UTF-8/hash identity.
+
+Acceptance: malformed evaluator prompts/rubrics fail before scheduling jobs or constructing providers, with static allowlisted path diagnostics and no raw source content; malformed asset candidates cannot overwrite resources; direct writer refusal leaves existing files and missing parent directories untouched. Valid CRLF/Māori/emoji/combining/literal replacement text keeps exact evaluator source hashes and frozen requests despite later edits. Next write before-change source/candidate/writer regressions, patch the shared codec boundaries, then focused/full verification and local checkpoint. No actual inference, owner resources/data, labels, runtime installation, downloads or paid calls.
+
+T28 WIP: three before-change failures reproduce malformed evaluator source admission, candidate rewriting and durable writer replacement (`target/T28-evaluator-encoding-reproduction/before.xml`); exact valid Unicode/hash/frozen request control passes. Evaluator resource loading now uses the strict codec with static path diagnostics. Atomic writing encodes strictly before filesystem operations. Next focused evaluation/assets/isolation/recovery/command checks, then full build and checkpoint; no owner resources or real inference.
+
+T28 verified 2026-10-02: focusedJava29/fullJava159/shaded build pass. Four added regressions cover malformed evaluator prompt/rubric refusal before scheduling/provider construction, high/low surrogate candidate refusal for all evaluator prompts without overwrites, shared writer refusal before directories/temp files/destination changes, and exact valid Unicode/CRLF hashes and frozen fake requests after later edits. Earlier source/runtime/isolation/recovery/command tests pass with the shared writer change. Python19 from T24 is unchanged. Diff/ancestry/reference checks pass, owneriml preserved; no owner data, actual inference, downloads, paid calls or push. Next verify the latest tracked-file ZIP with cached pinned Java, fresh Maven/dependencies and optional runtimes absent, since application boundaries changed after the earlier T20 delivery checkpoint.
+
+T27 readiness follow-up 2026-10-02: actual source Python service0.3.0 and Java health smoke agree on the raw configuration hash; all three analyzer states remain loaded=false. Existing dependencies/cache were inspected only; the managed setup marker remains invalid until explicit upgraded setup. Owned smoke service stopped, ephemeral port63389 released. This confirms protocol compatibility only, not runtime/model suitability or inference accuracy.
 
 ## T27 completed checkpoint
 
@@ -240,7 +254,7 @@ T11 final verification: 500/500 source/content checks pass; 131 original passage
 - Genuine human behavioural review for REQ-16–19 and real labels/adjudication for the 200-item pilot. Software cues, review preparation and scoring are implemented; synthetic scores never establish research accuracy. Latest disjoint genuine prepared file is ignored target/genuine-review-pilot-current-grounding.json (import explicitly). The older target/genuine-review-pilot.json and owner pilot2224fde6-83eb-455c-9e5c-aba790e4723e were preserved; the old artifact has19 overlaps after T11 grounding changes. Keep labels blank until real review and curate propositions/context/sampling before research use.
 - Account-specific cloud and local Ollama availability/model behaviour remain unverified. Routine tests use fake providers and no paid calls. Public university hosting/authentication remains future scope under REQ-58.
 
-No half-finished code remains after the verified T27 checkpoint. Preserve the unrelated .iml. One exploratory ZIP RecoveryTest had a transient ERROR that did not reproduce in six focused repeats or later full ZIP checks; the original failure logs remain in target/delivery-23fea5f924854757b21e2ce56afe387f. Investigate if it recurs; do not suppress tests or infer a cause from this run.
+No half-finished code remains after the verified T28 checkpoint. Preserve the unrelated .iml. One exploratory ZIP RecoveryTest had a transient ERROR that did not reproduce in six focused repeats or later full ZIP checks; the original failure logs remain in target/delivery-23fea5f924854757b21e2ce56afe387f. Investigate if it recurs; do not suppress tests or infer a cause from this run.
 
 ## Earlier checkpoint notes (historical)
 
@@ -299,6 +313,7 @@ Verification: Maven verify passes 2 tests (HTTP demo/chair/replay and cancellati
 | T25 captured transformer decisions | Java147/build verified | Threshold/parameter/abstention validation; exact equality/ties and retained valid batches/methods; invalid pilot cases count as failures |
 | T26 large public transcript transfer | Java150/build verified | >2MiB HTTP/commands/menu/restart round trips;64MiB import/2MiB ordinary caps, early length refusal and private/invalid import protection |
 | T27 resource/runtime encoding | Java155/build verified | Strict UTF-8 snapshots/candidates/readiness/pull records; valid Unicode/hash identity, early source refusal and retained prior job progress |
+| T28 evaluator/durable encoding | Java159/build verified | Strict blind resource source/candidates and pre-filesystem atomic writer validation; exact valid Unicode/hash/frozen request control |
 
 ## Recovery procedure
 
