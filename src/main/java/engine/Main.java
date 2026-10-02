@@ -1,11 +1,9 @@
 package engine;
 
-import engine.application.DebateApplication;
 import engine.utils.Json;
 import engine.utils.HttpBodies;
 import engine.utils.AtomicFiles;
 import engine.web.WebServer;
-import com.sun.net.httpserver.HttpServer;
 import java.io.*;
 import java.net.URI;
 import java.net.http.*;
@@ -14,7 +12,6 @@ import java.nio.charset.CharacterCodingException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
 import java.time.Duration;
 
 /** Guided and scriptable adapters for the same HTTP application operations as the browser. */
@@ -33,13 +30,13 @@ public final class Main {
         System.setOut(new PrintStream(System.out,true,StandardCharsets.UTF_8));
         String base=System.getenv().getOrDefault("PARLIAMENT_URL","http://localhost:8080");
         Main cli=new Main(base,new Scanner(System.in,StandardCharsets.UTF_8),System.out);
-        DebateApplication owned=null; HttpServer server=null;
+        WebServer.OwnedBackend owned=null;
         try {
             if (args.length==0) {
                 try { cli.get("/api/config"); }
                 catch (IOException e) {
                     if (!base.equals("http://localhost:8080")) throw new IllegalStateException("Start the configured server before opening the menu");
-                    owned=DebateApplication.local(Path.of(".")); server=WebServer.start(8080,owned);
+                    owned=WebServer.startLocal(8080,Path.of("."));
                     cli.output.println("Started the local backend. It will stop when this menu exits.");
                 }
                 cli.menu();
@@ -47,7 +44,6 @@ public final class Main {
         } catch (IOException e) { throw new IllegalStateException("Server unavailable. Start run.cmd serve (Windows) or sh run.sh serve (Unix)."); }
         finally {
             if (owned!=null) owned.close();
-            if (server!=null) { server.stop(0); ((ExecutorService)server.getExecutor()).shutdownNow(); }
         }
     }
     public void command(String[] args) throws Exception {

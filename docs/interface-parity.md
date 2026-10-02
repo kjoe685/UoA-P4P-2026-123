@@ -2,6 +2,8 @@
 
 Browser controls and both terminal modes call the same loopback backend. Commands attach to an existing server; the guided menu can start an owned backend on port 8080 and stops only that backend when it exits. Set `PARLIAMENT_URL` to attach to another local port. A missing input/output file returns the guided menu to operation selection.
 
+Owned browser/menu startup reserves the loopback port before loading or recovering saved application state. An occupied port fails before touching active sitting/job files. Use the existing backend or choose a free port before retrying. Failed startup releases its socket/resources; normal menu exit closes its owned application and HTTP executor.
+
 Accepted chair rulings enter the public evidence before the next contribution, including interjections. They retain the topic on which they were queued. Rulings accepted during the final response are retained before the terminal event, also on cancellation or provider failure; submissions after generation closes are rejected. Cancelled model responses remain discarded.
 
 Ordinary terminal API responses have a30-second deadline through the body read and a64MiB success limit (64KiB for bounded application errors). Interrupted, oversized, malformed-error and redirected responses fail before writing an export file. Successful201/202 operation responses are accepted. Terminal transcript/text/report/pilot exports use atomic UTF-8 replacement at the explicit destination; parent directories are created as needed. Live sitting event streams remain separate and can stay open for the debate's duration.

@@ -21,7 +21,9 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 /**
  * Entry point for the web frontend. Serves the static site in {@code web/} and the JSON API in {@link ApiHandler}.
@@ -66,9 +68,9 @@ public class WebServer {
             return;
         }
 
-        DebateApplication application = DebateApplication.local(Path.of("."));
-        HttpServer server = start(port, application);
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> { application.close(); server.stop(0); }, "parliament-shutdown"));
+        OwnedBackend backend = startLocal(port,Path.of("."));
+        HttpServer server = backend.server();
+        Runtime.getRuntime().addShutdownHook(new Thread(backend::close, "parliament-shutdown"));
         System.out.println("=== AI-Based Virtual Parliament: web frontend ===");
         System.out.println("The House is open at http://localhost:" + server.getAddress().getPort());
         System.out.println("Press Ctrl+C to stop the server.");
@@ -84,11 +86,57 @@ public class WebServer {
      * @param chatManagerFactory creates a fresh {@link ChatManager} for each MP agent, given the API key
      */
     public static HttpServer start(int port, Function<ModelConfig, ChatManager> chatManagerFactory) throws IOException {
-        return start(port, new DebateApplication(Path.of("."), new RunStore(Path.of("runs")), chatManagerFactory));
+        return startOwned(port,() -> new DebateApplication(Path.of("."), new RunStore(Path.of("runs")), chatManagerFactory)).server();
     }
 
     public static HttpServer start(int port, DebateApplication application) throws IOException {
         HttpServer server = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), port), 0);
+        try { return startBound(server,application); }
+        catch (RuntimeException | Error e) { stopBound(server); throw e; }
+    }
+
+    /** Reserve the socket before recovery can read or rewrite durable application state. */
+    public static OwnedBackend startLocal(int port,Path root) throws IOException {
+        return startOwned(port,() -> DebateApplication.local(root));
+    }
+
+    static OwnedBackend startOwned(int port,Supplier<DebateApplication> factory) throws IOException {
+        HttpServer server=HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(),port),0);
+        DebateApplication application=null;
+        boolean started=false;
+        try {
+            application=java.util.Objects.requireNonNull(factory.get());
+            startBound(server,application); started=true; return new OwnedBackend(server,application);
+        } catch (RuntimeException | Error e) {
+            try { if (application!=null) application.close(); } finally { if (started) stop(server); else stopBound(server); }
+            throw e;
+        }
+    }
+
+    public static final class OwnedBackend implements AutoCloseable {
+        private final HttpServer server;
+        private final DebateApplication application;
+        private boolean closed;
+        private OwnedBackend(HttpServer server,DebateApplication application) { this.server=server; this.application=application; }
+        public HttpServer server() { return server; }
+        @Override public synchronized void close() {
+            if (closed) return; closed=true;
+            try { application.close(); } finally { stop(server); }
+        }
+    }
+
+    private static void stop(HttpServer server) {
+        server.stop(0);
+        if (server.getExecutor() instanceof ExecutorService executor) executor.shutdownNow();
+    }
+
+    private static void stopBound(HttpServer server) {
+        // Java17 closes its selector in the dispatcher. A bound server needs that
+        // dispatcher started before stop can fully release its socket/resources.
+        server.start(); stop(server);
+    }
+
+    private static HttpServer startBound(HttpServer server,DebateApplication application) {
         // Each open event stream holds a thread, so the pool must be able to grow.
         server.setExecutor(Executors.newCachedThreadPool());
 

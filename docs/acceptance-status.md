@@ -1,8 +1,8 @@
 # Acceptance status
 
-This ledger covers every requirement in the [primary plan](implementation-plan.md) as of 2026-10-02, application checkpoint T31 with T29 delivery verification (see Git log for local commit hashes). It records evidence and remaining acceptance, without replacing the plan. The [progress log](implementation-progress.md) retains detailed checks, failures and recovery artifacts; historical WIP entries are superseded by its current checkpoint and verified table.
+This ledger covers every requirement in the [primary plan](implementation-plan.md) as of 2026-10-02, application/delivery checkpoint T32 (see Git log for the local commit hash). It records evidence and remaining acceptance, without replacing the plan. The [progress log](implementation-progress.md) retains detailed checks, failures and recovery artifacts; historical WIP entries are superseded by its current checkpoint and verified table.
 
-The current application passes **164 Java tests and the shaded build**, with19 Python tests passed at T24 (unchanged by T25–T31). T29 isolated Windows ZIP passes159 tests, packaged synthetic archive/JNI checks and launcher workflows; T30–T31 optional-target mapping and pilot content-split changes were subsequently verified in the repository. T29's result explicitly records cachedJavaArchive=true/resumedFixture=true after an initial sandbox network refusal; Maven/dependencies were acquired fresh. T10 used fresh official Java/Maven/dependency downloads; T20's historical ZIP127 also reused verified Java. Extractor11 checks are recorded at their relevant checkpoints. T27's updated source Python0.3.0/Java health protocol smoke passed without loading analyzers; it establishes compatibility only. These counts describe software verification, not model availability or research accuracy.
+The current application and T32 isolated Windows ZIP pass **167 Java tests and the shaded build**, with19 Python tests passed at T24 (unchanged by T25–T32). T32 also passes packaged synthetic archive/JNI and launcher workflows, including revised owned startup. Its fresh fixture records cachedJavaArchive=true/resumedFixture=false with fresh Maven/dependencies. Historical T29 ZIP159 explicitly resumed after sandbox network refusal; T10 used fresh official Java/Maven/dependency downloads, and T20 ZIP127 reused verified Java. Extractor11 checks are recorded at their relevant checkpoints. T27's updated source Python0.3.0/Java health protocol smoke passed without loading analyzers; it establishes compatibility only. These counts describe software verification, not model availability or research accuracy.
 
 | Requirement | Current evidence | Remaining acceptance |
 |---|---|---|
@@ -55,13 +55,13 @@ The current application passes **164 Java tests and the shaded build**, with19 P
 | REQ-47 | Maven source layout; separate application/adapters/config/resources | Preserve structure during future changes |
 | REQ-48 | README leads with download/extract/launch and explicit demo | First-time-user usability acceptance |
 | REQ-49 | Launcher and guided menu reduce ordinary commands | Native/pristine platform acceptance |
-| REQ-50 | Default demo/port, saved settings and managed build/cache reuse | Native/pristine platform acceptance |
+| REQ-50 | Default demo/port, saved settings/build/cache reuse; T32 duplicate startup preserves active files | Native/pristine platform acceptance |
 | REQ-51 | Historical T01 refreshed main at a99269c before planning | Historical requirement fulfilled; no branch reset needed |
 | REQ-52 | Primary plan starts with the full requirement inventory | Historical requirement fulfilled |
 | REQ-53 | T04–T14 interface matrix; shared command/menu/API/browser QA; T26 large public round trips | Real runtime/model and native interface acceptance |
 | REQ-54 | T05–T14 advanced assets/settings/analysis/runtime/pilot controls | Actual optional runtime setup on target platforms |
-| REQ-55 | T01–T31 task records, recovery log, memory and local checkpoints | Keep recording before lengthy operations/interruption |
-| REQ-56 | T10 cold Windows ZIP; T13 genuine cached uv; T20/T29 refreshed ZIP | Pristine Windows and native Linux/macOS |
+| REQ-55 | T01–T32 task records, recovery log, memory and local checkpoints | Keep recording before lengthy operations/interruption |
+| REQ-56 | T10 cold Windows ZIP; T13 genuine cached uv; T20/T29/T32 refreshed ZIP | Pristine Windows and native Linux/macOS |
 | REQ-57 | Six evaluation-only commits excluded; reference tips unchanged | Repeat ancestry/ref checks at checkpoints |
 | REQ-58 | Local software/interfaces implemented; services/adapters/storage separated | Genuine local runtime acceptance; later hosting remains deferred |
 

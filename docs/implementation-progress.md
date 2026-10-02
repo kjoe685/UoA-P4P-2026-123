@@ -6,9 +6,27 @@
 - Branch: `codex/dual-interface-integration`, created from refreshed `origin/main` at `a99269c`.
 - Recovered primary plan from previous chat `01a0f6c1-32c6-7a33-bf8c-6ad9fee837e5`; that chat ended in Plan mode without writing changes.
 - Preserved secondary plan from `9cbcb12`. Evaluation reference: `c41c4c2`, file-level reuse only.
-- T01–T31 checkpoints verified locally; latest checkpoint title `T31: refuse pilot source content overlap across splits` (see Git log for local commit hash). Application checkpoint T31 passes Java164/shaded build; T29 isolated Windows ZIP passes Java159/shaded build. Python19 passed at T24 and is unchanged. External platform/model/human acceptance remains below.
+- T01–T32 checkpoints verified locally; latest checkpoint title `T32: protect active state during failed backend startup` (see Git log for local commit hash). Application checkpoint T32 and its isolated Windows ZIP both pass Java167/shaded build. Python19 passed at T24 and is unchanged. External platform/model/human acceptance remains below.
 - Existing untracked `UoA-P4P-2026-123.iml` belongs to the user; preserve it.
 - [Acceptance status](acceptance-status.md) maps all58 requirement IDs to current evidence and remaining platform/model/human checks. Historical WIP entries below are superseded by completed checkpoint records, not tasks to repeat.
+
+## T32 completed checkpoint
+
+**T32 — Bind an owned backend before opening durable application state (REQ-11, 45–50, 53–55, 57–58).**
+
+Dependency: T31 `204e26f`. Browser startup constructs `DebateApplication.local` before binding HTTP; its recovery marks running sittings/jobs interrupted even when a second launcher immediately fails because the first backend owns the port. Guided fallback also constructs before binding. Bind first, then construct/start the owned application, with one closeable owner shared by browser and menu. Preserve caller-owned application startup and clean up bound sockets/executors on factory/start failures.
+
+Acceptance: a child browser launch against a live fake sitting/job and occupied port fails without rewriting their transcript/view/job files or triggering providers; bind rejection happens before the application factory runs. Factory failure releases its bound port/resources, normal startup/close owns only its own backend, and menu/server/launcher parity/recovery remains covered. Next write a before-change isolated child-launch regression, implement deferred application construction/owned lifecycle, then focused/full checks and local checkpoint. No owner state, real inference, paid calls, runtime/model downloads or push.
+
+T32 WIP: isolated child browser startup against a live fake backend rewrites its running transcript before failing bind (`target/T32-startup-reproduction/before.xml`). Browser/menu startup now share a closeable owned backend which binds before creating the application; factory/start failures stop bound sockets/executors, and close stops only owned state. Caller-provided application startup remains caller-owned. Next add factory/normal lifecycle checks, run duplicate-launch/menu/recovery focused checks and full build, then current launcher verification and local checkpoint. All state/processes are isolated fixtures with fake work.
+
+T32 focused follow-up: duplicate child and normal owned close pass, but factory-failure socket reuse fails (`bound-factory-cleanup.xml`). Reviewed the pinned JDK17 ServerImpl source: stop closes the channel, while the selector closes only in the dispatcher; a never-started bound server therefore retains resources. Failure cleanup now starts that dispatcher before stopping so socket/selector release completes. Next rerun focused lifecycle tests, then full build and isolated launcher/menu checks; do not claim cleanup verified until the reuse regression passes.
+
+T32 focusedJava27 pass: duplicate child leaves live transcript/view/job bytes unchanged; occupied port refuses before factory; failed factory releases its socket immediately; normal/idempotent owned close cancels owned jobs and shuts down its HTTP executor. Recovery/run/chair/command/web checks pass. Next fullJava167/shaded build, then stage only the T32 files for the new tracked ZIP inventory and run isolated PS5.1/batch/guided/ownership/recovery delivery before committing. No owner state or actual inference; the application checkpoint remains T31 until all required checks finish.
+
+T32 fullJava167/shaded build pass. Staging the exact T32 code/test/docs for tracked ZIP inventory; checkpoint commit waits for the revised owned startup to pass isolated Windows PowerShell5.1/batch/guided/ownership/restart/recovery delivery. Cached pinned Java only, fresh Maven/dependencies, no actual optional runtime/model execution or owner data.
+
+T32 verified 2026-10-02: focusedJava27/fullJava167/shaded build and new isolated ZIP167/package/launcher checks pass. Duplicate browser child leaves live transcript/view/job bytes unchanged after bind refusal; factory rejection releases its socket, and normal/idempotent owned close cancels owned jobs and closes HTTP resources. Pinned Java17 dispatcher cleanup is documented in the retained failure evidence. Browser and guided startup share the owned handle; existing caller-owned application routes remain supported. Fixture `target/delivery-a094999715154a9a93b591c15907376e/result.json` records cachedJavaArchive=true/resumedFixture=false, fresh Maven/dependencies, PS5.1/built-in PATH/spaces, actual batch/Unicode guided/ownership/repeat/restart/incomplete caches and packaged synthetic ZIP/gzip/zstd/JNI. Source hashes match; session44294 completed, owned ports18089/8080 released. Diff/ancestry/reference checks pass; owneriml preserved. No user data changes, actual inference/runtime/model downloads, labels, paid calls or push. Next review configured terminal backend URL handling, then remaining external acceptance.
 
 ## T31 completed checkpoint
 
@@ -290,7 +308,7 @@ T11 final verification: 500/500 source/content checks pass; 131 original passage
 - Genuine human behavioural review for REQ-16–19 and real labels/adjudication for the 200-item pilot. Software cues, review preparation and scoring are implemented; synthetic scores never establish research accuracy. Latest disjoint genuine prepared file is ignored target/genuine-review-pilot-current-grounding.json (import explicitly). The older target/genuine-review-pilot.json and owner pilot2224fde6-83eb-455c-9e5c-aba790e4723e were preserved; the old artifact has19 overlaps after T11 grounding changes. Keep labels blank until real review and curate propositions/context/sampling before research use.
 - Account-specific cloud and local Ollama availability/model behaviour remain unverified. Routine tests use fake providers and no paid calls. Public university hosting/authentication remains future scope under REQ-58.
 
-No half-finished code remains after the verified T31 checkpoint. Preserve the unrelated .iml. One exploratory ZIP RecoveryTest had a transient ERROR that did not reproduce in six focused repeats or later full ZIP checks; the original failure logs remain in target/delivery-23fea5f924854757b21e2ce56afe387f. Investigate if it recurs; do not suppress tests or infer a cause from this run.
+No half-finished code remains after the verified T32 checkpoint. Preserve the unrelated .iml. One exploratory ZIP RecoveryTest had a transient ERROR that did not reproduce in six focused repeats or later full ZIP checks; the original failure logs remain in target/delivery-23fea5f924854757b21e2ce56afe387f. Investigate if it recurs; do not suppress tests or infer a cause from this run.
 
 ## Earlier checkpoint notes (historical)
 
@@ -353,6 +371,7 @@ Verification: Maven verify passes 2 tests (HTTP demo/chair/replay and cancellati
 | T29 latest isolated Windows ZIP | ZIP Java159/build/package/launcher verified | Fresh Maven/dependencies; cached pinned Java, explicit resumed fixture after sandbox refusal; optional runtimes absent, UTF-8/ownership/restart/recovery pass |
 | T30 optional stance target projection | Java161/build verified | Null/empty/Unicode-whitespace targets remain missing; mixed valid/missing HTTP/API/restart evidence preserved, exact public topics untouched |
 | T31 pilot split source content | Java164/build verified | Full-speech hashes disjoint across calibration/held-out even under different IDs; refusal before import/preparation writes, same-split content allowed; genuine blank artifact unchanged |
+| T32 owned backend startup | Root/ZIP Java167/build/package/launcher verified | Bind before durable recovery; duplicate child preserves live files, factory failure releases Java17 selector/socket, shared browser/menu owned cleanup |
 
 ## Recovery procedure
 
