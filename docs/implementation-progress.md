@@ -6,8 +6,20 @@
 - Branch: `codex/dual-interface-integration`, created from refreshed `origin/main` at `a99269c`.
 - Recovered primary plan from previous chat `01a0f6c1-32c6-7a33-bf8c-6ad9fee837e5`; that chat ended in Plan mode without writing changes.
 - Preserved secondary plan from `9cbcb12`. Evaluation reference: `c41c4c2`, file-level reuse only.
-- T01–T19 software checkpoints verified locally; latest checkpoint title `T19: preserve Unicode evidence at JSON boundaries` (see Git log for local commit hash). External platform/human acceptance remains below.
+- T01–T20 software checkpoints verified locally; latest checkpoint title `T20: refresh isolated Windows delivery verification` (see Git log for local commit hash). External platform/human acceptance remains below.
 - Existing untracked `UoA-P4P-2026-123.iml` belongs to the user; preserve it.
+
+## T20 completed checkpoint
+
+**T20 — Refresh isolated Windows delivery for the integrated runtime (REQ-20–22, 45–50, 53–58).**
+
+Dependency: T19 `59986ce`. The cold ZIP acceptance at T10 predates the new bundled archive/JNI dependencies and transport/Unicode changes. Extend the existing developer delivery harness to check local-LLM readiness without installation/generation and execute the existing synthetic packaged archive smoke from the isolated checkout. Then run current tracked files in a new space-path ZIP using built-in Windows PowerShell5.1/PATH. Reuse the verified Java archive explicitly; Maven/dependencies must build in the fresh fixture, with no owner run files or credentials copied.
+
+Acceptance: full current suite/build, credential-free demo, absent optional NLP/runtime, actual batch command and guided Unicode input, packaged ZIP/gzip/zstd/JNI, unchanged-build reuse, public evidence restart and interrupted Java/Maven cache recovery. Record cached-Java status and retain all logs/results. No inference, model/runtime weights, paid calls, native Unix/pristine-OS or research-accuracy claims. Next inspect/extend the harness, parse it, then execute and record the fixture before a local documentation/harness checkpoint.
+
+T20 WIP: harness now probes runtime readiness without installing/starting it and runs existing synthetic archive smoke against test helpers + isolated packaged JAR. PowerShell parsing/diff check pass. Current execution session8158/port18089 uses new `target/delivery-264cc4f25a524961a10a13c64d9530eb`, with cached official Java explicitly enabled and a fresh Maven/dependency cache. First ZIP launcher building; inspect retained first/repeat/recovery logs and result before claiming acceptance. The harness owns/stops its fixture processes; no model calls. Next inspect build, then verify all stages and local checkpoint.
+
+T20 verified 2026-10-02: isolated space-path Windows PowerShell5.1 ZIP passes current Java127/build, newly retrieved Maven/dependencies, optional NLP/local-LLM absence, packaged synthetic ZIP/gzip/zstd/JNI, actual batch CLI/Unicode guided input, owned-menu exit, restart/build reuse and incomplete Java/Maven cache recovery. Result `target/delivery-264cc4f25a524961a10a13c64d9530eb/result.json` explicitly records cachedJavaArchive=true/resumedFixture=false/menuOwnership=PASS; T10 remains the earlier genuine cold-Java evidence. Harness/session8158 completed; ports18089/8080 released. Parsing/diff/ancestry pass, reference branches unchanged. No models/runtime weights, paid calls, owner data changes or push. Native/pristine OS and human research acceptance remain external. Next inspect terminal event-stream bounds/interruption and record a task before changes.
 
 ## T19 completed checkpoint
 
@@ -137,7 +149,7 @@ T11 final verification: 500/500 source/content checks pass; 131 original passage
 - Genuine human behavioural review for REQ-16–19 and real labels/adjudication for the 200-item pilot. Software cues, review preparation and scoring are implemented; synthetic scores never establish research accuracy. Latest disjoint genuine prepared file is ignored target/genuine-review-pilot-current-grounding.json (import explicitly). The older target/genuine-review-pilot.json and owner pilot2224fde6-83eb-455c-9e5c-aba790e4723e were preserved; the old artifact has19 overlaps after T11 grounding changes. Keep labels blank until real review and curate propositions/context/sampling before research use.
 - Account-specific cloud and local Ollama availability/model behaviour remain unverified. Routine tests use fake providers and no paid calls. Public university hosting/authentication remains future scope under REQ-58.
 
-No half-finished code remains after the verified T14 checkpoint. Preserve the unrelated .iml. One exploratory ZIP RecoveryTest had a transient ERROR that did not reproduce in six focused repeats or later full ZIP checks; the original failure logs remain in target/delivery-23fea5f924854757b21e2ce56afe387f. Investigate if it recurs; do not suppress tests or infer a cause from this run.
+No half-finished code remains after the verified T20 checkpoint. Preserve the unrelated .iml. One exploratory ZIP RecoveryTest had a transient ERROR that did not reproduce in six focused repeats or later full ZIP checks; the original failure logs remain in target/delivery-23fea5f924854757b21e2ce56afe387f. Investigate if it recurs; do not suppress tests or infer a cause from this run.
 
 ## Earlier checkpoint notes (historical)
 
@@ -188,6 +200,7 @@ Verification: Maven verify passes 2 tests (HTTP demo/chair/replay and cancellati
 | T17 NLP setup/readiness | Software and current Python schema verified | Java117, snapshot queue/edit/report/restart and fake process/cancellation tests; real existing unloaded health schema accepted by packaged Java; no inference/install/download |
 | T18 terminal transport/exports | Software verified with fixtures | Java123, body bounds/deadlines/cancel, redirect/error refusal and owner-file preservation,201/202/Unicode and atomic export replacement |
 | T19 Unicode boundaries | Software verified with fixtures | Java127, strict UTF-8/scalar rejection before mutation and exact valid text/canonical round trips; native Blob/TextDecoder fixtures |
+| T20 refreshed Windows delivery | Isolated current-host acceptance verified | ZIP Java127/build, fresh Maven/dependencies, packaged ZIP/gzip/zstd/JNI, optional runtime absence, Unicode/menu/ownership/reuse/recovery; cached Java explicit |
 
 ## Recovery procedure
 

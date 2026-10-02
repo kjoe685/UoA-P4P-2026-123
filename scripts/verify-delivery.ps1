@@ -35,6 +35,7 @@ function Start-Fixture {
     throw "Launcher readiness timed out; inspect $fixtureRoot/$Label.*.log"
 }
 try {
+    Write-Host "Delivery fixture: $fixtureRoot"
     if (!$ResumeFixture) {
     New-Item -ItemType Directory -Force -Path $fixtureRoot | Out-Null
     # Git constructs the developer fixture only; ordinary ZIP users do not need it.
@@ -69,6 +70,13 @@ try {
     if ($config.defaultProvider -ne 'demo') { throw 'ZIP default requires credentials' }
     $readiness = Invoke-RestMethod -Uri "http://127.0.0.1:$Port/api/local-readiness" -TimeoutSec 5
     if ($readiness.installed -ne $false) { throw 'ZIP unexpectedly has optional NLP dependencies' }
+    $ollama = Invoke-RestMethod -Uri "http://127.0.0.1:$Port/api/ollama-readiness" -TimeoutSec 10
+    if ($ollama.installed -ne $false -or $ollama.owned -ne $false) { throw 'ZIP unexpectedly installed or started a local LLM runtime' }
+    $packageSmoke = Join-Path $fixtureRoot 'packaged-archive-smoke'
+    $managedJava = Join-Path $checkout '.runtime/jdk-17.0.20.1+1/bin/java.exe'
+    $smokeOutput = & $managedJava -cp ((Join-Path $checkout 'target/test-classes') + ';' + (Join-Path $checkout 'target/virtual-parliament.jar')) engine.application.OllamaPackageSmoke $packageSmoke 2>&1 | Out-String
+    if ($LASTEXITCODE -ne 0 -or !$smokeOutput.Contains('ZIP bundled reader PASS') -or !$smokeOutput.Contains('GZIP_TAR bundled reader PASS') -or !$smokeOutput.Contains('ZSTD_TAR bundled reader PASS')) { throw 'Isolated packaged archive/JNI smoke failed' }
+    [IO.File]::WriteAllText((Join-Path $fixtureRoot 'packaged-archive-smoke.log'),$smokeOutput,(New-Object Text.UTF8Encoding $false))
     $run = Invoke-RestMethod -Uri "http://127.0.0.1:$Port/api/debates" -Method Post -ContentType 'application/json' -Body '{"agentModelPreset":"demo","rounds":1,"groundingCount":0,"members":[{"party":"LABOUR"}],"topics":["ZIP delivery verification"]}' -TimeoutSec 10
     $events = (Invoke-WebRequest -UseBasicParsing -Uri "http://127.0.0.1:$Port/api/debates/$($run.id)/events" -TimeoutSec 20).Content
     if (!$events.Contains('"outcome":"complete"')) { throw 'ZIP demo did not complete' }
@@ -122,7 +130,7 @@ try {
     if (!(Test-Path -LiteralPath (Join-Path $managedRoot 'bin/java.exe')) -or !(Test-Path -LiteralPath (Join-Path $managedRoot 'bin/javac.exe'))) { throw 'Interrupted extraction did not recover' }
     if (Test-Path -LiteralPath (Join-Path $managedRoot 'jdk-17.0.20.1+1')) { throw 'Recovered JDK nested inside incomplete root' }
     Stop-OwnedLauncher
-    [pscustomobject]@{result='PASS'; fixture=$fixtureRoot; cachedJavaArchive=[bool]$UseCachedJavaArchive; resumedFixture=[bool]$ResumeFixture; menuOwnership=$ownership; checks='ZIP/space path/built-in PATH/first build/demo/optional absence/run.cmd/UTF8 menu/repeat/restart/incomplete Java and Maven extraction/stale partial'; runTime=(Get-Date).ToString('o')} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $fixtureRoot 'result.json') -Encoding UTF8
+    [pscustomobject]@{result='PASS'; fixture=$fixtureRoot; cachedJavaArchive=[bool]$UseCachedJavaArchive; resumedFixture=[bool]$ResumeFixture; menuOwnership=$ownership; checks='ZIP/space path/built-in PATH/first build/demo/optional NLP and LLM absence/packaged ZIP gzip zstd JNI/run.cmd/UTF8 menu/repeat/restart/incomplete Java and Maven extraction/stale partial'; runTime=(Get-Date).ToString('o')} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $fixtureRoot 'result.json') -Encoding UTF8
     Write-Output "PASS: isolated ZIP delivery; evidence $fixtureRoot/result.json"
 } finally {
     Stop-OwnedLauncher
