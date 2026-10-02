@@ -12,12 +12,17 @@ public final class JobService implements AutoCloseable {
     public final class Context {
         private final String id;
         private Context(String id) { this.id=id; }
-        public void checkCancelled() { if (Thread.currentThread().isInterrupted() || find(id).terminal()) throw new CancellationException(); }
+        public void checkCancelled() {
+            if (closed || cancellationRequests.contains(id) || Thread.currentThread().isInterrupted() || find(id).terminal())
+                throw new CancellationException();
+        }
         public void update(String progress,Object result) { checkCancelled(); transition(id,BackgroundJob.State.RUNNING,progress,result); }
     }
     private final Path root;
     private final Map<String,BackgroundJob> jobs=new ConcurrentHashMap<>();
     private final Map<String,Future<?>> futures=new ConcurrentHashMap<>();
+    private final Set<String> cancellationRequests=ConcurrentHashMap.newKeySet();
+    private volatile boolean closed;
     private final ThreadPoolExecutor executor=new ThreadPoolExecutor(1,1,0,TimeUnit.SECONDS,new ArrayBlockingQueue<>(4),task -> {
         Thread thread=new Thread(task,"parliament-analysis"); thread.setDaemon(true); return thread;
     });
@@ -36,6 +41,7 @@ public final class JobService implements AutoCloseable {
         } catch (IOException e) { throw new IllegalStateException("Cannot list background jobs"); }
     }
     public synchronized BackgroundJob submit(String kind,String runId,Object input,Work work) {
+        if (closed) throw new IllegalStateException("Background job service is closed");
         if (executor.getActiveCount()+executor.getQueue().size()>=5) throw new IllegalStateException("Background job limit reached");
         String id=UUID.randomUUID().toString();
         var job=new BackgroundJob(id,kind,runId,System.currentTimeMillis(),null,BackgroundJob.State.QUEUED,"Waiting",null);
@@ -44,8 +50,9 @@ public final class JobService implements AutoCloseable {
             futures.put(id,executor.submit(() -> {
                 if (find(id).terminal()) return;
                 try {
+                    var context=new Context(id); context.checkCancelled();
                     transition(id,BackgroundJob.State.RUNNING,"Starting",null);
-                    boolean success=work.run(new Context(id));
+                    context.checkCancelled(); boolean success=work.run(context); context.checkCancelled();
                     transition(id,success ? BackgroundJob.State.COMPLETE : BackgroundJob.State.FAILED,
                             success ? "Complete" : "Completed with method failures; inspect retained results",find(id).result());
                 } catch (CancellationException | InterruptedException e) {
@@ -59,6 +66,7 @@ public final class JobService implements AutoCloseable {
                                 System.currentTimeMillis(),BackgroundJob.State.FAILED,"Could not save job progress; committed partial results remain on disk",current.result()));
                     }
                     futures.remove(id);
+                    cancellationRequests.remove(id);
                 }
             }));
         } catch (RejectedExecutionException e) { transition(id,BackgroundJob.State.FAILED,"Background queue unavailable",null); throw new IllegalStateException("Background job limit reached"); }
@@ -77,11 +85,21 @@ public final class JobService implements AutoCloseable {
     }
     public synchronized void cancel(String id) {
         var previous=find(id); if (previous.terminal()) return;
-        transition(id,BackgroundJob.State.CANCELLED,"Cancelled; partial results retained",previous.result());
-        var future=futures.remove(id); if (future!=null) future.cancel(true); executor.purge();
+        // Cancellation must stop work even when its durable state cannot be replaced.
+        cancellationRequests.add(id);
+        try { transition(id,BackgroundJob.State.CANCELLED,"Cancelled; partial results retained",previous.result()); }
+        finally {
+            var future=futures.remove(id); if (future!=null) future.cancel(true); executor.purge();
+        }
     }
-    @Override public void close() {
-        jobs.values().stream().filter(job -> !job.terminal()).map(BackgroundJob::id).toList().forEach(this::cancel);
-        executor.shutdownNow();
+    @Override public synchronized void close() {
+        closed=true; RuntimeException failure=null;
+        try {
+            for (String id:jobs.values().stream().filter(job -> !job.terminal()).map(BackgroundJob::id).toList()) {
+                try { cancel(id); }
+                catch (RuntimeException e) { if (failure==null) failure=e; }
+            }
+        } finally { executor.shutdownNow(); }
+        if (failure!=null) throw failure;
     }
 }

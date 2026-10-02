@@ -6,6 +6,8 @@ Browser controls and both terminal modes call the same loopback backend. Command
 
 Owned browser/menu startup reserves the loopback port before loading or recovering saved application state. An occupied port fails before touching active sitting/job files. Use the existing backend or choose a free port before retrying. Failed startup releases its socket/resources; normal menu exit closes its owned application and HTTP executor.
 
+Cancelling a job still interrupts it if its cancelled state cannot be saved. The operation reports the storage refusal, preserves the last committed partial results and prevents further work at cancellation checks. Backend shutdown attempts every job cancellation and closes owned sittings/runtimes even after a refused save. On restart, unfinished saved jobs become interrupted without automatically rerunning work. Closed background services refuse new jobs before creating saved files.
+
 Accepted chair rulings enter the public evidence before the next contribution, including interjections. They retain the topic on which they were queued. Rulings accepted during the final response are retained before the terminal event, also on cancellation or provider failure; submissions after generation closes are rejected. Cancelled model responses remain discarded.
 
 Sitting rounds and shared/member grounding counts require JSON integer values, such as `1`, `0` and `-1`; decimals or exponent notation are refused even if floating-point parsing would round them to a whole number. Bounds are checked before narrowing the value. The same validation protects new sittings, reusable settings, file commands and guided settings/overrides; an invalid save preserves the previous settings file.

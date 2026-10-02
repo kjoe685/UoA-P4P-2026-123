@@ -187,11 +187,17 @@ public final class DebateApplication implements AutoCloseable {
         return text.toString();
     }
     @Override public void close() {
-        background.close(); nlp.close();
-        sessions.values().stream().filter(session -> !session.isFinished()).forEach(RunSession::adjourn);
-        jobs.shutdown();
-        try { if (!jobs.awaitTermination(5,TimeUnit.SECONDS)) jobs.shutdownNow(); }
-        catch (InterruptedException e) { jobs.shutdownNow(); Thread.currentThread().interrupt(); }
-        ollama.close();
+        try { background.close(); }
+        finally {
+            try { nlp.close(); }
+            finally {
+                try {
+                    sessions.values().stream().filter(session -> !session.isFinished()).forEach(RunSession::adjourn);
+                    jobs.shutdown();
+                    try { if (!jobs.awaitTermination(5,TimeUnit.SECONDS)) jobs.shutdownNow(); }
+                    catch (InterruptedException e) { jobs.shutdownNow(); Thread.currentThread().interrupt(); }
+                } finally { ollama.close(); }
+            }
+        }
     }
 }
