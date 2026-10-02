@@ -1,11 +1,11 @@
 package engine.evaluation.local;
 
 import engine.utils.Json;
+import engine.utils.HttpBodies;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.Objects;
 
@@ -33,9 +33,9 @@ public final class HttpNlpClient implements NlpClient {
 
     @Override public NlpResponse analyze(NlpRequest request) {
         try {
-            var response = client.send(HttpRequest.newBuilder(endpoint).timeout(timeout)
+            var response = HttpBodies.send(client,HttpRequest.newBuilder(endpoint).timeout(timeout)
                     .header("Content-Type", "application/json").POST(HttpRequest.BodyPublishers.ofString(Json.write(request))).build(),
-                    HttpResponse.BodyHandlers.ofString());
+                    timeout,HttpBodies.JSON_LIMIT);
             if (response.statusCode() != 200) throw new IllegalStateException("Local NLP request failed (HTTP " + response.statusCode() + ")");
             try {
                 return Json.read(response.body(), NlpResponse.class);
@@ -45,6 +45,8 @@ public final class HttpNlpClient implements NlpClient {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new IllegalStateException("Local NLP request interrupted");
+        } catch (HttpBodies.ResponseTooLargeException e) {
+            throw new IllegalStateException("Local NLP response exceeds 16 MiB; reduce the batch size");
         } catch (IOException e) {
             throw new IllegalStateException("Local NLP service unavailable or timed out");
         }

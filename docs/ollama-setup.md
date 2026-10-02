@@ -33,6 +33,8 @@ Only loopback HTTP addresses are accepted, without credentials, query or fragmen
 
 Inference uses serialized chat calls and an explicit context/output budget. Oversized requests fail rather than losing history/grounding; `truncate` and `shift` are false. Model caches report name, size and digest, without proving their hardware compatibility, performance or research quality. Model tags are owner-configured identifiers, not immutable weight pins; repeated setup reuses cached files rather than silently updating them. Installing the runtime alone does not prove that any model fits in the machine's memory.
 
+The upstream [`serve` command](https://github.com/ollama/ollama/blob/v0.35.0/cmd/cmd.go) also initializes its signing key in the standard user home (`.ollama/id_ed25519` and its public key), even with cloud disabled. The project-local model cache does not isolate this user profile. These runtime keys are not copied into application settings, transcripts or exports; genuine runtime execution remains a separate acceptance check.
+
 ## Runtime identity and recovery
 
 Official [Ollama v0.35.0 release metadata](https://github.com/ollama/ollama/releases/tag/v0.35.0), reviewed2026-10-02, supplies these pins. Archive readers are bundled with Java; no system zstd command or administrator installer is needed.

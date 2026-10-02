@@ -1,11 +1,11 @@
 package engine.provider;
 
 import engine.utils.Json;
+import engine.utils.HttpBodies;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Map;
@@ -34,8 +34,9 @@ public final class ProviderHttp {
                 var builder = HttpRequest.newBuilder(endpoint).timeout(Duration.ofNanos(remaining))
                         .header("Content-Type", "application/json");
                 headers.forEach(builder::header);
-                var response = client.send(builder.POST(HttpRequest.BodyPublishers.ofString(payload, StandardCharsets.UTF_8)).build(),
-                        HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+                var response = HttpBodies.send(client,
+                        builder.POST(HttpRequest.BodyPublishers.ofString(payload, StandardCharsets.UTF_8)).build(),
+                        Duration.ofNanos(remaining),HttpBodies.JSON_LIMIT);
                 if (response.statusCode() == 200) return response.body();
                 if (response.statusCode() == 429 && attempt == 0) {
                     long delay = 250;
@@ -52,6 +53,8 @@ public final class ProviderHttp {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new IllegalStateException(label + " request interrupted");
+        } catch (HttpBodies.ResponseTooLargeException e) {
+            throw new IllegalStateException(label + " response exceeds 16 MiB; reduce the output budget");
         } catch (IOException e) {
             throw new IllegalStateException("Could not contact " + label + " (connection failed or timed out)");
         }

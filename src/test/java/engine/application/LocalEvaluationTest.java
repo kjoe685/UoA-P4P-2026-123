@@ -84,6 +84,38 @@ class LocalEvaluationTest {
             assertFalse(Json.write(job).contains("SECRET_SENTINEL"));
         }
     }
+    @Test void oversizedWireBatchPreservesCommittedEvidenceAndSanitizesSavedFailure() throws Exception {
+        TestFixtures.copyResources(root);
+        Files.writeString(root.resolve("config/local-evaluation.json"),"{\"schemaVersion\":1,\"endpoint\":\"http://127.0.0.1:8765/v1/analyze\",\"timeoutSeconds\":5,\"batchSize\":1,\"methods\":[\"vader-sentiment\"]}");
+        var calls=new AtomicInteger(); var server=HttpServer.create(new InetSocketAddress("127.0.0.1",0),0);
+        server.createContext("/",exchange -> {
+            try (exchange) {
+                var request=Json.read(new String(exchange.getRequestBody().readAllBytes(),java.nio.charset.StandardCharsets.UTF_8),NlpRequest.class);
+                byte[] body=Json.write(response(request)).getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                exchange.sendResponseHeaders(200,0); exchange.getResponseBody().write(body);
+                if (calls.incrementAndGet()>1) {
+                    byte[] spaces=new byte[8192]; Arrays.fill(spaces,(byte)' ');
+                    try { for (int i=0;i<=16*1024*1024/spaces.length;i++) exchange.getResponseBody().write(spaces); }
+                    catch (java.io.IOException ignored) { /* The client rejects and closes the oversized body. */ }
+                }
+            }
+        }); server.start();
+        try (var jobs=new JobService(root.resolve("runs/jobs"))) {
+            var evaluator=new LocalEvaluationService(root,jobs,config -> new HttpNlpClient(
+                    URI.create("http://127.0.0.1:"+server.getAddress().getPort()+"/"),Duration.ofSeconds(5)));
+            var job=finish(jobs,evaluator.start(evidence(),Map.of()).id());
+            assertEquals(BackgroundJob.State.FAILED,job.state()); assertEquals(2,calls.get());
+            var batches=((LocalReport)job.result()).methods().get(0).batches();
+            assertEquals("ok",batches.get(0).status()); assertEquals("turn-3",batches.get(0).items().get(0).turnId());
+            assertEquals("failed",batches.get(1).status()); assertEquals("transport_or_response_failed",batches.get(1).error());
+            assertTrue(batches.get(1).items().isEmpty());
+            assertFalse(Json.write(job).contains("PRIVATE_IDENTITY_SENTINEL"));
+            try (var restarted=new JobService(root.resolve("runs/jobs"))) {
+                assertEquals(Json.parse(Json.write(job.result())),restarted.find(job.id()).result());
+                assertEquals(BackgroundJob.State.FAILED,restarted.find(job.id()).state());
+            }
+        } finally { server.stop(0); }
+    }
     @Test void cancellationDiscardsUnfinishedBatchAndRetainsPreviousReport() throws Exception {
         TestFixtures.copyResources(root); var configFile=root.resolve("config/local-evaluation.json");
         Files.writeString(configFile,Files.readString(configFile).replace("\"batchSize\":50","\"batchSize\":1"));

@@ -6,12 +6,24 @@
 - Branch: `codex/dual-interface-integration`, created from refreshed `origin/main` at `a99269c`.
 - Recovered primary plan from previous chat `01a0f6c1-32c6-7a33-bf8c-6ad9fee837e5`; that chat ended in Plan mode without writing changes.
 - Preserved secondary plan from `9cbcb12`. Evaluation reference: `c41c4c2`, file-level reuse only.
-- T01–T14 software checkpoints verified locally; latest checkpoint title `T14: integrate managed local LLM setup across interfaces` (see Git log for local commit hash). External platform/human acceptance remains below.
+- T01–T15 software checkpoints verified locally; latest checkpoint title `T15: bound provider and local analysis response transport` (see Git log for local commit hash). External platform/human acceptance remains below.
 - Existing untracked `UoA-P4P-2026-123.iml` belongs to the user; preserve it.
 
 ## Active task
 
-No unfinished implementation remains after T14. Continue requirement-focused inspection, preserving the software/external-acceptance distinction. The next task must record its requirement IDs and acceptance checks before edits.
+No unfinished code at the T15 checkpoint. Continue requirement-focused inspection; record the next task and acceptance checks before edits. External acceptance remains below.
+
+## T15 completed checkpoint
+
+**T15 — Bound provider and local-analysis response transport (REQ-01–02, 14, 20–22, 27–34, 53, 55, 58).**
+
+Dependency: verified T14 `397f65b`. Transport review found provider and local NLP clients buffer successful response bodies without a byte limit before JSON/model-budget validation. A malformed loopback or provider response can exhaust the shared backend; streamed runtime setup already has body cancellation/deadline controls. Preserve one bounded rate-limit retry and sanitized errors, while applying explicit body limits and cancellation/deadlines through a shared lower-level utility. External provider availability/quality remains unverified. The upstream Ollama serve command also initializes keys in its standard user home even when cloud is disabled; genuine runtime setup should remain separately audited, not treated as an isolated profile by existing mocks.
+
+Acceptance: controlled fake HTTP success bodies exceeding the bound fail before parsing/reporting without leaking sentinels; stalls after headers time out and cancellation releases workers; 429 retry/redirect/credential behaviour remains bounded; local method failures preserve other committed results; regression and ancestry checks before a local checkpoint. No paid/model calls or genuine runtime/model downloads. Next add focused oversized/stalled-body regressions, implement shared response transport bounds, and update progress after tests.
+
+T15 WIP: focused real loopback regressions reproduced seven defects: two oversized successes accepted, two after-header timeout stalls, two stalled error bodies and one stalled429 preventing retry (`target/T15-transport-reproduction`). Shared16MiB UTF-8 response bounds/body deadlines implemented below application/provider layers; downloads reuse the same cancellation guard. Error bodies close unread and provider retries retain their original deadline. First focused48 tests pass, including existing runtime setup/recovery. Next verify saved partial local reports/redirect privacy and the full suite/build before committing. Official upstream `serve` key initialization is documented; fake fixtures still do not prove genuine runtime execution or profile isolation.
+
+T15 verified 2026-10-02: full Java103 tests/shaded build pass. Twelve new wire regressions cover oversized provider/NLP successes, after-header timeout, interruption/worker release, stalled error bodies and429 retry, redirect credentials/input containment and saved/reopened partial local reports. UTF-8 decoding is strict and successful JSON bodies are bounded before parsing; sanitized size errors identify the output/batch setting to reduce. Shared download cancellation remains covered by existing runtime fixtures. The first full run exposed a test accessor typo (`errorCode` rather than `error`), corrected before the successful build. Next inspect remaining primary-plan contracts and record the next task; no genuine models, paid calls, owner-data rewrites or push.
 
 ## T14 completed checkpoint
 
@@ -123,6 +135,7 @@ Verification: Maven verify passes 2 tests (HTTP demo/chair/replay and cancellati
 | T12 chair lifecycle | Verified | Java72; final-turn completion/cancellation/failure retention, next-topic/interjection context, late rejection and HTTP/command/menu/restart/export parity |
 | T13 optional bootstrap recovery | Windows/portable fixtures verified | Genuine pinned Windows uv execution, archive/executable integrity/retry/preservation, locked extras wiring; Python17; native/pristine OS pending |
 | T14 local LLM setup/parity | Software verified with fixtures | Java91, bundled ZIP/gzip/zstd/JNI smoke, HTTP/menu/commands/browser explicit setup/model downloads, frozen settings/privacy, cache/range/cancel/restart and service ownership; genuine runtime/model/OS acceptance pending |
+| T15 bounded response transport | Software verified with fixtures | Java103, real loopback size/stall/cancel/error/retry/redirect checks and persisted partial analysis; strict UTF-8/shared deadline guard |
 
 ## Recovery procedure
 
