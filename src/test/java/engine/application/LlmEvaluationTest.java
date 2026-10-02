@@ -97,6 +97,70 @@ public class LlmEvaluationTest {
         calls.set(0); var refused=new LLMEvaluator(request -> { calls.incrementAndGet(); return new ChatResponse(null,"openai","gpt-4o-mini",ChatResponse.CompletionStatus.REFUSED,null,1); },MODEL,resources);
         assertEquals("response_refused",refused.evaluate(source).topics().get(0).error()); assertEquals(1,calls.get());
     }
+    @Test void repairReceivesAllEvidenceRuleCodesAndTheFrozenEditableTemplate() throws Exception {
+        TestFixtures.copyResources(root); var resources=LlmEvaluationResources.load(root); var source=evidence();
+        var valid=answer("topic-1",source.events(),source.roster(),resources.rubric());
+        var participants=valid.participants().stream().map(person -> new LlmAssessment.ParticipantAssessment(person.participantId(),
+                person.metrics().stream().map(metric -> {
+                    boolean unsupported=person.participantId().equals("b") && metric.metricId().equals("consistency")
+                            || person.participantId().equals("a") && metric.metricId().equals("responsiveness");
+                    return unsupported ? new LlmAssessment.MetricAssessment(metric.metricId(),EvaluationStatus.OK,0,
+                            "UNTRUSTED_CANDIDATE_SENTINEL {{VALIDATION_FAILURES}}",List.of(person.participantId().equals("a") ? "turn-11" : "turn-10")) : metric;
+                }).toList())).toList();
+        String candidate=Json.write(new LlmAssessment("topic-1",participants));
+        assertThrows(IllegalArgumentException.class,() -> LlmResponseValidator.parse(candidate,"topic-1",source.events(),source.roster(),resources.rubric()));
+        var calls=new AtomicInteger(); List<ChatRequest> requests=new ArrayList<>();
+        try (var jobs=new JobService(root.resolve("runs/jobs"))) {
+            var job=finish(jobs,new LlmEvaluationService(root,jobs,model -> request -> {
+                requests.add(request);
+                if (calls.incrementAndGet()==1) {
+                    new AssetService(root).update("prompts/EvaluatorRepair.txt","NEXT_JOB_QA_SENTINEL",true);
+                    return new ChatResponse(candidate,"openai","gpt-4o-mini",ChatResponse.CompletionStatus.COMPLETED,null,1);
+                }
+                return fake(request,resources.rubric());
+            }).start(source,MODEL).id());
+            var report=(LlmReport)job.result(); assertEquals(BackgroundJob.State.COMPLETE,job.state());
+            assertEquals(2,calls.get()); assertEquals(2,report.assessments().topics().get(0).attempts().size());
+            assertEquals(resources.sourceHashes(),report.assessments().sourceHashes());
+            String feedback=requests.get(1).messages().get(3).content();
+            assertTrue(feedback.contains("\"MINIMUM_OWN_TURNS\"")); assertTrue(feedback.contains("\"PRIOR_EXCHANGE\""));
+            for (String forbidden:List.of("UNTRUSTED_CANDIDATE_SENTINEL","NEXT_JOB_QA_SENTINEL","{{VALIDATION_FAILURES}}")) assertFalse(feedback.contains(forbidden));
+            assertEquals(candidate,requests.get(1).messages().get(2).content());
+            assertFalse(Json.write(job).contains("UNTRUSTED_CANDIDATE_SENTINEL"));
+        }
+    }
+    @Test void malformedCandidateGetsOnlyStaticFeedbackAndRepairInputRemainsBudgeted() throws Exception {
+        TestFixtures.copyResources(root); var resources=LlmEvaluationResources.load(root); var calls=new AtomicInteger(); List<ChatRequest> requests=new ArrayList<>();
+        engine.ChatManager provider=request -> {
+            requests.add(request); calls.incrementAndGet();
+            return new ChatResponse("UNTRUSTED_PARSE_SENTINEL {{VALIDATION_FAILURES}}","openai","gpt-4o-mini",ChatResponse.CompletionStatus.COMPLETED,null,1);
+        };
+        var result=new LLMEvaluator(provider,MODEL,resources).evaluate(evidence());
+        assertEquals("invalid_assessment",result.topics().get(0).error()); assertNull(result.topics().get(0).assessment());
+        assertEquals(2,calls.get()); assertEquals(2,result.topics().get(0).attempts().size());
+        String feedback=requests.get(1).messages().get(3).content();
+        assertTrue(feedback.contains("\"STRUCTURE_OR_EVIDENCE\""));
+        assertFalse(feedback.contains("UNTRUSTED_PARSE_SENTINEL")); assertFalse(feedback.contains("{{VALIDATION_FAILURES}}"));
+        var config=resources.config(); int firstRequestSize=Json.write(requests.get(0)).length();
+        var limited=new LlmEvaluationResources(new LlmEvaluationConfig(config.schemaVersion(),config.maxRepairAttempts(),config.maxCalls(),
+                firstRequestSize,config.maxResponseCharacters(),config.maxTotalCompletionTokens()),resources.rubric(),resources.systemPrompt(),resources.cue(),resources.repairPrompt(),resources.sourceHashes());
+        calls.set(0);
+        assertEquals("input_budget_exceeded",new LLMEvaluator(provider,MODEL,limited).evaluate(evidence()).topics().get(0).error());
+        assertEquals(1,calls.get());
+    }
+    @Test void legacyRepairTextRemainsSupportedAndUnknownParametersAreRejectedBeforeSave() throws Exception {
+        TestFixtures.copyResources(root); var assets=new AssetService(root); String legacy="Legacy editable repair text";
+        assets.update("prompts/EvaluatorRepair.txt",legacy,true);
+        assertThrows(IllegalArgumentException.class,() -> assets.update("prompts/EvaluatorRepair.txt","{{UNKNOWN_PARAMETER}}",true));
+        assertEquals(legacy,assets.read("prompts/EvaluatorRepair.txt"));
+        var resources=LlmEvaluationResources.load(root); var calls=new AtomicInteger(); List<ChatRequest> requests=new ArrayList<>();
+        var result=new LLMEvaluator(request -> {
+            requests.add(request);
+            return calls.incrementAndGet()==1 ? new ChatResponse("{}","openai","gpt-4o-mini",ChatResponse.CompletionStatus.COMPLETED,null,1) : fake(request,resources.rubric());
+        },MODEL,resources).evaluate(evidence());
+        assertEquals(EvaluationStatus.OK,result.topics().get(0).status()); assertEquals(2,calls.get());
+        assertEquals(legacy,requests.get(1).messages().get(3).content());
+    }
     @Test void durableJobsFreezeResourcesAndRetainTopicsOnCancellationAndRestart() throws Exception {
         TestFixtures.copyResources(root); var resources=LlmEvaluationResources.load(root); var source=evidence(); var events=new ArrayList<>(source.events());
         events.add(new PublicEvent("turn-12","topic-2",PublicEvent.Type.SPEECH,source.roster().get(0),"Second evidence."));
@@ -139,7 +203,7 @@ public class LlmEvaluationTest {
             assertEquals(EvaluationStatus.OK,report.assessments().topics().get(0).status());
             assertEquals("provider_failed",report.assessments().topics().get(1).error());
             assertEquals(2,calls.get()); assertFalse(Json.write(job).contains("SECRET_EXCEPTION_SENTINEL"));
-            assertEquals("llm-rubric-schema2-v1",report.assessments().implementationVersion());
+            assertEquals("llm-rubric-schema2-v2",report.assessments().implementationVersion());
             assertTrue(report.assessments().topics().get(0).attempts().get(0).requestSha256().matches("[0-9a-f]{64}"));
         }
     }

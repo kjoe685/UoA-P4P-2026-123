@@ -20,6 +20,7 @@ import java.util.Objects;
 /** One isolated assessment of all participants per topic, with at most one budgeted repair. */
 public final class LLMEvaluator {
     public static final String ID = "llm-rubric";
+    public static final String IMPLEMENTATION_VERSION = "llm-rubric-schema2-v2";
     private final ChatManager provider;
     private final ModelConfig model;
     private final LlmEvaluationResources resources;
@@ -43,9 +44,9 @@ public final class LLMEvaluator {
             var identity=transcript.topics().stream().filter(item -> item.id().equals(topic.getKey())).findFirst().orElseThrow();
             results.add(evaluateTopic(identity, topic.getValue(), roster, budget));
             if (Thread.currentThread().isInterrupted()) throw new java.util.concurrent.CancellationException();
-            progress.accept(new LlmAnalysisMetric("llm-rubric-schema2-v1",model,resources.rubric(),resources.sourceHashes(),results));
+            progress.accept(new LlmAnalysisMetric(IMPLEMENTATION_VERSION,model,resources.rubric(),resources.sourceHashes(),results));
         }
-        return new LlmAnalysisMetric("llm-rubric-schema2-v1",model,resources.rubric(),resources.sourceHashes(),results);
+        return new LlmAnalysisMetric(IMPLEMENTATION_VERSION,model,resources.rubric(),resources.sourceHashes(),results);
     }
 
     private LlmAnalysisMetric.TopicResult evaluateTopic(engine.transcript.Topic identity, List<PublicEvent> events,
@@ -86,10 +87,10 @@ public final class LLMEvaluator {
                 boolean scored = assessment.participants().stream().flatMap(p -> p.metrics().stream()).anyMatch(m -> m.status() == EvaluationStatus.OK);
                 return new LlmAnalysisMetric.TopicResult(topic, scored ? EvaluationStatus.OK : EvaluationStatus.INSUFFICIENT_EVIDENCE,
                         null, assessment, attempts);
-            } catch (IllegalArgumentException e) {
+            } catch (LlmResponseValidator.ValidationException e) {
                 if (attempt == resources.config().maxRepairAttempts()) return failure(topic, "invalid_assessment", attempts);
                 messages.add(new ChatMessage(ChatMessage.Role.ASSISTANT, text.isBlank() ? "{}" : text));
-                messages.add(new ChatMessage(ChatMessage.Role.USER, resources.repairPrompt()));
+                messages.add(new ChatMessage(ChatMessage.Role.USER, resources.renderRepair(e.codes())));
             }
         }
         throw new IllegalStateException("Unreachable repair state");

@@ -11,6 +11,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -18,7 +19,19 @@ import java.util.Set;
 public record LlmEvaluationResources(LlmEvaluationConfig config, LlmRubric rubric,
                                      String systemPrompt, String cue, String repairPrompt,
                                      Map<String, String> sourceHashes) {
-    public LlmEvaluationResources { sourceHashes = Map.copyOf(sourceHashes); }
+    public LlmEvaluationResources {
+        sourceHashes = Map.copyOf(sourceHashes);
+        repairTemplate(repairPrompt);
+    }
+    public String renderRepair(List<LlmResponseValidator.ValidationCode> codes) {
+        var values = repairPrompt.contains("{{VALIDATION_FAILURES}}")
+                ? Map.of("VALIDATION_FAILURES", Json.write(codes.stream().map(Enum::name).distinct().toList())) : Map.<String,String>of();
+        return repairTemplate(repairPrompt).render(values);
+    }
+    private static PromptTemplate repairTemplate(String text) {
+        return new PromptTemplate("EvaluatorRepair.txt", text,
+                text != null && text.contains("{{VALIDATION_FAILURES}}") ? Set.of("VALIDATION_FAILURES") : Set.of());
+    }
     public static LlmEvaluationResources load(Path root) {
         return load(root,Map.of());
     }
@@ -29,7 +42,7 @@ public record LlmEvaluationResources(LlmEvaluationConfig config, LlmRubric rubri
         String system = new PromptTemplate("EvaluatorPrompt.txt", read(root, "prompts/EvaluatorPrompt.txt", hashes,replacements), Set.of("RUBRIC"))
                 .render(Map.of("RUBRIC", Json.writeCanonical(rubric)));
         String cue = new PromptTemplate("EvaluatorCue.txt", read(root, "prompts/EvaluatorCue.txt", hashes,replacements), Set.of()).render(Map.of());
-        String repair = new PromptTemplate("EvaluatorRepair.txt", read(root, "prompts/EvaluatorRepair.txt", hashes,replacements), Set.of()).render(Map.of());
+        String repair = read(root, "prompts/EvaluatorRepair.txt", hashes,replacements);
         return new LlmEvaluationResources(config, rubric, system, cue, repair, hashes);
     }
     private static String read(Path root, String relative, Map<String, String> hashes,Map<String,String> replacements) {

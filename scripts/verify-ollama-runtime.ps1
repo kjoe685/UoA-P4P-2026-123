@@ -3,12 +3,20 @@ param(
     [int]$Port = 11439,
     [ValidateSet('Runtime','Model')][string]$Mode = 'Runtime',
     [string]$RuntimeFixture,
-    [int]$ContextTokens = 16384
+    [int]$ContextTokens = 16384,
+    [string]$PublicTranscript
 )
 $ErrorActionPreference = 'Stop'
 $taskRepository = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $taskTarget = Join-Path $taskRepository 'target'
 $taskPrefix = $taskTarget + [IO.Path]::DirectorySeparatorChar
+if ($PublicTranscript) {
+    if ($Mode -ne 'Model' -or !$ResumeFixture) { throw 'PublicTranscript requires Model mode and an existing ResumeFixture model cache' }
+    $taskPublicSource = [IO.Path]::GetFullPath($PublicTranscript)
+    if (!$taskPublicSource.StartsWith($taskPrefix, [StringComparison]::OrdinalIgnoreCase) -or !(Test-Path -LiteralPath $taskPublicSource -PathType Leaf)) {
+        throw 'PublicTranscript must be a retained public transcript file under this project target'
+    }
+}
 if ($ResumeFixture) {
     $taskFixture = [IO.Path]::GetFullPath($ResumeFixture)
     if (!$taskFixture.StartsWith($taskPrefix, [StringComparison]::OrdinalIgnoreCase) -or !(Test-Path -LiteralPath $taskFixture -PathType Container)) {
@@ -42,6 +50,7 @@ if (!(Test-Path -LiteralPath (Join-Path $taskTarget 'virtual-parliament.jar'))) 
 $taskStopSignal = Join-Path $taskFixture ('stop-' + [guid]::NewGuid().ToString('N') + '.requested')
 $taskArguments = '-Djava.io.tmpdir="' + $taskTarget + '" -cp "' + (Join-Path $taskTarget 'test-classes') + ';' + (Join-Path $taskTarget 'virtual-parliament.jar') + '" engine.application.' + $taskMain + ' "' + $taskFixture + '" ' + $Port + ' "' + $taskStopSignal + '"'
 if ($Mode -eq 'Model') { $taskArguments += ' ' + $ContextTokens }
+if ($PublicTranscript) { $taskArguments += ' "' + $taskPublicSource + '"' }
 $taskStart = New-Object Diagnostics.ProcessStartInfo
 $taskStart.FileName = $taskJava
 $taskStart.Arguments = $taskArguments
@@ -58,7 +67,8 @@ foreach ($taskKey in @($taskStart.EnvironmentVariables.Keys)) {
     }
 }
 Write-Output "Official runtime acceptance fixture: $taskFixture"
-if ($Mode -eq 'Model') { Write-Output 'Explicit model mode downloads local qwen3:8b weights and performs bounded genuine local generation/rubric calls.' }
+if ($PublicTranscript) { Write-Output 'Explicit evidence mode reuses local qwen3:8b cache and evaluates retained public evidence without new speeches or model downloads.' }
+elseif ($Mode -eq 'Model') { Write-Output 'Explicit model mode downloads local qwen3:8b weights and performs bounded genuine local generation/rubric calls.' }
 else { Write-Output 'Explicitly downloads the pinned official archive only; no model weights or generation.' }
 $taskChild = [Diagnostics.Process]::Start($taskStart)
 [ordered]@{ pid = $taskChild.Id; fixture = $taskFixture; port = $Port; stopSignal = $taskStopSignal; startedAt = (Get-Date -Format o) } |

@@ -5,6 +5,7 @@ import engine.chat.*;
 import engine.config.*;
 import engine.evaluation.EvaluationStatus;
 import engine.evaluation.llm.LlmReport;
+import engine.evaluation.llm.LlmEvaluationResources;
 import engine.provider.ProviderFactory;
 import engine.provider.ChatCompletionsProvider;
 import engine.transcript.*;
@@ -20,7 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public final class OfficialOllamaModelSmoke {
     private OfficialOllamaModelSmoke() { }
     public static void main(String[] args) throws Exception {
-        if (args.length != 4) throw new IllegalArgumentException("Use an isolated fixture root, port, stop signal and context limit");
+        if (args.length != 4 && args.length != 5) throw new IllegalArgumentException("Use an isolated fixture root, port, stop signal, context limit and optional public transcript");
         Path root = Path.of(args[0]).toAbsolutePath().normalize();
         Path target = Path.of("target").toAbsolutePath().normalize();
         Path stopSignal = Path.of(args[2]).toAbsolutePath().normalize();
@@ -30,6 +31,19 @@ public final class OfficialOllamaModelSmoke {
                 || !root.equals(stopSignal.getParent())) throw new IllegalArgumentException("Use the isolated Windows runner model mode");
         int port = Integer.parseInt(args[1]);
         if (port < 1024 || port > 65535 || port == 11434 || occupied(port)) throw new IllegalArgumentException("Choose a free non-default test port");
+        Path sourcePath = args.length == 5 ? Path.of(args[4]).toRealPath() : null;
+        Transcript source = null; String sourceHash = null;
+        if (sourcePath != null) {
+            require(sourcePath.startsWith(target.toRealPath()) && !sourcePath.equals(root.resolve("public-transcript.json"))
+                    && Files.isRegularFile(sourcePath) && Files.size(sourcePath) <= 25_000_000,
+                    "Use retained public evidence under target, separate from helper output");
+            byte[] bytes = Files.readAllBytes(sourcePath); sourceHash = LlmEvaluationResources.sha256(bytes);
+            source = Json.read(Utf8.decode(bytes), Transcript.class);
+            require(source.outcome() == Transcript.Outcome.COMPLETE && source.roster().size() == 2 && source.topics().size() == 1
+                    && source.events().stream().filter(event -> event.type() == PublicEvent.Type.SPEECH).count() == 2,
+                    "Retained acceptance evidence must be a completed two-speech single-topic sitting");
+            require(Files.isDirectory(root.resolve(".runtime/ollama-models")), "Evidence mode requires an existing local model cache");
+        }
         if (!Files.isDirectory(root.resolve("config"))) TestFixtures.copyResources(root);
         var initial = Json.read(Files.readString(root.resolve("config/engine.json")), EngineConfig.class);
         // Bound this acceptance to exactly two ordinary calls; preserve the configured model preset.
@@ -39,9 +53,18 @@ public final class OfficialOllamaModelSmoke {
         var config = new OllamaConfig(1, URI.create("http://127.0.0.1:" + port), Integer.parseInt(args[3]), 60, 3600);
         AtomicFiles.write(root.resolve("config/ollama.json"), Json.write(config));
         String acceptanceId = UUID.randomUUID().toString();
+        if (sourcePath != null) {
+            // Explicit evidence mode captures current editable evaluator assets; old jobs retain their own snapshots.
+            var current = LlmEvaluationResources.load(Path.of(""));
+            for (var entry : current.sourceHashes().entrySet()) {
+                byte[] bytes = Files.readAllBytes(Path.of(entry.getKey()));
+                require(entry.getValue().equals(LlmEvaluationResources.sha256(bytes)), "Evaluator resources changed while capturing acceptance");
+                AtomicFiles.write(root.resolve(entry.getKey()), Utf8.decode(bytes));
+            }
+        }
         Path diagnostics = root.resolve("diagnostics").resolve(acceptanceId);
         Path log = root.resolve(".runtime/ollama-service-" + port + ".log");
-        long initialChatRequests = Files.exists(log) ? chatCount(log) : 0;
+        long initialChatRequests = 0;
         var runtime = new ManagedOllama(root); var factory = new ProviderFactory(root, runtime);
         AtomicInteger modelCalls = new AtomicInteger();
         var application = new DebateApplication(root, new RunStore(root.resolve("runs")), (model, capturedRuntime) -> {
@@ -73,22 +96,40 @@ public final class OfficialOllamaModelSmoke {
         result.put("acceptanceId", acceptanceId); result.put("diagnostics", root.relativize(diagnostics).toString());
         result.put("modelPreset", "qwen3-local"); result.put("model", bounded.models().get("qwen3-local").model());
         result.put("contextTokens", config.contextTokens());
+        result.put("scope", sourcePath == null ? "new-sitting-and-blind-rubric" : "retained-public-evidence-blind-rubric");
+        if (sourcePath != null) result.put("sourceSha256", sourceHash);
         try {
             require(OfficialOllamaSmoke.finish(application, application.setupOllama().id(), stopSignal).state() == BackgroundJob.State.COMPLETE,
                     "Cached official runtime setup must complete");
-            System.out.println("Deliberately downloading only the configured local qwen3:8b preset");
-            var download = OfficialOllamaSmoke.finish(application, application.downloadOllamaModel("qwen3-local").id(), stopSignal);
-            AtomicFiles.write(root.resolve("model-download.json"), Json.write(download));
-            require(download.state() == BackgroundJob.State.COMPLETE, "Selected model setup failed; retain the cache and job");
+            // Owned startup replaces its operational log; measure this invocation after that replacement.
+            initialChatRequests = Files.exists(log) ? chatCount(log) : 0;
+            if (sourcePath == null) {
+                System.out.println("Deliberately downloading only the configured local qwen3:8b preset");
+                var download = OfficialOllamaSmoke.finish(application, application.downloadOllamaModel("qwen3-local").id(), stopSignal);
+                AtomicFiles.write(root.resolve("model-download.json"), Json.write(download));
+                require(download.state() == BackgroundJob.State.COMPLETE, "Selected model setup failed; retain the cache and job");
+                require(OfficialOllamaSmoke.finish(application, application.downloadOllamaModel("qwen3-local").id(), stopSignal).state() == BackgroundJob.State.COMPLETE,
+                        "Explicit repeat model setup must reuse the cache");
+            } else {
+                runtime.requireCachedModel(config, bounded.models().get("qwen3-local").model());
+                result.put("modelDownloadSubmitted", false);
+            }
             var inventory = application.ollamaReadiness();
             result.put("observedInventory", Json.parse(Json.write(inventory.get("models"))));
-            require(OfficialOllamaSmoke.finish(application, application.downloadOllamaModel("qwen3-local").id(), stopSignal).state() == BackgroundJob.State.COMPLETE,
-                    "Explicit repeat model setup must reuse the cache");
             result.put("modelCacheReuse", true);
-            System.out.println("Generating a bounded genuine local sitting: two members, one round, zero grounding");
-            var sitting = application.start(Map.of("topics", List.of("Should New Zealand build more public housing?"), "rounds", 1,
-                    "members", List.of(Map.of("party", "LABOUR"), Map.of("party", "NATIONAL")), "groundingCount", 0,
-                    "agentModelPreset", "qwen3-local", "evaluatorModelPreset", "qwen3-local"));
+            RunSession sitting;
+            if (sourcePath != null) {
+                System.out.println("Importing retained public evidence; no new speeches or model download");
+                sitting = application.importTranscript(source);
+                var imported = sitting.transcript();
+                require(imported.events().equals(source.events()) && imported.roster().equals(source.roster()) && imported.topics().equals(source.topics())
+                        && imported.startedAt() == source.startedAt() && imported.endedAt().equals(source.endedAt()), "Imported public evidence must stay exact");
+            } else {
+                System.out.println("Generating a bounded genuine local sitting: two members, one round, zero grounding");
+                sitting = application.start(Map.of("topics", List.of("Should New Zealand build more public housing?"), "rounds", 1,
+                        "members", List.of(Map.of("party", "LABOUR"), Map.of("party", "NATIONAL")), "groundingCount", 0,
+                        "agentModelPreset", "qwen3-local", "evaluatorModelPreset", "qwen3-local"));
+            }
             result.put("runId", sitting.id());
             long deadline = System.nanoTime() + TimeUnit.MINUTES.toNanos(12);
             while (!sitting.isFinished()) {
@@ -99,6 +140,7 @@ public final class OfficialOllamaModelSmoke {
             }
             Transcript evidence = sitting.transcript();
             AtomicFiles.write(root.resolve("public-transcript.json"), Json.write(evidence));
+            AtomicFiles.write(root.resolve("public-transcript-" + acceptanceId + ".json"), Json.write(evidence));
             AtomicFiles.write(root.resolve("public-transcript.txt"), application.textExport(sitting.id()));
             result.put("sittingOutcome", evidence.outcome());
             result.put("publicContributions", evidence.events().stream().filter(event -> event.type() == PublicEvent.Type.SPEECH).count());
@@ -117,6 +159,7 @@ public final class OfficialOllamaModelSmoke {
             AtomicFiles.write(root.resolve("llm-job.json"), Json.write(evaluation));
             var report = Json.read(Json.write(evaluation.result()), LlmReport.class);
             AtomicFiles.write(root.resolve("llm-report.json"), Json.write(report));
+            AtomicFiles.write(root.resolve("llm-report-" + acceptanceId + ".json"), Json.write(report));
             result.put("rubricJobState", evaluation.state()); result.put("rubricJobId", evaluation.id());
             if (!report.assessments().topics().isEmpty()) {
                 result.put("rubricTopicStatus", report.assessments().topics().get(0).status());
@@ -135,13 +178,19 @@ public final class OfficialOllamaModelSmoke {
             result.put("providerAttempts", modelCalls.get());
             if (Files.exists(log)) result.put("realChatHttpRequests", chatCount(log) - initialChatRequests);
             result.put("researchValidity", "not assessed; requires genuine human review");
+            if (sourcePath != null) {
+                boolean unchanged = sourceHash.equals(LlmEvaluationResources.sha256(Files.readAllBytes(sourcePath)));
+                result.put("sourceUnchanged", unchanged);
+                if (!unchanged) result.put("state", "FAILED");
+            }
             if (!Boolean.TRUE.equals(result.get("ownedPortReleased"))) result.put("state", "FAILED");
             result.put("verifiedAt", java.time.Instant.now().toString());
             AtomicFiles.write(root.resolve("model-result.json"), Json.write(result));
             AtomicFiles.write(root.resolve("model-result-" + acceptanceId + ".json"), Json.write(result));
         }
         require(Boolean.TRUE.equals(result.get("ownedPortReleased")), "Selected-model acceptance must release its owned runtime");
-        System.out.println("Genuine selected local-model/cache/context/rubric acceptance PASS; no research accuracy claim");
+        require(sourcePath == null || Boolean.TRUE.equals(result.get("sourceUnchanged")), "Acceptance source identity must remain unchanged");
+        System.out.println("Genuine selected local-model acceptance PASS for " + result.get("scope") + "; no research accuracy claim");
         System.out.println("Result: " + root.resolve("model-result.json"));
     }
     private static long chatCount(Path log) throws Exception {
