@@ -6,9 +6,23 @@
 - Branch: `codex/dual-interface-integration`, created from refreshed `origin/main` at `a99269c`.
 - Recovered primary plan from previous chat `01a0f6c1-32c6-7a33-bf8c-6ad9fee837e5`; that chat ended in Plan mode without writing changes.
 - Preserved secondary plan from `9cbcb12`. Evaluation reference: `c41c4c2`, file-level reuse only.
-- T01–T26 checkpoints verified locally; latest checkpoint title `T26: preserve large transcript import round trips` (see Git log for local commit hash). Application checkpoint T26 passes Java150/shaded build; Python19 passed at T24 and is unchanged. External platform/model/human acceptance remains below.
+- T01–T27 checkpoints verified locally; latest checkpoint title `T27: preserve UTF-8 resource and local runtime integrity` (see Git log for local commit hash). Application checkpoint T27 passes Java155/shaded build; Python19 passed at T24 and is unchanged. External platform/model/human acceptance remains below.
 - Existing untracked `UoA-P4P-2026-123.iml` belongs to the user; preserve it.
 - [Acceptance status](acceptance-status.md) maps all58 requirement IDs to current evidence and remaining platform/model/human checks. Historical WIP entries below are superseded by completed checkpoint records, not tasks to repeat.
+
+## T27 completed checkpoint
+
+**T27 — Refuse malformed encoding in captured resources and local runtime JSON (REQ-01–02, 05–11, 20–22, 46, 53–55, 57–58).**
+
+Dependency: T26 `53d2410`. `ConfigurationSnapshot.read` replacement-decodes bytes and replacement-encodes in-memory asset candidates, allowing source hashes/prompts to disagree or saving rewritten surrogate text. Managed Ollama also replacement-decodes bounded readiness bodies and progress records, accepting malformed ignored fields as successful protocol data. Use strict UTF-8 encoding/decoding at these remaining boundaries and preserve original byte/hash identity for valid text. Existing public/API/provider paths already decode strictly.
+
+Acceptance: malformed prompt/config bytes fail before provider construction/storage across shared application/API controls; malformed surrogate asset candidates leave files unchanged; genuine UTF-8 Māori/emoji/combining/literal replacement characters and frozen hashes remain exact. Fake Ollama malformed readiness/progress are refused with prior progress retained after restart and no raw diagnostic text; valid protocol remains supported. Next write before-change reproductions, add a small shared strict codec at the affected boundaries, then focused/full tests and local checkpoint. No owner resources, actual runtime/weights, inference, labels or paid calls.
+
+T27 reproduction in progress: fake malformed readiness and pull-success records are accepted before changes (two failures retained under `target/T27-encoding-reproduction/runtime-before.xml`). The initial source fixture used a nonexistent persona filename; corrected it to `TemplateName.PERSONA.fileName()` before recording actual source-boundary evidence. No implementation changes yet. Next finish the corrected source reproduction, then strict codec and focused/full checks.
+
+T27 WIP: corrected source regressions now reproduce malformed prompt/config admission before provider construction and surrogate asset rewriting (two failures; valid Unicode/hash fixture passes). Runtime fixtures reproduce malformed readiness and pull-success acceptance (two failures). Before-change XMLs are retained under `target/T27-encoding-reproduction`; initial filename fixture errors are superseded. Added strict shared codec, snapshot source/candidate validation and local runtime readiness/progress decoding; documentation explains correcting source encoding. Next focused source/isolation/runtime/command checks, full build and local checkpoint. No owner files or model calls.
+
+T27 verified 2026-10-02: focusedJava26/fullJava155/shaded build pass. Five added regressions cover malformed prompt/config admission before provider construction/API persistence, surrogate asset validation/save refusal with files unchanged, exact valid Unicode/CRLF source hashes frozen after edits, malformed fake Ollama readiness refusal, and malformed pull-success failure with prior committed progress retained after restart. Diagnostics retain no source/remote sentinels or decoding causes. Python19 from T24 is unchanged. Source/diff/ancestry/reference checks pass; owneriml preserved. No actual runtime/model execution, owner data changes, inference, downloads, paid calls or push. Next perform readiness-only protocol smoke against the updated Python service, then continue requirement-focused acceptance review.
 
 ## T26 completed checkpoint
 
@@ -226,7 +240,7 @@ T11 final verification: 500/500 source/content checks pass; 131 original passage
 - Genuine human behavioural review for REQ-16–19 and real labels/adjudication for the 200-item pilot. Software cues, review preparation and scoring are implemented; synthetic scores never establish research accuracy. Latest disjoint genuine prepared file is ignored target/genuine-review-pilot-current-grounding.json (import explicitly). The older target/genuine-review-pilot.json and owner pilot2224fde6-83eb-455c-9e5c-aba790e4723e were preserved; the old artifact has19 overlaps after T11 grounding changes. Keep labels blank until real review and curate propositions/context/sampling before research use.
 - Account-specific cloud and local Ollama availability/model behaviour remain unverified. Routine tests use fake providers and no paid calls. Public university hosting/authentication remains future scope under REQ-58.
 
-No half-finished code remains after the verified T26 checkpoint. Preserve the unrelated .iml. One exploratory ZIP RecoveryTest had a transient ERROR that did not reproduce in six focused repeats or later full ZIP checks; the original failure logs remain in target/delivery-23fea5f924854757b21e2ce56afe387f. Investigate if it recurs; do not suppress tests or infer a cause from this run.
+No half-finished code remains after the verified T27 checkpoint. Preserve the unrelated .iml. One exploratory ZIP RecoveryTest had a transient ERROR that did not reproduce in six focused repeats or later full ZIP checks; the original failure logs remain in target/delivery-23fea5f924854757b21e2ce56afe387f. Investigate if it recurs; do not suppress tests or infer a cause from this run.
 
 ## Earlier checkpoint notes (historical)
 
@@ -284,6 +298,7 @@ Verification: Maven verify passes 2 tests (HTTP demo/chair/replay and cancellati
 | T24 local provenance identity | Java142/Python19/build verified | One-read source identity, implementation0.3.0, stale-batch/pilot refusal and retained committed evidence; unchanged dependency pins/offline lock49 |
 | T25 captured transformer decisions | Java147/build verified | Threshold/parameter/abstention validation; exact equality/ties and retained valid batches/methods; invalid pilot cases count as failures |
 | T26 large public transcript transfer | Java150/build verified | >2MiB HTTP/commands/menu/restart round trips;64MiB import/2MiB ordinary caps, early length refusal and private/invalid import protection |
+| T27 resource/runtime encoding | Java155/build verified | Strict UTF-8 snapshots/candidates/readiness/pull records; valid Unicode/hash identity, early source refusal and retained prior job progress |
 
 ## Recovery procedure
 

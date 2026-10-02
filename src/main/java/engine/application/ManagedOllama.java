@@ -100,7 +100,7 @@ public final class ManagedOllama implements AutoCloseable {
         try {
             var request=HttpRequest.newBuilder(config.baseUrl().resolve(path)).timeout(Duration.ofSeconds(2)).GET().build();
             byte[] body=RuntimeDownload.read(http,request,2,ManagedOllama::checkInterrupted,input -> RuntimeDownload.bounded(input,1_000_000));
-            return Json.read(new String(body,StandardCharsets.UTF_8),JsonNode.class);
+            return Json.read(engine.utils.Utf8.decode(body),JsonNode.class);
         } catch (InterruptedException e) { Thread.currentThread().interrupt(); throw new CancellationException(); }
         catch (CancellationException e) { throw e; }
         catch (Exception e) { throw new IllegalStateException("Local Ollama unavailable or incompatible"); }
@@ -130,7 +130,7 @@ public final class ManagedOllama implements AutoCloseable {
             var buffer=new BufferedInputStream(input); byte[] line;
             while ((line=line(buffer))!=null) {
                 job.checkCancelled(); if (++records>1_000_000) throw new IOException("Too many model-download progress records");
-                var state=Json.read(new String(line,StandardCharsets.UTF_8),JsonNode.class);
+                var state=Json.read(engine.utils.Utf8.decode(line),JsonNode.class);
                 if (state.hasNonNull("error") || !state.path("status").isTextual()) throw new IOException("Model pull failed");
                 if (state.path("status").asText().equals("success")) { success=true; break; }
                 Map<String,Object> progress=new LinkedHashMap<>(); progress.put("model",identity);

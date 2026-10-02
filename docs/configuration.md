@@ -2,6 +2,8 @@
 
 `config/engine.json` defines validated model presets, independent agent/evaluator defaults, party profiles, default topic/rounds and interruption probabilities/seed. `prompts/` contains editable base/persona/grounding/turn/engagement/strategy templates. `data/hansard/excerpts.json` contains 500 genuine, reproducibly extracted excerpts. Changes affect new runs without recompilation. Active runs keep immutable source contents and SHA-256 hashes.
 
+Save source resources as valid UTF-8. Snapshot loading refuses malformed bytes before constructing providers or saving a run; errors identify the allowlisted resource without echoing its contents. Asset validation also refuses unpaired Unicode surrogates before saving. Valid Māori, emoji, combining text and a literal replacement character retain their exact contents and source hashes. Correct the source encoding before trying again.
+
 Model presets include the deterministic demo, OpenAI, Anthropic, Gemini, Grok and Ollama. Agent and judge presets are independent, with optional member overrides. Selecting a preset never downloads or substitutes a model. Credentials are resolved only when the selected provider is constructed, and adapters are reused safely with stateless requests.
 
 | Provider | Credential/setup |

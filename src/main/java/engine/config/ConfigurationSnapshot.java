@@ -3,10 +3,10 @@ package engine.config;
 import engine.agent.HansardExcerpts;
 import engine.prompt.*;
 import java.nio.file.*;
-import java.nio.charset.StandardCharsets;
 import java.security.*;
 import java.util.*;
 import engine.utils.Json;
+import engine.utils.Utf8;
 
 /** Immutable owner-side resources. Loaded once before any model calls. */
 public final class ConfigurationSnapshot {
@@ -42,13 +42,14 @@ public final class ConfigurationSnapshot {
 
     private static String read(Path root,String relative,Map<String,String> replacements,Map<String,String> contents,Map<String,String> hashes) {
         try {
-            byte[] data=replacements.containsKey(relative) ? replacements.get(relative).getBytes(StandardCharsets.UTF_8)
+            byte[] data=replacements.containsKey(relative) ? Utf8.encode(replacements.get(relative))
                     : Files.readAllBytes(root.resolve(relative));
-            String text=new String(data,StandardCharsets.UTF_8);
+            String text=Utf8.decode(data);
             contents.put(relative,text);
             hashes.put(relative,HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(data)));
             return text;
-        } catch (java.io.IOException e) { throw new IllegalArgumentException("Cannot read resource: "+relative); }
+        } catch (java.nio.charset.CharacterCodingException e) { throw new IllegalArgumentException("Resource must contain valid UTF-8/Unicode text: "+relative); }
+        catch (java.io.IOException e) { throw new IllegalArgumentException("Cannot read resource: "+relative); }
         catch (NoSuchAlgorithmException e) { throw new IllegalStateException("SHA-256 unavailable"); }
     }
     public EngineConfig config() { return config; }

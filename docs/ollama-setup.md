@@ -2,6 +2,8 @@
 
 The browser's **Local LLM setup**, guided choice18 and commands use one application service. Readiness checks `/api/version` and `/api/tags`; they do not start services, download files or generate text. Setup and model downloads are durable, cancellable background jobs. Inspect them in **Background jobs**, guided choice14, or the job/report commands. A backend restart keeps committed progress and marks unfinished jobs interrupted without rerunning them.
 
+Readiness bodies and streamed download records must contain valid UTF-8 and scalar JSON. Malformed records fail with bounded diagnostics; a failed download retains its earlier committed progress for inspection after restart.
+
 1. Refresh readiness. If a compatible loopback Ollama service already runs (version0.35.0 or newer, the reviewed protocol baseline), use it directly. The application does not stop external services.
 2. For a managed installation, explicitly choose **Set up portable Ollama runtime**. This downloads a pinned official archive into ignored `.runtime/`, verifies its size/SHA-256, safely extracts it into staging and starts its service. Model weights are separate.
 3. Choose a local model preset and explicitly download it. Presets come from `config/engine.json`, for example `qwen3-local` selects `qwen3:8b`. Downloads use Ollama's streaming pull API; progress retains byte counts without retaining raw remote messages. A cached local model is reused. Cloud models and known remote aliases are refused.
