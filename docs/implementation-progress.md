@@ -6,9 +6,23 @@
 - Branch: `codex/dual-interface-integration`, created from refreshed `origin/main` at `a99269c`.
 - Recovered primary plan from previous chat `01a0f6c1-32c6-7a33-bf8c-6ad9fee837e5`; that chat ended in Plan mode without writing changes.
 - Preserved secondary plan from `9cbcb12`. Evaluation reference: `c41c4c2`, file-level reuse only.
-- T01–T36 checkpoints verified locally; latest checkpoint title `T36: preserve exact numeric inputs across interfaces` (see Git log for local commit hash). Application checkpoint T36 passes Java177/shaded build and browser import14/14/numeric12/12/decoding/syntax checks; latest isolated Windows ZIP remains T32/Java167. Python19 passed at T24 and is unchanged. External platform/model/human acceptance remains below.
+- T01–T37 checkpoints verified locally; latest checkpoint title `T37: recreate base JAR before shading` (see Git log for local commit hash). Application checkpoint T37 passes Java177/shaded build, offline repackaging7/package-JNI checks; browser import14/14/numeric12/12/decoding/syntax passed T36 and are unchanged. Latest isolated Windows ZIP remains T32/Java167. Python19 passed at T24 and is unchanged. External platform/model/human acceptance remains below.
 - Existing untracked `UoA-P4P-2026-123.iml` belongs to the user; preserve it.
 - [Acceptance status](acceptance-status.md) maps all58 requirement IDs to current evidence and remaining platform/model/human checks. Historical WIP entries below are superseded by completed checkpoint records, not tasks to repeat.
+
+## T37 completed checkpoint
+
+**T37 — Create a fresh base JAR before every packaging/shading pass (REQ-45–50, 53, 55–58).**
+
+Dependency: T36 `5b58754`. Repeating Maven packaging without source changes can skip the base JAR step and feed the previously shaded artifact into shade again, as observed in T35's dependency-class overlaps. The pinned [Maven JAR Plugin3.4.2 guidance](https://maven.apache.org/plugins-archives/maven-jar-plugin-3.4.2/jar-mojo.html#forceCreation) prescribes forceCreation for postprocessing plugins. Set that option without changing dependency pins or the launcher's separate unchanged-build reuse.
+
+Acceptance: an offline isolated Maven fixture using the real project POM first packages, injects a synthetic stale postprocessing entry, then repackages without source changes. The stale entry must disappear and the synthetic packaged main still run; repeat the injection/rebuild once more to prove fresh creation each time. Preserve source hashes and owner outputs; no clean/delete workaround. Verify rootJava177/shaded build and packaged synthetic ZIP/gzip/zstd/JNI after the configuration change. Next retain the before-change failure using a WindowsPS5.1-compatible fixture harness, apply one packaging option, run fixture/full/package checks and commit locally. Cached tools/dependencies only; no real services/models, downloads, paid calls or push.
+
+T37 WIP: before-change offline PS5.1 fixture initial packaging/main succeeds, but unchanged-source repeat preserves the injected stale postprocessing entry (`target/repackaging-a37dd33f14314bc1965e8baed26132c1 with spaces/result.json`). No root artifact or owner files were modified. The project now enables fresh base JAR creation before shade, with dependency pins and launcher reuse unchanged. Next fresh fixture's initial/two injection/repackage passes, rootJava177/shaded build and packaged synthetic archive/JNI checks before local checkpoint.
+
+T37 offline PS5.1 fixture passes all7 checks (`target/repackaging-616745c81e0c4f19ba850625df44f4cb with spaces/result.json`). Initial/two unchanged-source repackages remove injected stale entries, preserve source hash, retain application/dependency classes and run the packaged synthetic main; no network calls or clean/delete workaround. Next rootJava177/shaded build and production packaged synthetic archive/JNI smoke, then docs/branch checks/local checkpoint.
+
+T37 verified 2026-10-02: isolated offline PS5.1 repackaging7, rootJava177/shaded build and production packaged ZIP/gzip/zstd/JNI pass. Root verify explicitly creates its base JAR despite unchanged classes, then shades current pinned dependencies; normal module/license/manifest overlaps remain, while prior whole-dependency-class input overlaps are gone. Before/after fixtures retain injected-stale failure and two successful removal passes with unchanged source; logs/results retained. Dependency versions and launcher cached-build bypass are unchanged. Diff/58-ID/links/ancestry/reference checks pass; owneriml/genuine blank artifact preserved. No clean/delete workaround, downloads, runtime/model execution, inference, paid calls or push. Next record T38 and refresh isolated Windows ZIP delivery for current177/packaging/terminal/browser-source changes, using cached verified Java and fresh Maven/dependencies; native UI/OS/model/human acceptance stays separate.
 
 ## T36 completed checkpoint
 
@@ -372,7 +386,7 @@ T11 final verification: 500/500 source/content checks pass; 131 original passage
 - Genuine human behavioural review for REQ-16–19 and real labels/adjudication for the 200-item pilot. Software cues, review preparation and scoring are implemented; synthetic scores never establish research accuracy. Latest disjoint genuine prepared file is ignored target/genuine-review-pilot-current-grounding.json (import explicitly). The older target/genuine-review-pilot.json and owner pilot2224fde6-83eb-455c-9e5c-aba790e4723e were preserved; the old artifact has19 overlaps after T11 grounding changes. Keep labels blank until real review and curate propositions/context/sampling before research use.
 - Account-specific cloud and local Ollama availability/model behaviour remain unverified. Routine tests use fake providers and no paid calls. Public university hosting/authentication remains future scope under REQ-58.
 
-No half-finished code remains after the verified T36 checkpoint. Preserve the unrelated .iml. One exploratory ZIP RecoveryTest had a transient ERROR that did not reproduce in six focused repeats or later full ZIP checks; the original failure logs remain in target/delivery-23fea5f924854757b21e2ce56afe387f. Investigate if it recurs; do not suppress tests or infer a cause from this run.
+No half-finished code remains after the verified T37 checkpoint. Preserve the unrelated .iml. One exploratory ZIP RecoveryTest had a transient ERROR that did not reproduce in six focused repeats or later full ZIP checks; the original failure logs remain in target/delivery-23fea5f924854757b21e2ce56afe387f. Investigate if it recurs; do not suppress tests or infer a cause from this run.
 
 ## Earlier checkpoint notes (historical)
 
@@ -440,6 +454,7 @@ Verification: Maven verify passes 2 tests (HTTP demo/chair/replay and cancellati
 | T34 exact sitting counts | Java174/build verified | JSON integer types/full-width bounds prevent rounded rounds/global/member grounding; HTTP/commands/guided refusal before providers/writes and previous settings preservation |
 | T35 browser JSON file imports | Java175/build and browser14/14 verified | Exact decoded transcript/pilot source,64MiB/2MiB chooser limits, strict backend raw metadata/refusal/restart; controlled DOM/fetch does not establish native upload acceptance |
 | T36 exact numeric inputs | Java177/build/browser12+14 verified | Grounding draft/current-control validation, exact signed-long seed transport and retained blank preparation; sanitized command/menu parse failures before requests |
+| T37 fresh base JAR packaging | Java177/build/repackaging7/package-JNI verified | Pinned plugin forceCreation removes stale postprocessing entries across two repeats without source changes/clean; cached tools only, launcher unchanged-build reuse preserved |
 
 ## Recovery procedure
 

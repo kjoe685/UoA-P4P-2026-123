@@ -1,6 +1,6 @@
 # Acceptance status
 
-This ledger covers every requirement in the [primary plan](implementation-plan.md) as of 2026-10-02, application checkpoint T36 and delivery checkpoint T32 (see Git log for local commit hashes). It records evidence and remaining acceptance, without replacing the plan. The [progress log](implementation-progress.md) retains detailed checks, failures and recovery artifacts; historical WIP entries are superseded by its current checkpoint and verified table.
+This ledger covers every requirement in the [primary plan](implementation-plan.md) as of 2026-10-02, application checkpoint T37 and delivery checkpoint T32 (see Git log for local commit hashes). It records evidence and remaining acceptance, without replacing the plan. The [progress log](implementation-progress.md) retains detailed checks, failures and recovery artifacts; historical WIP entries are superseded by its current checkpoint and verified table.
 
 The current application passes **177 Java tests and the shaded build**, browser import functions14/14, numeric controls12/12 and strict decoding/syntax checks. The latest T32 isolated Windows ZIP passes167 tests, packaged synthetic archive/JNI and launcher workflows, including revised owned startup. Its fresh fixture records cachedJavaArchive=true/resumedFixture=false with fresh Maven/dependencies. T33's four address regressions include actual terminal entry-point environment normalization/refusal; T34/T36 preserve exact whole-number settings/seeds before providers/storage. T35 fixes the browser file ceiling and reparsing gap; controlled DOM/fetch/storage checks and loopback backend evidence do not establish native upload/dialog acceptance. Launcher files are unchanged. Python19 passed at T24 and is unchanged by T25–T36. Historical T29 ZIP159 explicitly resumed after sandbox network refusal; T10 used fresh official Java/Maven/dependency downloads, and T20 ZIP127 reused verified Java. Extractor11 checks are recorded at their relevant checkpoints. T27's updated source Python0.3.0/Java health protocol smoke passed without loading analyzers; it establishes compatibility only. These counts describe software verification, not model availability or research accuracy.
 
@@ -55,12 +55,12 @@ The current application passes **177 Java tests and the shaded build**, browser 
 | REQ-47 | Maven source layout; separate application/adapters/config/resources | Preserve structure during future changes |
 | REQ-48 | README leads with download/extract/launch and explicit demo | First-time-user usability acceptance |
 | REQ-49 | Launcher and guided menu reduce ordinary commands; T33 normalized local backend addresses | Native/pristine platform acceptance |
-| REQ-50 | Default demo/port, saved settings/build/cache reuse; T32 duplicate startup preserves active files | Native/pristine platform acceptance |
+| REQ-50 | Default demo/port, saved settings/build/cache reuse; T32 duplicate startup preserves active files; T37 fresh repeated packaging | Native/pristine platform acceptance |
 | REQ-51 | Historical T01 refreshed main at a99269c before planning | Historical requirement fulfilled; no branch reset needed |
 | REQ-52 | Primary plan starts with the full requirement inventory | Historical requirement fulfilled |
 | REQ-53 | T04–T14 interface matrix; shared command/menu/API/browser QA; T26/T35 large public round trips/exact browser file source, T36 seed/count precision | Real runtime/model/native interface acceptance |
 | REQ-54 | T05–T14 advanced assets/settings/analysis/runtime/pilot controls | Actual optional runtime setup on target platforms |
-| REQ-55 | T01–T36 task records, recovery log, memory and local checkpoints | Keep recording before lengthy operations/interruption |
+| REQ-55 | T01–T37 task records, recovery log, memory and local checkpoints | Keep recording before lengthy operations/interruption |
 | REQ-56 | T10 cold Windows ZIP; T13 genuine cached uv; T20/T29/T32 refreshed ZIP | Pristine Windows and native Linux/macOS |
 | REQ-57 | Six evaluation-only commits excluded; reference tips unchanged | Repeat ancestry/ref checks at checkpoints |
 | REQ-58 | Local software/interfaces implemented; services/adapters/storage separated | Genuine local runtime acceptance; later hosting remains deferred |
