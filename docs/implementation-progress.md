@@ -6,9 +6,25 @@
 - Branch: `codex/dual-interface-integration`, created from refreshed `origin/main` at `a99269c`.
 - Recovered primary plan from previous chat `01a0f6c1-32c6-7a33-bf8c-6ad9fee837e5`; that chat ended in Plan mode without writing changes.
 - Preserved secondary plan from `9cbcb12`. Evaluation reference: `c41c4c2`, file-level reuse only.
-- T01–T34 checkpoints verified locally; latest checkpoint title `T34: validate exact integer sitting counts` (see Git log for local commit hash). Application checkpoint T34 passes Java174/shaded build; latest isolated Windows ZIP remains T32/Java167. Python19 passed at T24 and is unchanged. External platform/model/human acceptance remains below.
+- T01–T35 checkpoints verified locally; latest checkpoint title `T35: preserve browser JSON file imports` (see Git log for local commit hash). Application checkpoint T35 passes Java175/shaded build and browser function checks14/14; latest isolated Windows ZIP remains T32/Java167. Python19 passed at T24 and is unchanged. External platform/model/human acceptance remains below.
 - Existing untracked `UoA-P4P-2026-123.iml` belongs to the user; preserve it.
 - [Acceptance status](acceptance-status.md) maps all58 requirement IDs to current evidence and remaining platform/model/human checks. Historical WIP entries below are superseded by completed checkpoint records, not tasks to repeat.
+
+## T35 completed checkpoint
+
+**T35 — Preserve browser file-import source and match the shared transfer limits (REQ-01–02, 11, 46, 48–50, 53–55, 57–58).**
+
+Dependency: T34 `b9804d7`. T26 raised backend transcript imports to64MiB, but `importTranscript` still rejects browser files above2MiB. Transcript and pilot handlers also JSON.parse/stringify decoded files, which can round integers/fractional schema fields and collapse duplicate keys before Java's strict validation. Send decoded UTF-8 JSON text unchanged to the shared API, retain object serialization for ordinary operations, and align transcript/pilot file ceilings with their64MiB/2MiB routes. Keep the one-million-character stored pilot limit and server schema/privacy validation unchanged.
+
+Acceptance: execute the actual browser helper/import functions with native Blob/TextDecoder and a controlled DOM/HTTP fixture; >2MiB Unicode transcripts reach the shared route, duplicate keys/precise numeric tokens reach validation unchanged, and64MiB/2MiB over-limit or malformed UTF-8 files make no request. Ordinary object API calls and failure/menu statuses remain correct. Use actual loopback backend checks for raw strict import refusal and exact large-integer metadata round trips, with no providers/writes on rejected inputs. Next retain before-change browser reproductions, implement exact-text transport/file limits, run browser syntax/fixtures and relevant Java checks, then local checkpoint. No native-browser-upload/real-model/platform/accuracy claim from these fixtures.
+
+T35 WIP: before-change actual browser functions pass7/14 controlled checks (`target/T35-browser-import-reproduction/before.log`). The transcript chooser blocks >2MiB/inclusive64MiB; pilot chooser blocks >1.5MB/inclusive2MiB; parse/stringify changes9007199254740993 to9007199254740992, collapses duplicate keys and rounds precise fractional schema values. File handlers now send strict decoded UTF-8 text directly through an explicit raw-JSON API option and use64MiB/2MiB bounds; ordinary object serialization is retained. Next14 browser checks/syntax/decoding, real raw-import backend metadata/refusal checks, then appropriate full verification/local checkpoint. No native upload or model claim.
+
+T35 browser checks14/14, strict decoding fixtures and JavaScript syntax pass. Native Blob/TextDecoder/functions preserve exact source and ordinary object requests; controlled chooser bounds/refusal/error states pass. Added real loopback backend regression for >2MiB Unicode raw import with exact9007199254740993 metadata/export/restart and duplicate/fractional schema/time refusal preserving the valid stored file. Next focusedJava29, then fullJava175/shaded build and local checkpoint. Source/handler fixtures do not claim native browser upload/platform acceptance.
+
+T35 focusedJava29 pass including raw large-integer Unicode import/export/restart and strict duplicate/fractional token refusal. Existing pilot, shared count, Unicode, terminal/guided and recovery contracts remain green. Browser functions14/14 and decoding/syntax pass. Next fullJava175/shaded build, ledger update/branch checks and local checkpoint; latest ZIP remains T32/167, no native upload or live-model claim.
+
+T35 verified 2026-10-02: browser14/14/decoding/syntax, focusedJava29/fullJava175/shaded build pass. Actual frontend functions send decoded transcript/pilot text unchanged and match64MiB/2MiB chooser ceilings; controlled DOM/fetch/native Blob/TextDecoder checks retain ordinary serialization, malformed-byte refusal, error/selection cleanup and exact numeric/duplicate-key tokens. Actual loopback raw metadata/evidence import/export/restart and strict refusal preserve the existing file without providers. The prior T26 browser-capacity documentation gap is closed; native file-dialog/upload acceptance remains separate. Latest ZIP remains T32/167 and Python19 unchanged. Diff/58-ID/links/ancestry/reference checks pass; owneriml/genuine blank artifact preserved. No actual inference, downloads, labels, paid calls or push. Next record exact browser numeric input task: preparePilot uses Number on a signed-long seed, and grounding draft inputs convert text before shared validation. Preserve entered integer values and refuse fractional/exponent text before changes/requests.
 
 ## T34 completed checkpoint
 
@@ -338,7 +354,7 @@ T11 final verification: 500/500 source/content checks pass; 131 original passage
 - Genuine human behavioural review for REQ-16–19 and real labels/adjudication for the 200-item pilot. Software cues, review preparation and scoring are implemented; synthetic scores never establish research accuracy. Latest disjoint genuine prepared file is ignored target/genuine-review-pilot-current-grounding.json (import explicitly). The older target/genuine-review-pilot.json and owner pilot2224fde6-83eb-455c-9e5c-aba790e4723e were preserved; the old artifact has19 overlaps after T11 grounding changes. Keep labels blank until real review and curate propositions/context/sampling before research use.
 - Account-specific cloud and local Ollama availability/model behaviour remain unverified. Routine tests use fake providers and no paid calls. Public university hosting/authentication remains future scope under REQ-58.
 
-No half-finished code remains after the verified T34 checkpoint. Preserve the unrelated .iml. One exploratory ZIP RecoveryTest had a transient ERROR that did not reproduce in six focused repeats or later full ZIP checks; the original failure logs remain in target/delivery-23fea5f924854757b21e2ce56afe387f. Investigate if it recurs; do not suppress tests or infer a cause from this run.
+No half-finished code remains after the verified T35 checkpoint. Preserve the unrelated .iml. One exploratory ZIP RecoveryTest had a transient ERROR that did not reproduce in six focused repeats or later full ZIP checks; the original failure logs remain in target/delivery-23fea5f924854757b21e2ce56afe387f. Investigate if it recurs; do not suppress tests or infer a cause from this run.
 
 ## Earlier checkpoint notes (historical)
 
@@ -404,6 +420,7 @@ Verification: Maven verify passes 2 tests (HTTP demo/chair/replay and cancellati
 | T32 owned backend startup | Root/ZIP Java167/build/package/launcher verified | Bind before durable recovery; duplicate child preserves live files, factory failure releases Java17 selector/socket, shared browser/menu owned cleanup |
 | T33 terminal backend address | Java171/build verified | Normalize loopback root slash/case for commands/events/guided use; sanitized invalid address refusal before requests/writes, actual child entry-point check; latest ZIP remains T32/167 |
 | T34 exact sitting counts | Java174/build verified | JSON integer types/full-width bounds prevent rounded rounds/global/member grounding; HTTP/commands/guided refusal before providers/writes and previous settings preservation |
+| T35 browser JSON file imports | Java175/build and browser14/14 verified | Exact decoded transcript/pilot source,64MiB/2MiB chooser limits, strict backend raw metadata/refusal/restart; controlled DOM/fetch does not establish native upload acceptance |
 
 ## Recovery procedure
 

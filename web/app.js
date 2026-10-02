@@ -129,9 +129,9 @@ function formatDate(millis) {
 
 async function api(path, options = {}) {
   const init = { method: options.method || 'GET', headers: {} };
-  if (options.body !== undefined) {
+  if (options.body !== undefined || options.jsonText !== undefined) {
     init.headers['Content-Type'] = 'application/json';
-    init.body = JSON.stringify(options.body);
+    init.body = options.jsonText !== undefined ? options.jsonText : JSON.stringify(options.body);
   }
   let response;
   try {
@@ -546,8 +546,8 @@ function selectPilot() {
 async function importPilot(event) {
   const file=event.target.files[0]; if (!file) return;
   try {
-    if (file.size>1500000) throw new Error('Choose pilot JSON up to 1.5 MB (one million characters).');
-    const result=await api('/api/pilots',{method:'POST',body:JSON.parse(await readJsonFile(file))});
+    if (file.size>2*1024*1024) throw new Error('Choose pilot JSON up to 2 MiB (one million stored characters).');
+    const result=await api('/api/pilots',{method:'POST',jsonText:await readJsonFile(file)});
     await refreshPilots(result.id); $('#pilot-status').textContent=`Imported ${result.items} ${result.evidenceType} items. ${result.reviewStatus}.`;
   } catch(error) { $('#pilot-status').textContent=error.message; }
   finally { event.target.value=''; }
@@ -1012,8 +1012,8 @@ async function importTranscript(event) {
   const file = event.target.files[0];
   if (!file) return;
   try {
-    if (file.size > 2 * 1024 * 1024) throw new Error('Transcript must be at most 2 MiB.');
-    const { id } = await api('/api/debates/import', { method: 'POST', body: JSON.parse(await readJsonFile(file)) });
+    if (file.size > 64 * 1024 * 1024) throw new Error('Transcript must be at most 64 MiB.');
+    const { id } = await api('/api/debates/import', { method: 'POST', jsonText: await readJsonFile(file) });
     await refreshSavedRuns();
     openSitting(id);
   } catch (error) { $('#saved-status').textContent = `Import failed: ${error.message}`; }

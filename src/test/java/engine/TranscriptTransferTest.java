@@ -36,6 +36,33 @@ class TranscriptTransferTest {
         assertEquals(expected.topics(),actual.topics()); assertEquals(expected.events(),actual.events());
         assertEquals(expected.startedAt(),actual.startedAt()); assertEquals(expected.endedAt(),actual.endedAt()); assertEquals(expected.outcome(),actual.outcome());
     }
+    @Test void rawImportPreservesExactLongMetadataAndRefusesDuplicateOrFractionalSchemaTokens() throws Exception {
+        TestFixtures.copyResources(root); var store=new RunStore(root.resolve("runs"));
+        var evidence=largeEvidence(); long exact=9007199254740993L;
+        var source=new Transcript(2,evidence.runId(),exact,exact+2,evidence.roster(),evidence.topics(),evidence.events(),Transcript.Outcome.COMPLETE);
+        String text=Json.write(source);
+        try (var app=new DebateApplication(root,store,model -> { fail("Raw file imports cannot construct providers"); return null; })) {
+            var server=WebServer.start(0,app);
+            try {
+                var http=HttpClient.newHttpClient(); String base="http://localhost:"+server.getAddress().getPort();
+                var response=post(http,base+"/api/debates/import",text,false); assertEquals(201,response.statusCode());
+                String id=(String)((Map<?,?>)Json.parse(response.body())).get("id"); sameEvidence(source,app.find(id).transcript());
+                Path saved=root.resolve("runs/"+id+"/transcript.json"); byte[] original=Files.readAllBytes(saved);
+                var exported=http.send(HttpRequest.newBuilder(URI.create(base+"/api/debates/"+id+"/transcript")).GET().build(),HttpResponse.BodyHandlers.ofString());
+                assertEquals(200,exported.statusCode()); assertTrue(exported.body().contains("\"startedAt\":"+exact));
+                sameEvidence(source,Json.read(exported.body(),Transcript.class));
+                for (String invalid:List.of(text.replace("\"schemaVersion\":2","\"schemaVersion\":2,\"schemaVersion\":2"),
+                        text.replace("\"schemaVersion\":2","\"schemaVersion\":2.0000000000000000001"),
+                        text.replace("\"startedAt\":"+exact,"\"startedAt\":"+exact+".1"))) {
+                    var refused=post(http,base+"/api/debates/import",invalid,false); assertEquals(400,refused.statusCode());
+                    assertEquals(1,app.runs().size()); assertEquals(List.of(id),store.ids()); assertArrayEquals(original,Files.readAllBytes(saved));
+                }
+            } finally { server.stop(0); ((ExecutorService)server.getExecutor()).shutdownNow(); }
+        }
+        try (var app=new DebateApplication(root,store,model -> { fail("Restart cannot infer"); return null; })) {
+            assertEquals(1,app.runs().size()); sameEvidence(source,app.runs().get(0));
+        }
+    }
     @Test void largeUnicodeExportRoundTripsThroughHttpCommandsMenuAndRestart() throws Exception {
         TestFixtures.copyResources(root); var store=new RunStore(root.resolve("runs")); var source=largeEvidence(); var ids=new ArrayList<String>();
         try (var app=new DebateApplication(root,store,model -> { fail("Transfer must never construct providers"); return null; })) {
