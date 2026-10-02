@@ -6,12 +6,22 @@
 - Branch: `codex/dual-interface-integration`, created from refreshed `origin/main` at `a99269c`.
 - Recovered primary plan from previous chat `01a0f6c1-32c6-7a33-bf8c-6ad9fee837e5`; that chat ended in Plan mode without writing changes.
 - Preserved secondary plan from `9cbcb12`. Evaluation reference: `c41c4c2`, file-level reuse only.
-- T01–T18 software checkpoints verified locally; latest checkpoint title `T18: bound terminal transport and preserve exports` (see Git log for local commit hash). External platform/human acceptance remains below.
+- T01–T19 software checkpoints verified locally; latest checkpoint title `T19: preserve Unicode evidence at JSON boundaries` (see Git log for local commit hash). External platform/human acceptance remains below.
 - Existing untracked `UoA-P4P-2026-123.iml` belongs to the user; preserve it.
 
-## Active task
+## T19 completed checkpoint
 
-No unfinished code at the T18 checkpoint. Continue requirement-focused inspection; record the next task and acceptance checks before edits. External acceptance remains below.
+**T19 — Preserve Unicode evidence at import/serialization boundaries (REQ-01–02, 11, 14, 27–34, 42–43, 53, 55, 58).**
+
+Dependency: T18 `ffc6078`. HTTP JSON requests and browser file imports currently decode malformed UTF-8 with replacement characters. JSON also permits escaped unpaired UTF-16 surrogates which cannot round-trip through UTF-8 storage. Reject malformed encodings before state changes and validate scalar text at the shared JSON boundary, preserving valid Māori/emoji/combining text and the legitimate replacement character. Browser corpus/pilot/transcript imports must use fatal UTF-8 decoding; commands already use strict Files.readString.
+
+Acceptance: real fake-backend requests with invalid UTF-8/surrogates fail before run/import/settings mutation without echoing input; valid multi-byte text and paired escapes survive saved/exported/reopened evidence; canonical hashes/order and strict JSON contracts remain unchanged; Node file-decoding fixtures cover invalid bytes/BOM/Unicode without native upload automation. No model calls or owner data changes. Next write failing wire/shared JSON regressions, implement strict decoding/scalar validation, then focused/full verification and local checkpoint.
+
+T19 WIP: initial shared JSON regression reproduced unpaired surrogate acceptance. Initial HTTP fixtures omitted mandatory parties, so their apparent rejection was not encoding evidence; corrected complete settings and an isolated compilation of T18 Json/ApiHandler now reproduce both invalid UTF-8 acceptance/replacement and escaped-surrogate loss in saved files (`target/T19-unicode-reproduction/legacy-wire-result.txt`), without touching the working sources/branch. Strict API/browser decoding and shared JSON tree/scalar validation implemented; canonical serialization still uses the original ordered writer. Empty/duplicate/trailing JSON rejection retained, and embedded NLP configuration validates scalars before Python. Node native Blob/TextDecoder Unicode/BOM + four invalid-byte fixtures and syntax pass. Next full Java verification, source/diff/ancestry and local checkpoint; no model calls or owner data changes.
+
+T19 focused4 pass after correcting Jackson's empty-input MissingNode handling. Two intervening full runs passed126/127 with only that empty-input guard failing; the latest fix is now compiled and the full suite is running again. No other regression or owner mutation observed. Next confirm full build, commit the Unicode boundary checkpoint, then refresh isolated Windows ZIP delivery for the newly bundled runtime dependencies.
+
+T19 verified 2026-10-02: full Java127/shaded build passes. Four added tests cover nested value/key surrogates, serialization/canonical ordering, empty/duplicate/trailing contracts, invalid UTF-8/escaped-surrogate HTTP rejection without state changes and exact valid text round trips. Browser helper fixtures preserve Unicode/BOM and reject four malformed byte forms; Node syntax and diff/ancestry checks pass. The previous-checkpoint wire proof is retained under `target/T19-unicode-reproduction`; initial incomplete HTTP fixtures are explicitly superseded. Six evaluation-only commits excluded and reference tips unchanged. No owner data changes, paid/model calls or push. Next record T20 and refresh isolated Windows delivery against all current dependencies/checkpoints.
 
 ## T18 completed checkpoint
 
@@ -177,6 +187,7 @@ Verification: Maven verify passes 2 tests (HTTP demo/chair/replay and cancellati
 | T16 explicit local source | Software verified with fixtures | Java111, simulated alias race, case/default-tag/source normalization, cache reuse, older protocol refusal and remote response rejection; pinned upstream source reviewed |
 | T17 NLP setup/readiness | Software and current Python schema verified | Java117, snapshot queue/edit/report/restart and fake process/cancellation tests; real existing unloaded health schema accepted by packaged Java; no inference/install/download |
 | T18 terminal transport/exports | Software verified with fixtures | Java123, body bounds/deadlines/cancel, redirect/error refusal and owner-file preservation,201/202/Unicode and atomic export replacement |
+| T19 Unicode boundaries | Software verified with fixtures | Java127, strict UTF-8/scalar rejection before mutation and exact valid text/canonical round trips; native Blob/TextDecoder fixtures |
 
 ## Recovery procedure
 

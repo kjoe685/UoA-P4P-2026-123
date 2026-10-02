@@ -7,6 +7,8 @@ import engine.config.*;
 import engine.utils.Json;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
 import java.util.*;
 
 /** Thin HTTP adapter for the shared application operations. */
@@ -193,7 +195,10 @@ public final class ApiHandler implements HttpHandler {
             throw new IllegalArgumentException("Use application/json");
         byte[] data=exchange.getRequestBody().readNBytes(2*1024*1024+1);
         if (data.length>2*1024*1024) throw new IllegalArgumentException("Request body is too large");
-        Object parsed=Json.parse(new String(data,StandardCharsets.UTF_8));
+        String text;
+        try { text=StandardCharsets.UTF_8.newDecoder().decode(ByteBuffer.wrap(data)).toString(); }
+        catch (CharacterCodingException e) { throw new IllegalArgumentException("Request body must be valid UTF-8"); }
+        Object parsed=Json.parse(text);
         if (!(parsed instanceof Map<?,?>)) throw new IllegalArgumentException("Request body must be an object");
         return (Map<String,Object>)parsed;
     }

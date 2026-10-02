@@ -73,6 +73,7 @@ public final class ManagedNlp implements AutoCloseable {
         } finally { if (download.isAlive()) stop(download); Files.deleteIfExists(frozen); }
     }
     public void validateConfiguration(String text) {
+        Json.parse(text); // Validate embedded JSON scalar text before passing a settings file to Python.
         if (!installed()) throw new IllegalStateException("Set up local NLP before editing model-service settings");
         Path frozen=root.resolve(".runtime/nlp/validate-"+UUID.randomUUID()+".json");
         Process validation=null;

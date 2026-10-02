@@ -49,6 +49,12 @@ const SITTING_STORAGE_KEY = 'virtual-parliament.sitting';
 
 /* ---------- Small helpers ---------- */
 
+async function readJsonFile(file) {
+  const bytes = await file.arrayBuffer();
+  try { return new TextDecoder('utf-8', { fatal: true }).decode(bytes); }
+  catch { throw new Error('Choose a JSON file encoded as valid UTF-8.'); }
+}
+
 const $ = (selector) => document.querySelector(selector);
 
 /** Creates an element. `props` may hold className, text, attrs, dataset, style, on (event handlers). */
@@ -492,7 +498,7 @@ async function selectCorpus(event) {
   const file=event.target.files[0]; if (!file) return;
   try {
     if (file.size>1500000) throw new Error('Choose a corpus JSON file up to 1.5 MB (one million characters).');
-    corpusCandidate=await file.text(); $('#validate-corpus').disabled=false;
+    corpusCandidate=await readJsonFile(file); $('#validate-corpus').disabled=false;
     $('#corpus-status').textContent=`Loaded ${file.name}. Validate before importing.`;
   } catch(error) { $('#corpus-status').textContent=error.message; }
 }
@@ -541,7 +547,7 @@ async function importPilot(event) {
   const file=event.target.files[0]; if (!file) return;
   try {
     if (file.size>1500000) throw new Error('Choose pilot JSON up to 1.5 MB (one million characters).');
-    const result=await api('/api/pilots',{method:'POST',body:JSON.parse(await file.text())});
+    const result=await api('/api/pilots',{method:'POST',body:JSON.parse(await readJsonFile(file))});
     await refreshPilots(result.id); $('#pilot-status').textContent=`Imported ${result.items} ${result.evidenceType} items. ${result.reviewStatus}.`;
   } catch(error) { $('#pilot-status').textContent=error.message; }
   finally { event.target.value=''; }
@@ -1007,7 +1013,7 @@ async function importTranscript(event) {
   if (!file) return;
   try {
     if (file.size > 2 * 1024 * 1024) throw new Error('Transcript must be at most 2 MiB.');
-    const { id } = await api('/api/debates/import', { method: 'POST', body: JSON.parse(await file.text()) });
+    const { id } = await api('/api/debates/import', { method: 'POST', body: JSON.parse(await readJsonFile(file)) });
     await refreshSavedRuns();
     openSitting(id);
   } catch (error) { $('#saved-status').textContent = `Import failed: ${error.message}`; }

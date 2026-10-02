@@ -6,6 +6,8 @@ Accepted chair rulings enter the public evidence before the next contribution, i
 
 Ordinary terminal API responses have a30-second deadline through the body read and a64MiB success limit (64KiB for bounded application errors). Interrupted, oversized, malformed-error and redirected responses fail before writing an export file. Successful201/202 operation responses are accepted. Terminal transcript/text/report/pilot exports use atomic UTF-8 replacement at the explicit destination; parent directories are created as needed. Live sitting event streams remain separate and can stay open for the debate's duration.
 
+Incoming API JSON and browser corpus/pilot/transcript files require valid UTF-8. The shared JSON boundary rejects unpaired Unicode surrogates in values/keys before mapping or storage; valid Māori, emoji, combining marks and replacement characters retain their exact text. Files with malformed encoding must be corrected rather than silently rewritten during import. Developer file-decoding fixtures run with `node scripts/verify-file-decoding.cjs`; ordinary use needs no Node installation.
+
 | Operation | Browser | Guided choice | Scriptable command / shared endpoint |
 |---|---|---|---|
 | Inspect model/party/default choices and credential help | Sitting setup | 1, prompts | `config` / `GET /api/config` |
