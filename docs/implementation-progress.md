@@ -6,12 +6,26 @@
 - Branch: `codex/dual-interface-integration`, created from refreshed `origin/main` at `a99269c`.
 - Recovered primary plan from previous chat `01a0f6c1-32c6-7a33-bf8c-6ad9fee837e5`; that chat ended in Plan mode without writing changes.
 - Preserved secondary plan from `9cbcb12`. Evaluation reference: `c41c4c2`, file-level reuse only.
-- T01–T17 software checkpoints verified locally; latest checkpoint title `T17: freeze NLP setup and bound readiness responses` (see Git log for local commit hash). External platform/human acceptance remains below.
+- T01–T18 software checkpoints verified locally; latest checkpoint title `T18: bound terminal transport and preserve exports` (see Git log for local commit hash). External platform/human acceptance remains below.
 - Existing untracked `UoA-P4P-2026-123.iml` belongs to the user; preserve it.
 
 ## Active task
 
-No unfinished code at the T17 checkpoint. Continue requirement-focused inspection; record the next task and acceptance checks before edits. External acceptance remains below.
+No unfinished code at the T18 checkpoint. Continue requirement-focused inspection; record the next task and acceptance checks before edits. External acceptance remains below.
+
+## T18 completed checkpoint
+
+**T18 — Bound terminal API transport and refuse unsuccessful export responses (REQ-01–02, 46, 49–50, 53, 55, 58).**
+
+Dependency: T17 `d59c218`. Terminal API requests still buffer unlimited string bodies and their30-second request timeout stops applying after headers. Responses below400, including redirects, are treated as successful exports. Apply the shared body deadline/bounds while preserving bounded actionable application errors and genuine201/202 responses. Guided and command behavior must agree; no repeated flags/new user operations.
+
+Acceptance: fake backend stalled/oversized/error/redirect responses return bounded sanitized failures, preserve existing export files and release interrupted workers;201/202 UTF-8 results and shared interface regression stay correct. Normal success bodies capped at64MiB, error bodies64KiB; document these finite transport limits. Add an internal timeout-injection constructor only for fast fixtures. Next reproduce redirect/error-body handling and interruption behavior, implement shared status-dependent bounds and run focused/full verification before a local checkpoint. No model or paid calls.
+
+T18 WIP: two before-change tests reproduced redirect-body acceptance/export overwrite and malformed-error exception classification (`target/T18-cli-transport-reproduction`). Shared status-dependent body limits now preserve200/201/202 data, close redirects unread, bound application errors and sanitize malformed/control-bearing error messages;30-second deadlines remain active through body reads. Expanded wire checks cover Unicode statuses, oversized success/error file preservation and after-header timeout/interruption worker release. Next focused/full regression and ancestry before local commit. No user export files or paid/model calls affected; all failures reproduce in isolated temporary roots.
+
+T18 focused50 pass. Extend the file-preservation step before edits: use the existing atomic UTF-8 writer for every command/menu transcript, text, report and pilot output, resolving the explicit destination to an absolute path. Acceptance nested/space/Unicode destinations, complete replacement and no leftover part files; existing shared command/menu coverage retained. This avoids truncating an owner export before a complete replacement is written. Next full regression/build and ancestry, then commit.
+
+T18 verified 2026-10-02: full Java123/shaded build passes. Six added wire tests cover redirected exports, malformed application errors/menu recovery, UTF-8 status201/202/200, oversized success/error file preservation, after-header timeout and interrupted-worker release. All terminal output destinations use existing atomic UTF-8 replacement; nested/space/emoji paths and replacement/no-part-file checks pass. Application errors stay bounded/actionable; provider error bodies remain unread through the shared utility. Diff/ancestry checks pass with six evaluation-only commits excluded and reference tips unchanged. No owner export rewrites, model/paid calls or push. Next inspect incoming UTF-8 evidence integrity and record a task before any edits.
 
 ## T17 completed checkpoint
 
@@ -162,6 +176,7 @@ Verification: Maven verify passes 2 tests (HTTP demo/chair/replay and cancellati
 | T15 bounded response transport | Software verified with fixtures | Java103, real loopback size/stall/cancel/error/retry/redirect checks and persisted partial analysis; strict UTF-8/shared deadline guard |
 | T16 explicit local source | Software verified with fixtures | Java111, simulated alias race, case/default-tag/source normalization, cache reuse, older protocol refusal and remote response rejection; pinned upstream source reviewed |
 | T17 NLP setup/readiness | Software and current Python schema verified | Java117, snapshot queue/edit/report/restart and fake process/cancellation tests; real existing unloaded health schema accepted by packaged Java; no inference/install/download |
+| T18 terminal transport/exports | Software verified with fixtures | Java123, body bounds/deadlines/cancel, redirect/error refusal and owner-file preservation,201/202/Unicode and atomic export replacement |
 
 ## Recovery procedure
 

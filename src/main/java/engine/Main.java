@@ -2,6 +2,8 @@ package engine;
 
 import engine.application.DebateApplication;
 import engine.utils.Json;
+import engine.utils.HttpBodies;
+import engine.utils.AtomicFiles;
 import engine.web.WebServer;
 import com.sun.net.httpserver.HttpServer;
 import java.io.*;
@@ -11,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
+import java.time.Duration;
 
 /** Guided and scriptable adapters for the same HTTP application operations as the browser. */
 public final class Main {
@@ -18,7 +21,12 @@ public final class Main {
     private final HttpClient http=HttpClient.newHttpClient();
     private final Scanner input;
     private final PrintStream output;
-    public Main(String base,Scanner input,PrintStream output) { this.base=base; this.input=input; this.output=output; }
+    private final Duration requestTimeout;
+    public Main(String base,Scanner input,PrintStream output) { this(base,input,output,Duration.ofSeconds(30)); }
+    Main(String base,Scanner input,PrintStream output,Duration timeout) {
+        if (timeout.isZero() || timeout.isNegative()) throw new IllegalArgumentException("Terminal timeout must be positive");
+        this.base=base; this.input=input; this.output=output; this.requestTimeout=timeout;
+    }
     public static void main(String[] args) throws Exception {
         System.setOut(new PrintStream(System.out,true,StandardCharsets.UTF_8));
         String base=System.getenv().getOrDefault("PARLIAMENT_URL","http://localhost:8080");
@@ -48,7 +56,7 @@ public final class Main {
                 switch (args[1]) {
                     case "list" -> output.println(get("/api/pilots"));
                     case "import" -> { requireArgs(args,3); output.println(post("/api/pilots",Files.readString(Path.of(args[2])))); }
-                    case "show" -> { requireArgs(args,3); String dataset=get("/api/pilots/"+encode(args[2])); if (args.length>3) Files.writeString(Path.of(args[3]),dataset); else output.println(dataset); }
+                    case "show" -> { requireArgs(args,3); String dataset=get("/api/pilots/"+encode(args[2])); if (args.length>3) writeOutput(args[3],dataset); else output.println(dataset); }
                     case "prepare" -> { requireArgs(args,3); output.println(post("/api/pilots/"+encode(args[2])+"/prepare",Json.write(Map.of("seed",args.length>3 ? Long.parseLong(args[3]) : 123)))); }
                     case "evaluate" -> { requireArgs(args,3); output.println(post("/api/pilots/"+encode(args[2])+"/evaluate",Json.write(args.length>3 ? Map.of("methods",Arrays.asList(args[3].split(","))) : Map.of()))); }
                     default -> throw new IllegalArgumentException("pilot list | import FILE | show ID [FILE] | prepare ID [SEED] | evaluate ID [METHODS]");
@@ -97,7 +105,7 @@ public final class Main {
             case "cancel-job" -> { requireArgs(args,2); output.println(post("/api/jobs/"+encode(args[1])+"/cancel","{}")); }
             case "report" -> {
                 requireArgs(args,2); String report=get("/api/jobs/"+encode(args[1])+"/report");
-                if (args.length>2) Files.writeString(Path.of(args[2]),report); else output.println(report);
+                if (args.length>2) writeOutput(args[2],report); else output.println(report);
             }
             case "settings" -> {
                 requireArgs(args,2);
@@ -127,7 +135,7 @@ public final class Main {
             case "cancel" -> { requireArgs(args,2); output.println(post(runPath(args[1])+"/adjourn","{}")); }
             case "transcript", "export" -> {
                 requireArgs(args,2); String text=get(runPath(args[1])+(args[0].equals("transcript") ? "/transcript" : "/export"));
-                if (args.length>2) Files.writeString(Path.of(args[2]),text,StandardCharsets.UTF_8); else output.println(text);
+                if (args.length>2) writeOutput(args[2],text); else output.println(text);
             }
             default -> throw new IllegalArgumentException("Commands: config, settings, assets, corpus status/validate/import, pilot list/import/show/prepare/evaluate, local status/setup/download METHOD, ollama status/setup/download MODEL_PRESET, evaluate ID [METHODS], jobs, job ID, cancel-job ID, report ID [FILE], runs, start SETTINGS.json, import TRANSCRIPT.json, watch ID, ruling ID TEXT, cancel ID, transcript ID [FILE], export ID [FILE]");
         }
@@ -156,7 +164,7 @@ public final class Main {
                         else {
                             String path="/api/pilots/"+encode(ask("Pilot id: "));
                             switch (action) {
-                                case "show" -> { String file=ask("Output JSON file (blank = print): "), text=get(path); if (file.isBlank()) output.println(text); else Files.writeString(Path.of(file),text); }
+                                case "show" -> { String file=ask("Output JSON file (blank = print): "), text=get(path); if (file.isBlank()) output.println(text); else writeOutput(file,text); }
                                 case "prepare" -> { String seed=ask("Preparation seed (blank = 123; labels remain blank): "); output.println(post(path+"/prepare",Json.write(Map.of("seed",seed.isBlank() ? 123 : Long.parseLong(seed))))); }
                                 case "evaluate" -> { String methods=ask("Method IDs separated by commas (blank = defaults; reviewed data required): "); output.println(post(path+"/evaluate",Json.write(methods.isBlank() ? Map.of() : Map.of("methods",Arrays.asList(methods.split(",")))))); }
                                 default -> throw new IllegalArgumentException("Choose a listed pilot action");
@@ -192,7 +200,7 @@ public final class Main {
                         if (action.equals("cancel")) output.println(post("/api/jobs/"+encode(id)+"/cancel","{}"));
                         if (action.equals("report")) {
                             String file=ask("Output JSON file (blank = print): "), report=get("/api/jobs/"+encode(id)+"/report");
-                            if (file.isBlank()) output.println(report); else Files.writeString(Path.of(file),report);
+                            if (file.isBlank()) output.println(report); else writeOutput(file,report);
                         }
                     }
                     case "1" -> { String response=post("/api/debates",Json.write(guidedSettings())); output.println(response);
@@ -232,7 +240,7 @@ public final class Main {
                     case "6", "7" -> {
                         String id=ask("Sitting id: "), file=ask("Output file (blank = print): ");
                         String text=get(runPath(id)+(choice.equals("6") ? "/transcript" : "/export"));
-                        if (file.isBlank()) output.println(text); else { Files.writeString(Path.of(file),text); output.println("Saved "+file); }
+                        if (file.isBlank()) output.println(text); else { writeOutput(file,text); output.println("Saved "+file); }
                     }
                     default -> output.println("Choose a listed operation.");
                 }
@@ -299,16 +307,32 @@ public final class Main {
     private String get(String path) throws Exception { return request(path,null); }
     private String post(String path,String json) throws Exception { return request(path,json); }
     private String request(String path,String json) throws Exception {
-        var builder=HttpRequest.newBuilder(URI.create(base+path)).timeout(java.time.Duration.ofSeconds(30));
+        var builder=HttpRequest.newBuilder(URI.create(base+path)).timeout(requestTimeout);
         if (json==null) builder.GET(); else builder.header("Content-Type","application/json").POST(HttpRequest.BodyPublishers.ofString(json));
-        var response=http.send(builder.build(),HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
-        if (response.statusCode()>=400) {
-            Object parsed=Json.parse(response.body());
-            throw new IllegalStateException(parsed instanceof Map<?,?> body && body.get("error") instanceof String text ? text : "Operation failed");
+        HttpBodies.Response response;
+        try {
+            response=HttpBodies.send(http,builder.build(),requestTimeout,status ->
+                    status>=200 && status<300 ? 64*1024*1024 : status>=400 ? 64*1024 : 0);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt(); throw new IllegalStateException("Terminal request interrupted");
+        } catch (HttpBodies.ResponseTooLargeException e) {
+            throw new IllegalStateException("Server response exceeds the terminal size limit; no output file was changed");
+        } catch (HttpTimeoutException e) {
+            throw new IllegalStateException("Server response timed out; no output file was changed");
+        }
+        if (response.statusCode()<200 || response.statusCode()>=300) {
+            String message="Operation failed (HTTP "+response.statusCode()+")";
+            try {
+                Object parsed=Json.parse(response.body());
+                if (parsed instanceof Map<?,?> body && body.get("error") instanceof String text && !text.isBlank()
+                        && text.length()<=512 && text.codePoints().noneMatch(Character::isISOControl)) message=text;
+            } catch (IllegalArgumentException ignored) { /* Never print a raw or malformed server body. */ }
+            throw new IllegalStateException(message);
         }
         return response.body();
     }
     private static String runPath(String id) { return "/api/debates/"+java.net.URLEncoder.encode(id,StandardCharsets.UTF_8); }
+    private static void writeOutput(String file,String text) { AtomicFiles.write(Path.of(file).toAbsolutePath().normalize(),text); }
     private static String encode(String value) { return java.net.URLEncoder.encode(value,StandardCharsets.UTF_8); }
     private static void requireArgs(String[] args,int count) { if (args.length<count) throw new IllegalArgumentException("Missing command argument"); }
 }

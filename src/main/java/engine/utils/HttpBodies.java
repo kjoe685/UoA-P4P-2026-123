@@ -7,6 +7,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.concurrent.*;
+import java.util.function.IntUnaryOperator;
 
 /** Bounded UTF-8 responses and interruptible body deadlines, including stalls after headers. */
 public final class HttpBodies {
@@ -22,14 +23,20 @@ public final class HttpBodies {
 
     public static Response send(HttpClient client,HttpRequest request,Duration timeout,int limit)
             throws IOException,InterruptedException {
+        return send(client,request,timeout,status -> status==200 ? limit : 0);
+    }
+    /** A zero status limit closes the body unread; other statuses receive their explicit byte cap. */
+    public static Response send(HttpClient client,HttpRequest request,Duration timeout,IntUnaryOperator limits)
+            throws IOException,InterruptedException {
         if (timeout.isZero() || timeout.isNegative()) throw new IllegalArgumentException("HTTP timeout must be positive");
         long deadline=System.nanoTime()+timeout.toNanos();
         checkInterrupted();
         var response=client.send(request,HttpResponse.BodyHandlers.ofInputStream());
         try (var input=response.body()) {
             checkInterrupted();
-            // Error bodies can contain echoed private inputs. Close without reading or parsing them.
-            if (response.statusCode()!=200) return new Response(response.statusCode(),response.headers(),"");
+            // Buffer only explicitly selected statuses; providers close all error bodies unread.
+            int limit=limits.applyAsInt(response.statusCode());
+            if (limit==0) return new Response(response.statusCode(),response.headers(),"");
             String body=consume(input,deadline,() -> { },stream ->
                     StandardCharsets.UTF_8.newDecoder().decode(ByteBuffer.wrap(bounded(stream,limit))).toString());
             return new Response(response.statusCode(),response.headers(),body);
