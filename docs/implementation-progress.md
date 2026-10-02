@@ -2,13 +2,27 @@
 
 ## Current checkpoint
 
-- Date: 2026-10-02 (Pacific/Auckland).
+- Date: 2026-10-03 (Pacific/Auckland).
 - Branch: `codex/dual-interface-integration`, created from refreshed `origin/main` at `a99269c`.
 - Recovered primary plan from previous chat `01a0f6c1-32c6-7a33-bf8c-6ad9fee837e5`; that chat ended in Plan mode without writing changes.
 - Preserved secondary plan from `9cbcb12`. Evaluation reference: `c41c4c2`, file-level reuse only.
-- T01–T38 checkpoints verified locally; latest checkpoint title `T38: verify browser controls and current Windows delivery` (see Git log for local commit hash). Application and isolated Windows ZIP checkpoint T38 pass Java177/shaded build/package-JNI/launcher checks; browser import14/14/numeric12/12/decoding/syntax and current-host grounding/seed UI checks pass. Offline repackaging7 passed T37 and is unchanged. Python19 passed at T24 and is unchanged. External platform/model/human acceptance remains below.
+- T01–T39 checkpoints verified locally; latest checkpoint title `T39: preserve imported replay dates and verify browser upload` (see Git log for local commit hash). T39 browser date6/6/import14/14/numeric12/12/decoding/syntax and actual large Unicode chooser import/reopen pass. Application Java177/shaded build/package-JNI and isolated Windows ZIP evidence remain T38; T39 only changes frontend presentation/docs/checks. Offline repackaging7 passed T37 and is unchanged. Python19 passed at T24 and is unchanged. External platform/model/human acceptance remains below.
 - Existing untracked `UoA-P4P-2026-123.iml` belongs to the user; preserve it.
 - [Acceptance status](acceptance-status.md) maps all58 requirement IDs to current evidence and remaining platform/model/human checks. Historical WIP entries below are superseded by completed checkpoint records, not tasks to repeat.
+
+## T39 completed checkpoint
+
+**T39 — Verify remaining current-host browser acceptance (REQ-01–02, 11, 46, 48–50, 53–55, 57–58).**
+
+Dependency: T38 `52583de`. This automation recovered the most recent implementation chat and confirmed it completed T24–T38 without half-finished code; the only untracked root file is the preserved owner `.iml`. Browser import callbacks have controlled-fixture coverage, but genuine browser file selection/upload remains unverified. Inspect the available browser automation capability and exercise supported real browser paths against an isolated fake-provider backend, with synthetic public evidence/pilot files only. If native file selection is unavailable, record the exact limitation without replacing it with injected file inputs or claiming upload acceptance; continue independent remaining acceptance work.
+
+Acceptance: observed native browser operations agree with shared backend persistence/validation; imported public evidence retains Unicode/exact metadata and malformed files preserve previous state if supported. No owner runs/settings, genuine blank pilot, credentials or reference branches change. Record actual browser capability and process cleanup, update the acceptance ledger only for demonstrated checks, and commit a verified local checkpoint. Next start an isolated fake backend and inspect the documented browser file-selection APIs. Routine verification remains fake, with no paid calls, new human labels or push.
+
+T39 WIP 2026-10-03 06:06 (Pacific/Auckland): the real in-app browser file chooser imported the synthetic2579803-byte Unicode transcript and displays30 committed contributions. The isolated stored JSON retains startedAt9007199254740993/endedAt9007199254740995 exactly; protected owner hashes are unchanged. The chooser tool ignored its30-second request timeout and blocked16157seconds; do not repeat this operation or infer malformed-upload/native OS-dialog acceptance. The observed title is `Sitting of Invalid Date`: accepted signed-long source metadata can exceed JavaScript's Date range. Reviewed source also substitutes the current time for valid epoch zero through falsy fallback. Next reproduce actual date/terminal callbacks with epoch/out-of-range metadata, preserve zero and render a neutral unavailable-date/time presentation, then reload the actual imported sitting. Keep underlying public metadata and backend contracts unchanged; reuse controlled refusal fixtures for existing validation without claiming new native refusal evidence.
+
+T39 verified 2026-10-03: date callback regressions reproduce3/6 passes before the change and pass6/6 afterward; browser import14/integer12/strict-decoding/syntax checks remain green. Zero is preserved for start/end presentation; out-of-Date-range metadata uses a readable heading/unavailable-time message rather than an invalid date. The real browser reload/reopen displays30 contributions and the corrected presentation; screenshot `target/T39-browser-upload/readable-replay.jpg`. Stored source/evidence/time comparison and all protected owner hashes pass. Java/Python/runtime/build contracts are unchanged, so their previous verified counts are retained, not rerun or claimed newer; latest ZIP remains T38. Native pilot/refusal/other-platform acceptance stays pending after the chooser's unbounded delay. Next inspect whether genuine pinned Ollama package/service acceptance can be performed in an isolated current-host profile, without weights, paid calls or owner-profile writes. No new model availability/accuracy claim, human labels or push.
+
+T39 recovery: previous automation chat `01a0fc98-c54f-7182-982a-0c52dcd484c4` remains waiting on approval, with no browser upload result or active fixture listener on18088. It created only ignored synthetic upload files and the active task record. Reuse those files after verifying their contents, start a new isolated `PilotTest` fake-provider backend, and use the documented file chooser if supported. The owner's before-hash manifest is retained at `target/T39-browser-upload/protected-before.json`; no root application state is used by the fixture. Next inspect the current browser file chooser documentation and perform the native import/refusal checks; do not repeat any pending action in the other chat.
 
 ## T38 completed checkpoint
 
@@ -470,6 +484,7 @@ Verification: Maven verify passes 2 tests (HTTP demo/chair/replay and cancellati
 | T36 exact numeric inputs | Java177/build/browser12+14 verified | Grounding draft/current-control validation, exact signed-long seed transport and retained blank preparation; sanitized command/menu parse failures before requests |
 | T37 fresh base JAR packaging | Java177/build/repackaging7/package-JNI verified | Pinned plugin forceCreation removes stale postprocessing entries across two repeats without source changes/clean; cached tools only, launcher unchanged-build reuse preserved |
 | T38 browser/current Windows delivery | Browser/ZIP Java177/build/package/launcher verified | Current-host number-field styling/draft refusal recovery/exact seed text; fresh Maven/dependencies, cached verified Java only, tracked ZIP/space path/PS5.1/built-in PATH/batch/UTF8 menu/ownership/restart/reuse/incomplete caches pass |
+| T39 imported browser replay | Browser date6/import14/integer12/decoding/syntax and actual chooser transfer verified | Current-host2579803-byte Unicode/30-contribution import/reopen retains exact metadata; zero/date-range presentation fixed; native pilot/refusal/OS acceptance pending and chooser timeout issue retained |
 
 ## Recovery procedure
 

@@ -142,11 +142,15 @@ function seatBadge(partyId) {
 }
 
 function formatTime(millis) {
-  return new Date(millis).toLocaleTimeString('en-NZ', { hour: 'numeric', minute: '2-digit' });
+  const date = new Date(millis);
+  return Number.isFinite(date.getTime())
+    ? date.toLocaleTimeString('en-NZ', { hour: 'numeric', minute: '2-digit' }) : null;
 }
 
 function formatDate(millis) {
-  return new Date(millis).toLocaleDateString('en-NZ', {
+  const date = new Date(millis);
+  if (!Number.isFinite(date.getTime())) return null;
+  return date.toLocaleDateString('en-NZ', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   });
 }
@@ -684,10 +688,11 @@ function onSitting(event) {
   event.members = event.members.map(member => ({ ...member, strategy: member.strategy || 'NONE' }));
   sitting.members = event.members;
   sitting.topics = event.topics;
-  sitting.startedAt = event.startedAt || Date.now();
+  sitting.startedAt = event.startedAt ?? Date.now();
   for (const member of event.members) sitting.counts.set(member.name, { speeches: 0, interjections: 0 });
 
-  $('#sitting-title').textContent = `Sitting of ${formatDate(sitting.startedAt)}`;
+  const date = formatDate(sitting.startedAt), time = formatTime(sitting.startedAt);
+  $('#sitting-title').textContent = date ? `Sitting of ${date}` : 'Sitting of the House';
   document.title = `${event.topics[0]} · Virtual Parliament`;
   $('#transcript').replaceChildren();
 
@@ -699,7 +704,7 @@ function onSitting(event) {
   sitting.log.push(
     'VIRTUAL PARLIAMENT: SIMULATED HANSARD',
     'Pāremata Aotearoa · AI House of Representatives',
-    `Sitting of ${formatDate(sitting.startedAt)}, from ${formatTime(sitting.startedAt)}`,
+    date && time ? `Sitting of ${date}, from ${time}` : 'Sitting date and time unavailable.',
     '',
     'Members present:',
     ...event.members.map((m) => `  ${m.name} (${m.partyName})`),
@@ -792,15 +797,17 @@ function onAdjourned(event) {
   if (sitting.currentTopic && event.outcome === 'complete') sitting.currentTopic = sitting.topics.length + 1;
   renderAgenda();
 
-  const time = formatTime(event.at || Date.now());
+  const time = formatTime(event.at ?? Date.now());
+  const at = time ? ` at ${time}` : '';
   const text = {
-    complete: `The House adjourned at ${time}.`,
-    adjourned: `The Speaker adjourned the House at ${time}.`,
-    error: `The House rose at ${time}.`,
-    interrupted: `The sitting was interrupted before ${time}. Saved speeches are retained.`,
-  }[event.outcome] || `The House adjourned at ${time}.`;
-  appendEntry(el('p', { className: 'entry system-entry', text }));
-  sitting.log.push('', text);
+    complete: `The House adjourned${at}.`,
+    adjourned: `The Speaker adjourned the House${at}.`,
+    error: `The House rose${at}.`,
+    interrupted: `The sitting was interrupted${time ? ` before ${time}` : ''}. Saved speeches are retained.`,
+  }[event.outcome] || `The House adjourned${at}.`;
+  const message = time ? text : `${text} Time unavailable.`;
+  appendEntry(el('p', { className: 'entry system-entry', text: message }));
+  sitting.log.push('', message);
 
   if (event.outcome === 'error') setStatus('suspended', 'Sitting suspended');
   else setStatus('adjourned', 'House adjourned');
