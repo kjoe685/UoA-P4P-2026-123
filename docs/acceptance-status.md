@@ -1,8 +1,8 @@
 # Acceptance status
 
-This ledger covers every requirement in the [primary plan](implementation-plan.md) as of 2026-10-02, application checkpoint T28 (see Git log for the local commit hash). It records evidence and remaining acceptance, without replacing the plan. The [progress log](implementation-progress.md) retains detailed checks, failures and recovery artifacts; historical WIP entries are superseded by its current checkpoint and verified table.
+This ledger covers every requirement in the [primary plan](implementation-plan.md) as of 2026-10-02, application checkpoint T28 with T29 delivery verification (see Git log for local commit hashes). It records evidence and remaining acceptance, without replacing the plan. The [progress log](implementation-progress.md) retains detailed checks, failures and recovery artifacts; historical WIP entries are superseded by its current checkpoint and verified table.
 
-The current application passes **159 Java tests and the shaded build**, with19 Python tests passed at T24 (unchanged by T25–T28). The most recent isolated Windows ZIP passes **127 tests**, packaged synthetic archive/JNI checks and launcher workflows at T20; T21–T28 were subsequently verified in the repository. T10 used fresh official Java/Maven/dependency downloads; T20 explicitly reused the verified Java archive and fetched fresh Maven/dependencies. Extractor11 checks are recorded at their relevant checkpoints. T27's updated source Python0.3.0/Java health protocol smoke passed without loading analyzers; it establishes compatibility only. These counts describe software verification, not model availability or research accuracy.
+The current application and T29 isolated Windows ZIP pass **159 Java tests and the shaded build**, with19 Python tests passed at T24 (unchanged by T25–T29). T29 also passes packaged synthetic archive/JNI checks and launcher workflows. Its result explicitly records cachedJavaArchive=true/resumedFixture=true after an initial sandbox network refusal; Maven/dependencies were acquired fresh. T10 used fresh official Java/Maven/dependency downloads; T20's historical ZIP127 also reused verified Java. Extractor11 checks are recorded at their relevant checkpoints. T27's updated source Python0.3.0/Java health protocol smoke passed without loading analyzers; it establishes compatibility only. These counts describe software verification, not model availability or research accuracy.
 
 | Requirement | Current evidence | Remaining acceptance |
 |---|---|---|
@@ -60,8 +60,8 @@ The current application passes **159 Java tests and the shaded build**, with19 P
 | REQ-52 | Primary plan starts with the full requirement inventory | Historical requirement fulfilled |
 | REQ-53 | T04–T14 interface matrix; shared command/menu/API/browser QA; T26 large public round trips | Real runtime/model and native interface acceptance |
 | REQ-54 | T05–T14 advanced assets/settings/analysis/runtime/pilot controls | Actual optional runtime setup on target platforms |
-| REQ-55 | T01–T28 task records, recovery log, memory and local checkpoints | Keep recording before lengthy operations/interruption |
-| REQ-56 | T10 cold Windows ZIP; T13 genuine cached uv; T20 refreshed ZIP | Pristine Windows and native Linux/macOS |
+| REQ-55 | T01–T29 task records, recovery log, memory and local checkpoints | Keep recording before lengthy operations/interruption |
+| REQ-56 | T10 cold Windows ZIP; T13 genuine cached uv; T20/T29 refreshed ZIP | Pristine Windows and native Linux/macOS |
 | REQ-57 | Six evaluation-only commits excluded; reference tips unchanged | Repeat ancestry/ref checks at checkpoints |
 | REQ-58 | Local software/interfaces implemented; services/adapters/storage separated | Genuine local runtime acceptance; later hosting remains deferred |
 

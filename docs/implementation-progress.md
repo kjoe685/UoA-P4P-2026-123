@@ -6,9 +6,21 @@
 - Branch: `codex/dual-interface-integration`, created from refreshed `origin/main` at `a99269c`.
 - Recovered primary plan from previous chat `01a0f6c1-32c6-7a33-bf8c-6ad9fee837e5`; that chat ended in Plan mode without writing changes.
 - Preserved secondary plan from `9cbcb12`. Evaluation reference: `c41c4c2`, file-level reuse only.
-- T01–T28 checkpoints verified locally; latest checkpoint title `T28: preserve evaluator and durable text encoding` (see Git log for local commit hash). Application checkpoint T28 passes Java159/shaded build; Python19 passed at T24 and is unchanged. External platform/model/human acceptance remains below.
+- T01–T29 checkpoints verified locally; latest checkpoint title `T29: verify current isolated Windows ZIP delivery` (see Git log for local commit hash). Application checkpoint T28 and T29 isolated Windows ZIP both pass Java159/shaded build; Python19 passed at T24 and is unchanged. External platform/model/human acceptance remains below.
 - Existing untracked `UoA-P4P-2026-123.iml` belongs to the user; preserve it.
 - [Acceptance status](acceptance-status.md) maps all58 requirement IDs to current evidence and remaining platform/model/human checks. Historical WIP entries below are superseded by completed checkpoint records, not tasks to repeat.
+
+## T29 completed checkpoint
+
+**T29 — Verify current Windows ZIP delivery after boundary changes (REQ-45–50, 53–58).**
+
+Dependency: application T28 `519e222` passes Java159/build. The last isolated ZIP predates T21–T28 and its Java127 result no longer covers the latest transport/provenance/encoding changes. Use the existing delivery harness on a new tracked-file snapshot with Windows PowerShell5.1, built-in-only PATH and spaces, reusing only the checksum-pinned official Java archive. Obtain fresh Maven/dependencies, run the current suite and packaged synthetic archive/JNI checks, then real batch/guided demonstration, optional-runtime absence, restart/build reuse and incomplete-cache recovery.
+
+Acceptance: isolated snapshot contains no Git/runtime/user files/credentials; Java159/build and package/launcher checks pass, result identifies cached Java and fresh fixture distinctly, owned ports/processes stop; exact logs/result recorded before a documentation checkpoint. This host-isolation check does not establish pristine OS, native Unix or real model execution. Next run `scripts/verify-delivery.ps1 -UseCachedJavaArchive`, inspect failures without suppressing checks, update acceptance/progress/memory and commit locally. No code changes, inference, runtime/model downloads, labels, paid calls or push.
+
+T29 WIP: new fixture `target/delivery-c4b3ea68293b46c18d9b36d23977643d` includes current NLP0.3.0 sources/lock and evaluator fixes with exact matching hashes. Default sandbox prevented Maven distribution download (`Unable to connect to the remote server`) before any build; retried the same fixture with reviewed network access. The final result must record resumedFixture=true, cachedJavaArchive=true and distinguish the retry from a new successful first download. Fresh Maven/dependency acquisition and current-suite/launcher verification are running; no code changes or models.
+
+T29 verified 2026-10-02: isolated ZIP Java159/shaded build, packaged synthetic ZIP/gzip/zstd/JNI, Windows PowerShell5.1/built-in-only PATH/space path, batch CLI, Unicode guided input and backend ownership, repeat/restart/build reuse and incomplete Java/Maven extraction/stale partial recovery pass. Evidence `target/delivery-c4b3ea68293b46c18d9b36d23977643d/result.json` records cachedJavaArchive=true/resumedFixture=true after sandbox network refusal and reviewed retry; Maven/dependencies were acquired fresh in this fixture. Current source/lock hashes match the checkout. Session23539 completed, owned ports18089/8080 released. No actual optional runtime/model execution, inference, owner data changes, labels, paid calls or push. Diff/ancestry/reference/58-ID ledger checks pass. Next review whitespace-only optional policy targets, which currently become invalid NLP propositions and can poison a mixed stance batch.
 
 ## T28 completed checkpoint
 
@@ -254,7 +266,7 @@ T11 final verification: 500/500 source/content checks pass; 131 original passage
 - Genuine human behavioural review for REQ-16–19 and real labels/adjudication for the 200-item pilot. Software cues, review preparation and scoring are implemented; synthetic scores never establish research accuracy. Latest disjoint genuine prepared file is ignored target/genuine-review-pilot-current-grounding.json (import explicitly). The older target/genuine-review-pilot.json and owner pilot2224fde6-83eb-455c-9e5c-aba790e4723e were preserved; the old artifact has19 overlaps after T11 grounding changes. Keep labels blank until real review and curate propositions/context/sampling before research use.
 - Account-specific cloud and local Ollama availability/model behaviour remain unverified. Routine tests use fake providers and no paid calls. Public university hosting/authentication remains future scope under REQ-58.
 
-No half-finished code remains after the verified T28 checkpoint. Preserve the unrelated .iml. One exploratory ZIP RecoveryTest had a transient ERROR that did not reproduce in six focused repeats or later full ZIP checks; the original failure logs remain in target/delivery-23fea5f924854757b21e2ce56afe387f. Investigate if it recurs; do not suppress tests or infer a cause from this run.
+No half-finished code remains after the verified T29 checkpoint. Preserve the unrelated .iml. One exploratory ZIP RecoveryTest had a transient ERROR that did not reproduce in six focused repeats or later full ZIP checks; the original failure logs remain in target/delivery-23fea5f924854757b21e2ce56afe387f. Investigate if it recurs; do not suppress tests or infer a cause from this run.
 
 ## Earlier checkpoint notes (historical)
 
@@ -314,6 +326,7 @@ Verification: Maven verify passes 2 tests (HTTP demo/chair/replay and cancellati
 | T26 large public transcript transfer | Java150/build verified | >2MiB HTTP/commands/menu/restart round trips;64MiB import/2MiB ordinary caps, early length refusal and private/invalid import protection |
 | T27 resource/runtime encoding | Java155/build verified | Strict UTF-8 snapshots/candidates/readiness/pull records; valid Unicode/hash identity, early source refusal and retained prior job progress |
 | T28 evaluator/durable encoding | Java159/build verified | Strict blind resource source/candidates and pre-filesystem atomic writer validation; exact valid Unicode/hash/frozen request control |
+| T29 latest isolated Windows ZIP | ZIP Java159/build/package/launcher verified | Fresh Maven/dependencies; cached pinned Java, explicit resumed fixture after sandbox refusal; optional runtimes absent, UTF-8/ownership/restart/recovery pass |
 
 ## Recovery procedure
 
