@@ -17,6 +17,7 @@ if ($ResumeFixture) {
 $savedEnvironment = @{}
 foreach ($name in @('PATH','JAVA_HOME','MAVEN_USER_HOME','PARLIAMENT_MANAGED_JAVA','PARLIAMENT_URL')) { $savedEnvironment[$name] = [Environment]::GetEnvironmentVariable($name) }
 $launcher = $null
+$jobLocks = @()
 function Stop-OwnedLauncher {
     if ($script:launcher -and !$script:launcher.HasExited) {
         & "$env:SystemRoot/System32/taskkill.exe" /PID $script:launcher.Id /T /F 2>&1 | Out-Null
@@ -134,7 +135,35 @@ try {
     if (!$corruptedSpeech) { throw 'Completed ZIP fixture has no cached speech to verify recovery' }
     [IO.File]::WriteAllText($viewPath,(ConvertTo-Json -InputObject $cache -Depth 20 -Compress),(New-Object Text.UTF8Encoding $false))
     Copy-Item -LiteralPath $viewPath -Destination (Join-Path $fixtureRoot 'replay-corrupted.json')
+    # Fake saved work must not appear active when actual JAR recovery cannot replace its file.
+    $jobFixtures = @()
+    foreach ($jobState in @('QUEUED','RUNNING')) {
+        $jobId = [Guid]::NewGuid().ToString()
+        $jobDirectory = Join-Path $checkout ('runs/jobs/' + $jobId)
+        New-Item -ItemType Directory -Path $jobDirectory | Out-Null
+        $jobPath = Join-Path $jobDirectory 'job.json'
+        $inputPath = Join-Path $jobDirectory 'input.json'
+        $job = [ordered]@{id=$jobId;kind='delivery-job-recovery';runId=$run.id;createdAt=123;endedAt=$null;state=$jobState;progress='Committed partial result';result=@{retained=$unicodeTopic}}
+        [IO.File]::WriteAllText($jobPath,(ConvertTo-Json -InputObject $job -Depth 10 -Compress),(New-Object Text.UTF8Encoding $false))
+        [IO.File]::WriteAllText($inputPath,'{"privateSentinel":"PRIVATE_JOB_INPUT_SENTINEL"}',(New-Object Text.UTF8Encoding $false))
+        Copy-Item -LiteralPath $jobPath -Destination (Join-Path $fixtureRoot ($jobState + '-job-original.json'))
+        $jobFixtures += [pscustomobject]@{id=$jobId;state=$jobState;path=$jobPath;inputPath=$inputPath;jobHash=(Get-FileHash -LiteralPath $jobPath -Algorithm SHA256).Hash;inputHash=(Get-FileHash -LiteralPath $inputPath -Algorithm SHA256).Hash}
+        $jobLocks += [IO.File]::Open($jobPath,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::Read)
+    }
     $config = Start-Fixture 'repeat'
+    $listedJobs = Invoke-RestMethod -Uri "http://127.0.0.1:$Port/api/jobs" -TimeoutSec 5
+    foreach ($jobFixture in $jobFixtures) {
+        if (@($listedJobs | Where-Object { $_.id -eq $jobFixture.id }).Count -ne 0) { throw 'Refused recovery advertised workerless saved work' }
+        foreach ($suffix in @('','/report')) {
+            try {
+                $null = Invoke-WebRequest -UseBasicParsing -Uri "http://127.0.0.1:$Port/api/jobs/$($jobFixture.id)$suffix" -TimeoutSec 5
+                throw 'Refused recovery exposed unsaved job or report'
+            } catch [Net.WebException] {
+                if (!$_.Exception.Response -or [int]$_.Exception.Response.StatusCode -ne 404) { throw }
+            }
+        }
+        if ((Get-FileHash -LiteralPath $jobFixture.path -Algorithm SHA256).Hash -ne $jobFixture.jobHash -or (Get-FileHash -LiteralPath $jobFixture.inputPath -Algorithm SHA256).Hash -ne $jobFixture.inputHash) { throw 'Refused recovery changed committed job or private input' }
+    }
     if ((Get-Content -LiteralPath (Join-Path $checkout 'target/launcher-build.sha256') -Raw) -ne $stamp -or (Get-Item -LiteralPath (Join-Path $checkout 'target/virtual-parliament.jar')).LastWriteTimeUtc -ne $jarTime) { throw 'Repeat launch rebuilt unchanged sources' }
     $saved = Invoke-RestMethod -Uri "http://127.0.0.1:$Port/api/debates/$($run.id)/transcript" -TimeoutSec 5
     if ($saved.outcome -ne 'complete') { throw 'ZIP restart lost committed public evidence' }
@@ -155,6 +184,8 @@ try {
     Copy-Item -LiteralPath $viewPath -Destination (Join-Path $fixtureRoot 'replay-repaired.json')
     [pscustomobject]@{result='PASS';runId=$run.id;publicSha256=$publicHash.ToLowerInvariant();setupSha256=$setupHash.ToLowerInvariant();events=$publicReplay.Count;replay=$replayed.Count;runTime=(Get-Date).ToString('o')} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $fixtureRoot 'replay-recovery.json') -Encoding UTF8
     Stop-OwnedLauncher
+    foreach ($jobLock in $jobLocks) { $jobLock.Dispose() }
+    $jobLocks = @()
     # Simulate a killed extraction and stale partial download, retaining the valid archive.
     $runtimeRoot = (Resolve-Path -LiteralPath (Join-Path $checkout '.runtime')).Path
     $managedRoot = (Resolve-Path -LiteralPath (Join-Path $runtimeRoot 'jdk-17.0.20.1+1')).Path
@@ -166,10 +197,23 @@ try {
     $config = Start-Fixture 'recovery'
     if (!(Test-Path -LiteralPath (Join-Path $managedRoot 'bin/java.exe')) -or !(Test-Path -LiteralPath (Join-Path $managedRoot 'bin/javac.exe'))) { throw 'Interrupted extraction did not recover' }
     if (Test-Path -LiteralPath (Join-Path $managedRoot 'jdk-17.0.20.1+1')) { throw 'Recovered JDK nested inside incomplete root' }
+    $recoveredJobs = @()
+    foreach ($jobFixture in $jobFixtures) {
+        $recoveredJob = Invoke-RestMethod -Uri "http://127.0.0.1:$Port/api/jobs/$($jobFixture.id)" -TimeoutSec 5
+        $partialReport = Invoke-RestMethod -Uri "http://127.0.0.1:$Port/api/jobs/$($jobFixture.id)/report" -TimeoutSec 5
+        $storedJob = Get-Content -LiteralPath $jobFixture.path -Raw -Encoding UTF8 | ConvertFrom-Json
+        if ($recoveredJob.state -ne 'INTERRUPTED' -or $storedJob.state -ne 'INTERRUPTED' -or $recoveredJob.result.retained -ne $unicodeTopic -or $storedJob.result.retained -ne $unicodeTopic -or $partialReport.retained -ne $unicodeTopic -or $recoveredJob.runId -ne $run.id -or $recoveredJob.createdAt -ne 123 -or !$recoveredJob.endedAt) { throw 'Writable restart lost durable job interruption or exact partial results' }
+        if ((Get-FileHash -LiteralPath $jobFixture.inputPath -Algorithm SHA256).Hash -ne $jobFixture.inputHash) { throw 'Job recovery changed private input bytes' }
+        Copy-Item -LiteralPath $jobFixture.path -Destination (Join-Path $fixtureRoot ($jobFixture.state + '-job-recovered.json'))
+        $recoveredJobs += [pscustomobject]@{id=$jobFixture.id;originalState=$jobFixture.state;state=$storedJob.state;originalSha256=$jobFixture.jobHash.ToLowerInvariant();recoveredSha256=(Get-FileHash -LiteralPath $jobFixture.path -Algorithm SHA256).Hash.ToLowerInvariant();inputSha256=$jobFixture.inputHash.ToLowerInvariant()}
+    }
+    if ((Get-FileHash -LiteralPath $publicPath -Algorithm SHA256).Hash -ne $publicHash -or (Get-FileHash -LiteralPath $setupPath -Algorithm SHA256).Hash -ne $setupHash) { throw 'Job recovery changed public sitting evidence or private setup' }
+    [pscustomobject]@{result='PASS';refusedRecovery='unavailable';jobs=$recoveredJobs;runTime=(Get-Date).ToString('o')} | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath (Join-Path $fixtureRoot 'job-recovery.json') -Encoding UTF8
     Stop-OwnedLauncher
-    [pscustomobject]@{result='PASS'; fixture=$fixtureRoot; cachedJavaArchive=[bool]$UseCachedJavaArchive; resumedFixture=[bool]$ResumeFixture; menuOwnership=$ownership; replayRecovery='PASS'; checks='ZIP/space path/built-in PATH/first build/demo/optional NLP and LLM absence/packaged ZIP gzip zstd JNI/run.cmd/UTF8 menu/repeat/restart/corrupt replay repair/public and setup hashes/incomplete Java and Maven extraction/stale partial'; runTime=(Get-Date).ToString('o')} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $fixtureRoot 'result.json') -Encoding UTF8
+    [pscustomobject]@{result='PASS'; fixture=$fixtureRoot; cachedJavaArchive=[bool]$UseCachedJavaArchive; resumedFixture=[bool]$ResumeFixture; menuOwnership=$ownership; replayRecovery='PASS'; jobRecovery='PASS'; checks='ZIP/space path/built-in PATH/first build/demo/optional NLP and LLM absence/packaged ZIP gzip zstd JNI/run.cmd/UTF8 menu/repeat/restart/corrupt replay repair/refused job recovery and writable retry/exact partial and private input bytes/public and setup hashes/incomplete Java and Maven extraction/stale partial'; runTime=(Get-Date).ToString('o')} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $fixtureRoot 'result.json') -Encoding UTF8
     Write-Output "PASS: isolated ZIP delivery; evidence $fixtureRoot/result.json"
 } finally {
     Stop-OwnedLauncher
+    foreach ($jobLock in $jobLocks) { $jobLock.Dispose() }
     foreach ($name in $savedEnvironment.Keys) { [Environment]::SetEnvironmentVariable($name,$savedEnvironment[$name]) }
 }
