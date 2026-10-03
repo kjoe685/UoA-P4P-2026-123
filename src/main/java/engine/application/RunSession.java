@@ -11,6 +11,7 @@ import java.util.*;
 
 /** Durable sitting independent of the HTTP and terminal adapters. */
 public final class RunSession implements EngineOutput {
+    private static final String GENERATION_FAILURE="Generation failed. Check provider configuration and retry.";
     private final String id;
     private final RunStore store;
     private final PrivateSetup setup;
@@ -53,16 +54,17 @@ public final class RunSession implements EngineOutput {
     }
     public static RunSession restore(String id,RunStore store) {
         Transcript transcript=store.transcript(id);
+        if (!id.equals(transcript.runId())) throw new IllegalArgumentException("Saved transcript does not match its storage id");
         PrivateSetup setup=store.setup(id);
         List<String> view;
         try {
             view=store.view(id);
-            if (view.isEmpty() || !(Json.parse(view.get(0)) instanceof Map<?,?> first) || !"sitting".equals(first.get("type")))
-                throw new IllegalArgumentException("Saved view has no setup event");
-            for (String json:view) if (!(Json.parse(json) instanceof Map<?,?> event) || !(event.get("type") instanceof String))
-                throw new IllegalArgumentException("Invalid view event");
+            validateView(transcript,setup,view);
         }
-        catch (IllegalStateException | IllegalArgumentException e) { view=rebuildView(transcript,setup); }
+        catch (IllegalStateException | IllegalArgumentException e) {
+            view=rebuildView(transcript,setup);
+            store.saveView(id,view);
+        }
         return new RunSession(transcript,setup,view,store);
     }
     public static RunSession imported(Transcript transcript,PrivateSetup setup,RunStore store) {
@@ -80,7 +82,7 @@ public final class RunSession implements EngineOutput {
             else {
                 result=Transcript.Outcome.ERROR;
                 try { record(Map.of("type","error","message",e instanceof engine.chat.ContextBudgetExceededException
-                        ? engine.chat.ContextBudgetExceededException.GUIDANCE : "Generation failed. Check provider configuration and retry.")); }
+                        ? engine.chat.ContextBudgetExceededException.GUIDANCE : GENERATION_FAILURE)); }
                 catch (RuntimeException ignored) { }
             }
         } finally {
@@ -165,6 +167,37 @@ public final class RunSession implements EngineOutput {
                 event.put("text",evidence.text()); event.put("interjection",evidence.type()==PublicEvent.Type.INTERJECTION); }
         }
         return event;
+    }
+    /** A cache may omit a newly committed tail, but cannot change or invent public evidence. */
+    private static void validateView(Transcript transcript,PrivateSetup setup,List<String> view) {
+        if (view.isEmpty() || !sameEvent(Json.parse(view.get(0)),sittingEvent(transcript.runId(),transcript.startedAt(),transcript.roster(),transcript.topics(),setup)))
+            throw new IllegalArgumentException("Saved replay does not match the sitting");
+        int nextEvidence=0;
+        for (int index=1;index<view.size();index++) {
+            Object parsed=Json.parse(view.get(index));
+            if (!(parsed instanceof Map<?,?> event) || !(event.get("type") instanceof String type))
+                throw new IllegalArgumentException("Invalid saved replay event");
+            boolean valid=switch (type) {
+                case "topic","chair","speech" -> nextEvidence<transcript.events().size()
+                        && sameEvent(parsed,eventView(transcript.events().get(nextEvidence++),transcript.topics()));
+                case "calling" -> {
+                    var member=transcript.roster().stream().filter(value -> value.id().equals(event.get("memberId"))).findFirst().orElse(null);
+                    if (member==null || !(event.get("interjection") instanceof Boolean interjection)) yield false;
+                    var expected=memberFields(member); expected.put("type","calling"); expected.put("interjection",interjection);
+                    yield sameEvent(parsed,expected);
+                }
+                case "error" -> event.keySet().equals(Set.of("type","message"))
+                        && (GENERATION_FAILURE.equals(event.get("message")) || engine.chat.ContextBudgetExceededException.GUIDANCE.equals(event.get("message")));
+                case "adjourned" -> index==view.size()-1 && nextEvidence==transcript.events().size()
+                        && transcript.outcome()!=Transcript.Outcome.RUNNING
+                        && sameEvent(parsed,Map.of("type","adjourned","outcome",wireOutcome(transcript.outcome()),"at",transcript.endedAt()));
+                default -> false;
+            };
+            if (!valid) throw new IllegalArgumentException("Saved replay does not match committed evidence");
+        }
+    }
+    private static boolean sameEvent(Object cached,Object expected) {
+        return Objects.equals(cached,Json.parse(Json.write(expected)));
     }
     private static List<String> rebuildView(Transcript transcript,PrivateSetup setup) {
         List<String> result=new ArrayList<>();
