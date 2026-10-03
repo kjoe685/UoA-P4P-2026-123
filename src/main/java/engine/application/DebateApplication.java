@@ -193,16 +193,19 @@ public final class DebateApplication implements AutoCloseable {
     @Override public void close() {
         // Use the same admission lock as start/import, then release it before waiting for workers.
         synchronized (this) { if (closed) return; closed=true; }
-        try { background.close(); }
+        // Signal generation before a background save or runtime cleanup can delay shutdown.
+        try { sessions.values().stream().filter(session -> !session.isFinished()).forEach(RunSession::adjourn); }
         finally {
-            try { nlp.close(); }
+            jobs.shutdown();
+            try { background.close(); }
             finally {
-                try {
-                    sessions.values().stream().filter(session -> !session.isFinished()).forEach(RunSession::adjourn);
-                    jobs.shutdown();
-                    try { if (!jobs.awaitTermination(5,TimeUnit.SECONDS)) jobs.shutdownNow(); }
-                    catch (InterruptedException e) { jobs.shutdownNow(); Thread.currentThread().interrupt(); }
-                } finally { ollama.close(); }
+                try { nlp.close(); }
+                finally {
+                    try {
+                        try { if (!jobs.awaitTermination(5,TimeUnit.SECONDS)) jobs.shutdownNow(); }
+                        catch (InterruptedException e) { jobs.shutdownNow(); Thread.currentThread().interrupt(); }
+                    } finally { ollama.close(); }
+                }
             }
         }
     }

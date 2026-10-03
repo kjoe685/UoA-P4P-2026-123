@@ -80,4 +80,49 @@ class ApplicationShutdownTest {
             assertFalse(Json.write(sitting.transcript()).contains("Fixture"));
         } finally { releaseSave.countDown(); app.close(); worker.shutdownNow(); }
     }
+
+    @Test void shutdownInterruptsSittingBeforeWaitingForBackgroundPersistence() throws Exception {
+        TestFixtures.copyResources(root); var store=new RunStore(root.resolve("runs")); var calls=new AtomicInteger();
+        var providerEntered=new CountDownLatch(1); var providerInterrupted=new CountDownLatch(1); var releaseProvider=new CountDownLatch(1);
+        var persistenceEntered=new CountDownLatch(1); var releasePersistence=new CountDownLatch(1);
+        var app=new DebateApplication(root,store,model -> request -> {
+            if (calls.incrementAndGet()==1) return RunLifecycleTest.completed("Earlier committed public evidence.");
+            providerEntered.countDown();
+            try { releaseProvider.await(); }
+            catch (InterruptedException e) { providerInterrupted.countDown(); Thread.currentThread().interrupt(); }
+            return RunLifecycleTest.completed("ABANDONED_PROVIDER_SENTINEL");
+        });
+        var workers=Executors.newFixedThreadPool(2); Future<?> closing=null;
+        String id; byte[] retained;
+        try {
+            var sitting=app.start(TestFixtures.settings()); id=sitting.id(); assertTrue(providerEntered.await(3,TimeUnit.SECONDS));
+            // Background transitions hold this same monitor while committing job progress.
+            var persistence=workers.submit(() -> {
+                synchronized (app.background()) {
+                    persistenceEntered.countDown();
+                    try { releasePersistence.await(); }
+                    catch (InterruptedException e) { Thread.currentThread().interrupt(); throw new IllegalStateException(e); }
+                }
+            });
+            assertTrue(persistenceEntered.await(3,TimeUnit.SECONDS)); closing=workers.submit(app::close);
+            assertTrue(providerInterrupted.await(3,TimeUnit.SECONDS),"Shutdown must interrupt generation before waiting for background persistence");
+            assertFalse(closing.isDone(),"Shutdown must still wait for background cleanup");
+            assertThrows(IllegalStateException.class,() -> app.start(TestFixtures.settings()));
+            releasePersistence.countDown(); persistence.get(3,TimeUnit.SECONDS); closing.get(4,TimeUnit.SECONDS);
+            RunLifecycleTest.finish(sitting); assertEquals(2,calls.get());
+            assertEquals(Transcript.Outcome.ADJOURNED,sitting.transcript().outcome());
+            assertEquals(sitting.transcript(),store.transcript(id));
+            assertTrue(app.textExport(id).contains("Earlier committed public evidence."));
+            assertFalse(Json.write(sitting.transcript()).contains("SENTINEL"));
+            retained=Files.readAllBytes(root.resolve("runs").resolve(id).resolve("transcript.json"));
+        } finally {
+            releasePersistence.countDown(); releaseProvider.countDown();
+            try { if (closing!=null) closing.get(4,TimeUnit.SECONDS); }
+            finally { app.close(); workers.shutdownNow(); }
+        }
+        try (var recovered=new DebateApplication(root,store,model -> { throw new AssertionError("Recovery must not generate"); })) {
+            assertEquals(Transcript.Outcome.ADJOURNED,recovered.find(id).transcript().outcome());
+            assertArrayEquals(retained,Files.readAllBytes(root.resolve("runs").resolve(id).resolve("transcript.json")));
+        }
+    }
 }
