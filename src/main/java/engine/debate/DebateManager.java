@@ -58,6 +58,8 @@ public final class DebateManager {
                     TemplateName cue=firstOverall ? TemplateName.OPENING : firstOnTopic ? TemplateName.NEW_TOPIC : TemplateName.FOLLOW_UP;
                     firstOverall=false; firstOnTopic=false;
                     output.speakerCalled(speaker.identity(),false);
+                    // Persisting the calling indicator can delay until after stop intent arrives.
+                    if (stopped || Thread.currentThread().isInterrupted()) return;
                     String speech=speaker.speak(List.copyOf(evidence),prompts.turnCue(cue,topic,speaker.identity(),evidence));
                     if (!emit(PublicEvent.Type.SPEECH,speaker.identity(),speech)) return;
                     List<Agent> others=new ArrayList<>(agents); others.remove(speaker); Collections.shuffle(others,random);
@@ -66,6 +68,7 @@ public final class DebateManager {
                         if (candidate.shouldInterject(random,interruptions)) {
                             if (!drainRulings(false)) return;
                             output.speakerCalled(candidate.identity(),true);
+                            if (stopped || Thread.currentThread().isInterrupted()) return;
                             String text=candidate.speak(List.copyOf(evidence),prompts.turnCue(TemplateName.INTERJECTION,topic,candidate.identity(),evidence));
                             if (!emit(PublicEvent.Type.INTERJECTION,candidate.identity(),text)) return;
                             break;
@@ -107,14 +110,17 @@ public final class DebateManager {
     }
     public void addSpeakerRuling(String ruling) {
         synchronized (publicationLock) {
-            if (!acceptingRulings) throw new IllegalStateException("The House has already adjourned");
+            if (stopped || !acceptingRulings) throw new IllegalStateException("The House has already adjourned");
             rulings.add(ruling);
         }
     }
+    /** Signal stop intent without waiting for an accepted public save. */
+    public void signalStop() { stopped=true; }
     public void requestStop() {
+        signalStop();
         synchronized (publicationLock) {
             if (!acceptingRulings) return;
-            stopped=true; acceptingRulings=false;
+            acceptingRulings=false;
             // Interrupt generation under the same lock as final persistence, never during the flush.
             if (generationThread!=null && generationThread!=Thread.currentThread()) generationThread.interrupt();
         }

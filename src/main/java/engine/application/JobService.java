@@ -92,14 +92,19 @@ public final class JobService implements AutoCloseable {
             var future=futures.remove(id); if (future!=null) future.cancel(true); executor.purge();
         }
     }
-    @Override public synchronized void close() {
-        closed=true; RuntimeException failure=null;
-        try {
-            for (String id:jobs.values().stream().filter(job -> !job.terminal()).map(BackgroundJob::id).toList()) {
-                try { cancel(id); }
-                catch (RuntimeException e) { if (failure==null) failure=e; }
-            }
-        } finally { executor.shutdownNow(); }
-        if (failure!=null) throw failure;
+    /** Publish shutdown admission/cancellation before persistence can block cleanup. */
+    void prepareToClose() { closed=true; }
+    @Override public void close() {
+        prepareToClose();
+        synchronized (this) {
+            RuntimeException failure=null;
+            try {
+                for (String id:jobs.values().stream().filter(job -> !job.terminal()).map(BackgroundJob::id).toList()) {
+                    try { cancel(id); }
+                    catch (RuntimeException e) { if (failure==null) failure=e; }
+                }
+            } finally { executor.shutdownNow(); }
+            if (failure!=null) throw failure;
+        }
     }
 }

@@ -194,7 +194,12 @@ public final class DebateApplication implements AutoCloseable {
         // Use the same admission lock as start/import, then release it before waiting for workers.
         synchronized (this) { if (closed) return; closed=true; }
         // Signal generation before a background save or runtime cleanup can delay shutdown.
-        try { sessions.values().stream().filter(session -> !session.isFinished()).forEach(RunSession::adjourn); }
+        try {
+            background.prepareToClose();
+            // Stop every scheduler before one sitting's accepted save can block interruption.
+            sessions.values().forEach(RunSession::prepareToAdjourn);
+            sessions.values().stream().filter(session -> !session.isFinished()).forEach(RunSession::adjourn);
+        }
         finally {
             jobs.shutdown();
             try { background.close(); }

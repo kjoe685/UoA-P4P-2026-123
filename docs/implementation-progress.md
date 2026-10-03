@@ -3,14 +3,14 @@
 ## Current checkpoint
 
 - Date: 2026-10-03 (Pacific/Auckland). Sole working branch: `codex/dual-interface-integration`, based on refreshed `origin/main` at `a99269c`.
-- Application source checkpoint: T57 `c36a28b` shutdown cancellation ordering, following T54 `096cc18` and T53 `bd99841`. Current application and T58 isolated Windows ZIP pass **196 fake-provider Java tests and the shaded build**. T55 at `1c89d6a` is the earlier195-test delivery snapshot.
-- Latest documentation checkpoint: T56 recovery/history compaction (see Git log for the local commit). Original historical bytes, checkpoint coverage, current links and retained references are verified; application source is unchanged.
+- Application source checkpoint: T59 shared stop intent/provider admission (see Git log for its local commit), following T57 `c36a28b` shutdown cancellation ordering, following T54 `096cc18` and T53 `bd99841`. Current application passes **200 fake-provider Java tests and the shaded build**; T58 isolated Windows ZIP passes196 and predates T59. T55 at `1c89d6a` is the earlier195-test delivery snapshot.
+- Recovery/history checkpoint: T56 `553e524` compaction. Original historical bytes, checkpoint coverage, current links and retained references are verified; application source is unchanged.
 - T53 stops running/queued jobs even when cancellation persistence is refused, retains committed partial results and always attempts owned-resource cleanup. T54 refuses start/import once closure begins, before providers or files. Before-change failures and final checks remain under `target/T53-cancellation-reproduction/` and `target/T54-shutdown-admission/`.
 - T57 signals accepted sittings before waiting for background-job persistence or runtime cleanup. The new deterministic regression retains prior evidence, excludes the abandoned response and recovers exact transcript bytes without inference. Before-change failure,40focused checks and196-test offline package evidence are under `target/T57-shutdown-order/`.
 - T58 delivery evidence: `target/delivery-6d23861dd21c4d77ac25d2633efc2681/result.json`, `PASS`, cachedJavaArchive=true/resumedFixture=false/menuOwnership=PASS. Fresh Maven/dependencies, Windows PowerShell5.1/built-in PATH/spaces, packaged archive/JNI, batch/UTF8 guided input, owned startup/stop, public restart, build reuse and interrupted caches pass. Ten selected lifecycle/source/test/launcher hashes match T57; nine protected owner/history/review files are intact, and owned ports18089/8080 are released. ZIP SHA256: `1f258f87ebb8e620ffa70da83e3f8e41c8978131cb113905cb362804edb387b6`. The initial sandbox Maven-download refusal remains in `target/delivery-1b77454832bf4c03ab65891ec7c4c41e/`; the accepted check used reviewed network execution and a new fixture.
 - Earlier Python19 and browser checks retain their existing evidence; these backend/docs changes do not require repeating them. T40–T52 record genuine current-host local functionality separately from fake checks. Selected Qwen generation/cache, current CPU analysis/setup, four-speech review preparation and strict rubric JSON/evidence validation pass within their recorded limits. Human behavioural/scoring validity, other selected models and pristine/native platforms remain open.
 - `codex/frontend-integration` at `9cbcb12` and `feat/evaluation-framework` at `c41c4c2` remain read-only references. All six evaluation-only commits are excluded from working ancestry. No merge/cherry-pick/rebase or push is authorized by these checkpoints.
-- Only the unrelated user `UoA-P4P-2026-123.iml` was untracked before T57; preserve it. Earlier owned services are stopped. T57 application code is verified; no unfinished application code remains. Check active task records and actual processes before resuming an interrupted future run.
+- Only the unrelated user `UoA-P4P-2026-123.iml` was untracked before T57; preserve it. Earlier owned services are stopped. T59 application code is verified; no unfinished application code remains. Check active task records and actual processes before resuming an interrupted future run.
 
 The [acceptance ledger](acceptance-status.md) maps all58 requirements; the [interface matrix](interface-parity.md) maps browser, guided CLI and commands. The [complete checkpoint history](implementation-history.md) retains every original record, including superseded WIP, exact failures and recovery artifact paths. Historical counts describe their own checkpoints, not the current suite. Read the relevant history section when a prior failure or unfinished artifact needs investigation; do not repeat superseded WIP as a new task.
 
@@ -24,7 +24,19 @@ T57 verified 2026-10-03 14:41 Pacific/Auckland: the new `ApplicationShutdownTest
 
 ## Next action
 
-Reconcile new user changes and the remaining external acceptance below. No unfinished application code remains. Broaden verification only for a changed contract, new failure or unresolved concern. Do not invent features or human labels to spend remaining usage.
+Record T60 and refresh delivery for verified T59, then reconcile the remaining external acceptance below. Broaden verification only for a changed contract, new failure or unresolved concern. Do not invent features or human labels to spend remaining usage.
+
+## T59 completed checkpoint
+
+**T59 — Publish stop intent to every accepted sitting and background job before waiting for persistence (REQ-20–22, 53, 55, 58; primary stages 4 and 10).**
+
+Dependency: T57 `c36a28b` / T58 `4ccc90b`. Recorded acceptance before each change: two fake sittings paused in public saves must stop generation independently of whichever save blocks shutdown; ordinary/interjection calling callbacks must observe stop intent before invoking a provider; background work must stop before its next step while a sitting save is blocked. Preserve accepted public saves/rulings, committed partial jobs, closed admission, all cleanup and exact no-inference recovery. Identify the actual closing lock owner so UUID/map order cannot determine the result. No real model/service/dependency call or owner changes.
+
+T59 verified 2026-10-03 15:07 Pacific/Auckland. Four before-change failures are retained under `target/T59-concurrent-shutdown/`: `before-change.log` shows eleven total fake calls instead of two (nine extra calls while another save blocks shutdown); `calling-before-change.log` shows one unwanted ordinary request and a second unwanted interjection request; `background-before-change.log` shows one unwanted background step. The pre-calling-guard scheduler is retained as `before-calling-guard.java`.
+
+The application now publishes background and all-sitting stop intent without waiting for persistence, then performs safe interruption/cleanup under the existing monitors. Ordinary cancellation also publishes stop intent before taking the publication lock; stopped schedulers reject new rulings. Both provider invocation paths recheck stop/interrupt after saving the calling indicator. Already accepted public saves and ruling flushes keep their publication lock and complete safely.
+
+Final45focused checks pass (`focused-all.log`); all200fake Java tests and the offline shaded package pass (`full-package-final.log`). Both accepted public speeches, committed partial background bytes, abandoned-response suppression, post-close refusal and exact no-inference restart pass. Interim197/42/44 counts/logs are retained historical evidence. All nine protected owner/history/review hashes, reference tips and six excluded ancestors pass; no other project chat is active. No unfinished application code remains. Next verified local T59 checkpoint, then record T60 before refreshing Windows ZIP delivery. T58's196-test ZIP predates this contract; Python19/browser evidence is unchanged.
 
 ## T58 completed checkpoint
 
@@ -120,6 +132,7 @@ T56 staged verification initially flagged the preserved CRLF lines as trailing w
 | T56 current recovery/history | Exact archived bytes/checkpoint coverage/links/ref exclusions verified | Current handoff reduced from203560bytes to about23KB; all61prior rows/220protected tracked files intact, byte-preserving history and memory archives; no production change or repeated tests |
 | T57 shutdown cancellation ordering | FakeJava196/shaded build/focused40/before-change1fail verified | Accepted sitting interrupted before blocked background persistence; cleanup still waits, prior speech retained, abandoned response excluded and exact no-inference recovery |
 | T58 current Windows delivery | CleanZIP196/build/package/launcher verified | Current T57 ten lifecycle/source/test/launcher hashes exact; fresh Maven/dependencies/cached Java only/PS5.1/built-in PATH/spaces/batch UTF8/menu ownership/public restart/reuse/incomplete caches/owned port release; first sandbox download refusal retained |
+| T59 shared shutdown stop intent | FakeJava200/shaded build/focused45/before-change4fail verified | All sittings/background jobs observe stop before another persistence wait; ordinary/interjection calling guards avoid requests; accepted public saves/partial jobs and exact no-inference recovery retained |
 
 
 ## Recovery procedure

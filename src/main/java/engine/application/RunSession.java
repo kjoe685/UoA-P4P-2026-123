@@ -95,6 +95,9 @@ public final class RunSession implements EngineOutput {
     public String id() { return id; }
     public synchronized Transcript transcript() { return new Transcript(2,id,startedAt,endedAt,roster,topics,evidence,outcome); }
     public synchronized boolean isFinished() { return finished; }
+    public void prepareToAdjourn() {
+        if (manager!=null) manager.signalStop();
+    }
     public void adjourn() {
         if (manager!=null) manager.requestStop();
     }
