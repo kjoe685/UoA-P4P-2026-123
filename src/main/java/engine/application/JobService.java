@@ -34,8 +34,12 @@ public final class JobService implements AutoCloseable {
                 try {
                     var job=Json.read(Files.readString(directory.resolve("job.json")),BackgroundJob.class);
                     if (!directory.getFileName().toString().equals(UUID.fromString(job.id()).toString())) continue;
+                    if (!job.terminal()) {
+                        job=new BackgroundJob(job.id(),job.kind(),job.runId(),job.createdAt(),System.currentTimeMillis(),
+                                BackgroundJob.State.INTERRUPTED,"Interrupted by backend restart; partial results retained",job.result());
+                        save(job);
+                    }
                     jobs.put(job.id(),job);
-                    if (!job.terminal()) transition(job.id(),BackgroundJob.State.INTERRUPTED,"Interrupted by backend restart; partial results retained",job.result());
                 } catch (RuntimeException | IOException e) { System.err.println("A saved background job could not be read"); }
             }
         } catch (IOException e) { throw new IllegalStateException("Cannot list background jobs"); }
