@@ -113,10 +113,47 @@ try {
         try { $probe.Connect('127.0.0.1',8080); throw 'Owned menu left backend running' } catch [Net.Sockets.SocketException] { $ownership = 'PASS' } finally { $probe.Dispose() }
         $env:PARLIAMENT_URL = "http://127.0.0.1:$Port"
     }
+    # A presentation cache must not override committed evidence after actual JAR startup.
+    $runDirectory = Join-Path $checkout ('runs/' + $run.id)
+    $publicPath = Join-Path $runDirectory 'transcript.json'
+    $setupPath = Join-Path $runDirectory 'setup.json'
+    $viewPath = Join-Path $runDirectory 'view.json'
+    $publicHash = (Get-FileHash -LiteralPath $publicPath -Algorithm SHA256).Hash
+    $setupHash = (Get-FileHash -LiteralPath $setupPath -Algorithm SHA256).Hash
+    Copy-Item -LiteralPath $viewPath -Destination (Join-Path $fixtureRoot 'replay-original.json')
+    $cache = [string[]](Get-Content -LiteralPath $viewPath -Raw | ConvertFrom-Json)
+    $corruptedSpeech = $false
+    for ($cacheIndex=0;$cacheIndex -lt $cache.Count;$cacheIndex++) {
+        $cachedEvent = $cache[$cacheIndex] | ConvertFrom-Json
+        if (!$corruptedSpeech -and $cachedEvent.type -eq 'speech') {
+            $cachedEvent.text = 'UNCOMMITTED_REPLAY_SENTINEL'
+            $cache[$cacheIndex] = $cachedEvent | ConvertTo-Json -Depth 20 -Compress
+            $corruptedSpeech = $true
+        }
+    }
+    if (!$corruptedSpeech) { throw 'Completed ZIP fixture has no cached speech to verify recovery' }
+    [IO.File]::WriteAllText($viewPath,(ConvertTo-Json -InputObject $cache -Depth 20 -Compress),(New-Object Text.UTF8Encoding $false))
+    Copy-Item -LiteralPath $viewPath -Destination (Join-Path $fixtureRoot 'replay-corrupted.json')
     $config = Start-Fixture 'repeat'
     if ((Get-Content -LiteralPath (Join-Path $checkout 'target/launcher-build.sha256') -Raw) -ne $stamp -or (Get-Item -LiteralPath (Join-Path $checkout 'target/virtual-parliament.jar')).LastWriteTimeUtc -ne $jarTime) { throw 'Repeat launch rebuilt unchanged sources' }
     $saved = Invoke-RestMethod -Uri "http://127.0.0.1:$Port/api/debates/$($run.id)/transcript" -TimeoutSec 5
     if ($saved.outcome -ne 'complete') { throw 'ZIP restart lost committed public evidence' }
+    $replay = (Invoke-WebRequest -UseBasicParsing -Uri "http://127.0.0.1:$Port/api/debates/$($run.id)/events" -TimeoutSec 20).Content
+    if ($replay.Contains('UNCOMMITTED_REPLAY_SENTINEL')) { throw 'Restart published corrupted replay cache text' }
+    $replayed = @($replay -split "`n" | Where-Object { $_.StartsWith('data: ') } | ForEach-Object { $_.Substring(6) | ConvertFrom-Json })
+    $publicReplay = @($replayed | Where-Object { $_.turnId })
+    if ($publicReplay.Count -ne $saved.events.Count) { throw 'Restart replay changed committed evidence coverage' }
+    for ($eventIndex=0;$eventIndex -lt $publicReplay.Count;$eventIndex++) {
+        $replayedEvent = $publicReplay[$eventIndex]; $sourceEvent = $saved.events[$eventIndex]
+        $replayedText = if ($replayedEvent.type -eq 'topic') { $replayedEvent.topic } else { $replayedEvent.text }
+        if ($replayedEvent.turnId -ne $sourceEvent.id -or $replayedEvent.topicId -ne $sourceEvent.topicId -or $replayedText -ne $sourceEvent.text) { throw 'Restart replay differs from ordered committed evidence' }
+    }
+    if ($replayed[0].id -ne $run.id -or $replayed[-1].outcome -ne 'complete' -or $replayed[-1].at -ne $saved.endedAt) { throw 'Restart replay changed sitting or terminal metadata' }
+    if ((Get-FileHash -LiteralPath $publicPath -Algorithm SHA256).Hash -ne $publicHash -or (Get-FileHash -LiteralPath $setupPath -Algorithm SHA256).Hash -ne $setupHash) { throw 'Replay repair changed committed public or private setup files' }
+    $repairedCache = [string[]](Get-Content -LiteralPath $viewPath -Raw | ConvertFrom-Json)
+    if (($repairedCache -join '').Contains('UNCOMMITTED_REPLAY_SENTINEL') -or $repairedCache.Count -ne $replayed.Count) { throw 'Replay repair was not persisted before publication' }
+    Copy-Item -LiteralPath $viewPath -Destination (Join-Path $fixtureRoot 'replay-repaired.json')
+    [pscustomobject]@{result='PASS';runId=$run.id;publicSha256=$publicHash.ToLowerInvariant();setupSha256=$setupHash.ToLowerInvariant();events=$publicReplay.Count;replay=$replayed.Count;runTime=(Get-Date).ToString('o')} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $fixtureRoot 'replay-recovery.json') -Encoding UTF8
     Stop-OwnedLauncher
     # Simulate a killed extraction and stale partial download, retaining the valid archive.
     $runtimeRoot = (Resolve-Path -LiteralPath (Join-Path $checkout '.runtime')).Path
@@ -130,7 +167,7 @@ try {
     if (!(Test-Path -LiteralPath (Join-Path $managedRoot 'bin/java.exe')) -or !(Test-Path -LiteralPath (Join-Path $managedRoot 'bin/javac.exe'))) { throw 'Interrupted extraction did not recover' }
     if (Test-Path -LiteralPath (Join-Path $managedRoot 'jdk-17.0.20.1+1')) { throw 'Recovered JDK nested inside incomplete root' }
     Stop-OwnedLauncher
-    [pscustomobject]@{result='PASS'; fixture=$fixtureRoot; cachedJavaArchive=[bool]$UseCachedJavaArchive; resumedFixture=[bool]$ResumeFixture; menuOwnership=$ownership; checks='ZIP/space path/built-in PATH/first build/demo/optional NLP and LLM absence/packaged ZIP gzip zstd JNI/run.cmd/UTF8 menu/repeat/restart/incomplete Java and Maven extraction/stale partial'; runTime=(Get-Date).ToString('o')} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $fixtureRoot 'result.json') -Encoding UTF8
+    [pscustomobject]@{result='PASS'; fixture=$fixtureRoot; cachedJavaArchive=[bool]$UseCachedJavaArchive; resumedFixture=[bool]$ResumeFixture; menuOwnership=$ownership; replayRecovery='PASS'; checks='ZIP/space path/built-in PATH/first build/demo/optional NLP and LLM absence/packaged ZIP gzip zstd JNI/run.cmd/UTF8 menu/repeat/restart/corrupt replay repair/public and setup hashes/incomplete Java and Maven extraction/stale partial'; runTime=(Get-Date).ToString('o')} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $fixtureRoot 'result.json') -Encoding UTF8
     Write-Output "PASS: isolated ZIP delivery; evidence $fixtureRoot/result.json"
 } finally {
     Stop-OwnedLauncher
