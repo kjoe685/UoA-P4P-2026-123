@@ -88,6 +88,8 @@ public final class CollectEvaluationStudy {
     @SuppressWarnings("unchecked")
     public static void main(String[] args) throws Exception {
         if (args.length==2 && args[0].equals("self-test")) { selfTest(Path.of(args[1])); return; }
+        if(args.length==3 && args[0].equals("evaluate-local")) { recoverLocal(Path.of(args[2]).toAbsolutePath()); return; }
+        if(args.length==3 && args[0].equals("repair-local-debates")) { repairLocalDebates(Path.of(args[1]).toAbsolutePath(),Path.of(args[2]).toAbsolutePath()); return; }
         if (args.length!=3 || !Set.of("collect","self-test-matrix").contains(args[0])) throw new IllegalArgumentException("Use collect or self-test-matrix REPOSITORY BATCH, or self-test OUTPUT");
         boolean fake=args[0].equals("self-test-matrix");
         Path repo=Path.of(args[1]).toAbsolutePath(), batch=Path.of(args[2]).toAbsolutePath(), root=batch.resolve("application");
@@ -211,6 +213,113 @@ public final class CollectEvaluationStudy {
         return process;
     }
     static BackgroundJob waitJob(DebateApplication app,String id) throws Exception { while(!app.background().find(id).terminal()) Thread.sleep(500); return app.background().find(id); }
+    @SuppressWarnings("unchecked")
+    static void repairLocalDebates(Path repo,Path batch) throws Exception {
+        Set<String> approved=Set.of("four_day_week_h0_study-qwen_r1","four_day_week_h10_study-qwen_r1","nuclear_power_h10_study-qwen_r1","nuclear_power_h100_study-qwen_r1");
+        var manifest=(Map<String,Object>)Json.parse(Files.readString(batch.resolve("manifest.json")));
+        if(!Set.of("COLLECTED","ANALYZED").contains(manifest.get("state"))) throw new IllegalStateException("Inspect completed original collection before explicit replacement");
+        Path root=batch.resolve("application");
+        for(var e:((Map<String,String>)manifest.get("frozenSourceHashes")).entrySet())
+            if(!Hashes.sha256(Files.readAllBytes(root.resolve(e.getKey()))).equals(e.getValue())) throw new IllegalStateException("Frozen replacement source changed");
+        var snapshot=ConfigurationSnapshot.load(root); var judgeModel=snapshot.config().models().get("study-judge");
+        var ledger=new Ledger(batch.resolve("operations/usage.json"),Math.min(4.5,((Number)manifest.get("budgetLimitUsd")).doubleValue()));
+        var stored=(Map<String,Object>)Json.parse(Files.readString(ledger.file));ledger.calls.addAll((List<Map<String,Object>>)stored.get("calls"));
+        ledger.boundViolated=ledger.calls.stream().anyMatch(c -> "USAGE_EXCEEDS_RESERVED_BOUND".equals(c.get("status")));
+        long priorPaid=ledger.calls.stream().filter(c -> "openai".equals(c.get("provider"))).count();
+        requireFree(11451);requireFree(8766);
+        for(String file:List.of("ollama.log","runtime-process.json")) {
+            Path original=batch.resolve("operations/"+file),archive=batch.resolve("operations/first-collection-"+file);
+            if(Files.exists(original) && !Files.exists(archive)) Files.copy(original,archive);
+        }
+        Process runtime=startRuntime(manifest,batch);
+        try {
+            Thread.sleep(1500);
+            var managed=new ManagedOllama(root);var factory=new ProviderFactory(repo,managed);
+            java.util.function.BiFunction<ModelConfig,OllamaConfig,ChatManager> providers=(model,config) -> {
+                if(ledger.purpose.equals("generation") && !model.provider().equals("ollama")) throw new IllegalStateException("Paid generation forbidden in replacement mode");
+                if(ledger.purpose.equals("rubric") && !model.equals(judgeModel)) throw new IllegalStateException("Only approved common judge may be called");
+                var wrapped=ledger.wrap(factory.forModel(model,config));
+                return request -> {
+                    if(model.provider().equals("openai") && ledger.calls.stream().filter(c -> "openai".equals(c.get("provider"))).count()-priorPaid>=8)
+                        throw new IllegalStateException("Approved eight-call judgment limit reached");
+                    return wrapped.complete(request);
+                };
+            };
+            var store=new RunStore(root.resolve("runs"));
+            try(var app=new DebateApplication(root,store,providers,null,managed)) {
+                boolean failed=false;
+                for(var cell:(List<Map<String,Object>>)manifest.get("cells")) {
+                    if("COMPLETE".equals(cell.get("generationOutcome"))) continue;
+                    String name=(String)cell.get("cellId"),previous=(String)cell.get("runId");
+                    if(!approved.contains(name) || cell.containsKey("previousRunIds")) throw new IllegalStateException("Cell outside the approved one-replacement scope");
+                    var original=store.setup(previous).settings();
+                    if(original.members().stream().anyMatch(member -> !snapshot.config().models().get(member.modelPreset()).provider().equals("ollama")))
+                        throw new IllegalStateException("Cloud generation cannot be repeated by local replacement");
+                    if(app.find(previous).transcript().outcome()==Transcript.Outcome.COMPLETE) throw new IllegalStateException("Cannot repeat a completed debate");
+                    for(String relative:List.of("transcripts/"+name+".json","transcripts/"+name+".txt","reports/"+name+"-local.json","reports/"+name+"-rubric.json")) {
+                        Path file=batch.resolve("public/"+relative);
+                        if(Files.exists(file)) {Path target=batch.resolve("public/archived-attempts/"+previous+"/"+file.getFileName());Files.createDirectories(target.getParent());if(!Files.exists(target)) Files.copy(file,target);}
+                    }
+                    cell.put("previousRunIds",List.of(previous));cell.put("previousLocalJobId",cell.get("localJobId"));cell.put("previousRubricJobId",cell.get("rubricJobId"));
+                    ledger.cell=name;ledger.purpose="generation";cell.put("state","REPLACING_LOCAL_DEBATE");saveManifest(batch,manifest);
+                    var session=app.start(original.settings());cell.put("runId",session.id());saveManifest(batch,manifest);
+                    while(!session.isFinished()) {cell.put("speechCount",session.transcript().events().stream().filter(e -> e.type()==PublicEvent.Type.SPEECH).count());saveManifest(batch,manifest);Thread.sleep(500);}
+                    var transcript=session.transcript();String json=Json.write(transcript);long count=transcript.events().stream().filter(e -> e.type()==PublicEvent.Type.SPEECH).count();
+                    cell.put("generationOutcome",transcript.outcome().name());cell.put("speechCount",count);cell.put("startedAt",transcript.startedAt());cell.put("endedAt",transcript.endedAt());cell.put("transcriptSha256",Hashes.sha256(json));
+                    AtomicFiles.write(batch.resolve("public/transcripts/"+name+".json"),json);AtomicFiles.write(batch.resolve("public/transcripts/"+name+".txt"),app.textExport(session.id()));
+                    var local=app.evaluate(session.id(),Map.of("methods",List.of("vader-sentiment","cardiff-sentiment","deberta-stance")));cell.put("localJobId",local.id());local=waitJob(app,local.id());cell.put("localJobState",local.state().name());
+                    AtomicFiles.write(batch.resolve("public/reports/"+name+"-local.json"),Json.write(local.result()));
+                    if(local.result() instanceof engine.evaluation.local.LocalReport report) for(var method:report.methods()) for(int bi=0;bi<method.batches().size();bi++)
+                        AtomicFiles.write(batch.resolve("public/raw-evaluation/"+name+"-"+method.methodId()+"-replacement-batch-"+(bi+1)+".json"),Json.write(method.batches().get(bi)));
+                    ledger.purpose="rubric";var judge=app.evaluateLlm(session.id(),Map.of("modelPreset","study-judge"));cell.put("rubricJobId",judge.id());judge=waitJob(app,judge.id());cell.put("rubricJobState",judge.state().name());
+                    AtomicFiles.write(batch.resolve("public/reports/"+name+"-rubric.json"),Json.write(judge.result()));
+                    boolean complete=transcript.outcome()==Transcript.Outcome.COMPLETE && count==25 && local.state()==BackgroundJob.State.COMPLETE && judge.state()==BackgroundJob.State.COMPLETE;
+                    if(!complete) failed=true;cell.put("state",complete?"COMPLETE":"COMPLETE_WITH_FAILURES");saveManifest(batch,manifest);System.out.println("LOCAL_REPLACEMENT "+name+" "+cell.get("state"));
+                }
+                manifest.put("state",failed?"REPLACEMENT_FAILED":"ANALYZED");manifest.put("budgetCommittedUsd",ledger.committed());saveManifest(batch,manifest);
+            }
+        } finally {
+            var children=runtime.descendants().toList();runtime.destroy();if(!runtime.waitFor(10,java.util.concurrent.TimeUnit.SECONDS)) runtime.destroyForcibly();
+            for(var child:children) if(child.isAlive()) child.destroy();
+        }
+    }
+    @SuppressWarnings("unchecked")
+    static void recoverLocal(Path batch) throws Exception {
+        var manifest=(Map<String,Object>)Json.parse(Files.readString(batch.resolve("manifest.json")));
+        if(!Set.of("COLLECTED","LOCAL_REANALYSIS_FAILED").contains(manifest.get("state"))) throw new IllegalStateException("Wait for the original collector to finish before local reanalysis");
+        Path root=batch.resolve("application");
+        // No generator or paid evaluator may be constructed or called during this recovery mode.
+        try(var app=new DebateApplication(root,new RunStore(root.resolve("runs")),model -> request -> {throw new IllegalStateException("Model calls forbidden in local reanalysis");})) {
+            boolean failed=false;
+            for(var cell:(List<Map<String,Object>>)manifest.get("cells")) {
+                if("COMPLETE".equals(cell.get("localJobState"))) continue;
+                String id=(String)cell.get("runId"), name=(String)cell.get("cellId");
+                var transcript=app.find(id).transcript();
+                if(transcript.outcome()!=Transcript.Outcome.COMPLETE) throw new IllegalStateException("Only complete retained debates can receive final local reanalysis");
+                Path file=batch.resolve("public/reports/"+name+"-local.json");
+                if(Files.exists(file)) {
+                    Path prior=batch.resolve("public/reports/"+name+"-local-attempt-"+cell.get("localJobId")+".json");
+                    if(!Files.exists(prior)) Files.copy(file,prior);
+                }
+                var history=(List<String>)cell.computeIfAbsent("previousLocalJobIds",key -> new ArrayList<String>());
+                if(cell.get("localJobId") instanceof String previous) history.add(previous);
+                var job=app.evaluate(id,Map.of("methods",List.of("vader-sentiment","cardiff-sentiment","deberta-stance")));
+                cell.put("localJobId",job.id()); cell.put("state","REANALYZING_LOCAL"); saveManifest(batch,manifest);
+                job=waitJob(app,job.id()); cell.put("localJobState",job.state().name());
+                AtomicFiles.write(file,Json.write(job.result()));
+                AtomicFiles.write(batch.resolve("operations/"+name+"-local-reanalysis-job.json"),Json.write(job));
+                if(job.result() instanceof engine.evaluation.local.LocalReport report) {
+                    for(var method:report.methods()) for(int bi=0;bi<method.batches().size();bi++)
+                        AtomicFiles.write(batch.resolve("public/raw-evaluation/"+name+"-"+method.methodId()+"-reanalysis-batch-"+(bi+1)+".json"),Json.write(method.batches().get(bi)));
+                }
+                boolean complete=job.state()==BackgroundJob.State.COMPLETE;
+                if(!complete) failed=true;
+                cell.put("state",complete && "COMPLETE".equals(cell.get("rubricJobState")) ? "COMPLETE" : "COMPLETE_WITH_FAILURES");
+                saveManifest(batch,manifest); System.out.println("LOCAL_REANALYSIS "+name+" "+job.state());
+            }
+            manifest.put("state",failed ? "LOCAL_REANALYSIS_FAILED" : "ANALYZED"); saveManifest(batch,manifest);
+        }
+    }
     static void saveManifest(Path batch,Map<String,Object> manifest) { AtomicFiles.write(batch.resolve("manifest.json"),Json.write(manifest)); }
     static void selfTest(Path directory) throws Exception {
         Files.createDirectories(directory);

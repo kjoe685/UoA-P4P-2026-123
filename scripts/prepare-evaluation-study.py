@@ -1,10 +1,12 @@
 """Freeze one explicitly requested study batch; never reads or copies credentials."""
 import argparse
+from datetime import datetime
 import hashlib
 import json
 from pathlib import Path
 import shutil
 import subprocess
+from zoneinfo import ZoneInfo
 
 
 def write(path, value):
@@ -16,8 +18,12 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("repository", type=Path)
     parser.add_argument("batch", type=Path)
-    parser.add_argument("--repetitions", type=int, default=1, choices=[1, 3, 5])
+    parser.add_argument("--repetitions", type=int, default=1, choices=range(1, 6))
+    parser.add_argument("--first-repetition", type=int, default=1, choices=range(1, 6))
     args = parser.parse_args()
+    date_local = datetime.now(ZoneInfo("Pacific/Auckland")).date().isoformat()
+    if args.first_repetition + args.repetitions - 1 > 5:
+        raise SystemExit("Repetition IDs must stay between 1 and 5")
     repo, batch = args.repository.resolve(), args.batch.resolve()
     if batch.exists():
         raise SystemExit("Batch already exists; inspect its manifest instead of overwriting it")
@@ -46,8 +52,15 @@ def main():
     write(root / "config/local-evaluation.json", {"schemaVersion": 1, "endpoint": "http://127.0.0.1:8766/v1/analyze", "timeoutSeconds": 600, "batchSize": 50, "methods": ["vader-sentiment", "cardiff-sentiment", "deberta-stance"]})
     write(root / "config/llm-evaluation.json", {"schemaVersion": 1, "maxRepairAttempts": 1, "maxCalls": 2, "maxInputCharacters": 100000, "maxResponseCharacters": 100000, "maxTotalCompletionTokens": 16384})
     (root / ".runtime/nlp").mkdir(parents=True)
-    shutil.copyfile(repo / ".runtime/nlp/setup.complete", root / ".runtime/nlp/setup.complete")
-    for target, source in [(root / ".runtime/nlp-env", repo / ".runtime/nlp-env"), (root / "nlp/.models", repo / "nlp/.models")]:
+    lock_hash = hashlib.sha256((root / "nlp/uv.lock").read_bytes()).hexdigest()
+    caches = [repo, repo / "target/official-nlp-setup-d0968ef2a5fa4ffeac40574844e6bdb7 with spaces"]
+    nlp_cache = next((cache for cache in caches if (cache / ".runtime/nlp/setup.complete").is_file()
+                      and (cache / ".runtime/nlp/setup.complete").read_text(encoding="utf-8") == lock_hash
+                      and (cache / ".runtime/nlp-env/Scripts/python.exe").is_file()), None)
+    if nlp_cache is None:
+        raise SystemExit("No verified current-lock NLP cache; set up the local analysis runtime first")
+    shutil.copyfile(nlp_cache / ".runtime/nlp/setup.complete", root / ".runtime/nlp/setup.complete")
+    for target, source in [(root / ".runtime/nlp-env", nlp_cache / ".runtime/nlp-env"), (root / "nlp/.models", nlp_cache / "nlp/.models")]:
         if not source.is_dir():
             raise SystemExit("Missing cached local analysis runtime or weights")
         def psquote(value):
@@ -62,7 +75,7 @@ def main():
     parties = ["LABOUR", "NATIONAL", "GREEN", "ACT", "NZ_FIRST"]
     cells = []
     # Start the largest local condition first, as part of the requested data, to establish feasibility.
-    for repetition in range(1, args.repetitions + 1):
+    for repetition in range(args.first_repetition, args.first_repetition + args.repetitions):
         for ti, (topic_key, title, target) in enumerate(topics):
             rotation = (ti + repetition - 1) % len(parties)
             order = parties[rotation:] + parties[:rotation]
@@ -73,10 +86,13 @@ def main():
                     cells.append({"cellId": cell_id, "topicKey": topic_key, "topicTitle": title, "policyTarget": target, "groundingCount": grounding, "repetition": repetition, "modelPreset": preset, "speakingOrder": order, "settings": settings, "state": "PENDING"})
     fixture = repo / "target/official-ollama-04b2594c962d4316b01a30741935aebf with spaces"
     frozen = {f.relative_to(root).as_posix(): hashlib.sha256(f.read_bytes()).hexdigest() for f in root.rglob("*") if f.is_file() and ".runtime" not in f.parts and ".models" not in f.parts}
-    manifest = {"schemaVersion": 1, "batchId": batch.name, "state": "PREPARED", "dateLocal": "2026-10-09", "timezone": "Pacific/Auckland", "sourceCommit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=repo, text=True).strip(), "repetitions": args.repetitions, "expectedDebates": len(cells), "expectedSpeeches": len(cells) * 25, "budgetLimitUsd": 4.50, "standardInputUsdPerMillion": 0.10, "standardOutputUsdPerMillion": 0.50, "budgetInputUsdPerMillion": 0.275, "budgetOutputUsdPerMillion": 1.10, "pricingSource": "https://developers.openai.com/api/docs/models/gpt-6-luna", "budgetMethod": "UTF-8 serialized request bytes plus 4096 protocol tokens bound input; full output cap reserved before dispatch. Short-context fast/cache-write/regional prices conservatively covered. Reported usage releases unused reservation; errors or missing usage retain full reservation. No automatic retries.", "models": {p: engine["models"][p] for p in ["study-luna", "study-qwen", "study-judge"]}, "localReasoning": "Ollama/Qwen default thinking; no think or reasoning-effort override sent", "ollamaContextTokens": 131072, "ollamaEnvironment": {"OLLAMA_FLASH_ATTENTION": "1", "OLLAMA_KV_CACHE_TYPE": "q4_0", "OLLAMA_NUM_PARALLEL": "1", "OLLAMA_NO_CLOUD": "1"}, "ollamaExecutable": str(fixture / ".runtime/ollama-0.35.0-windows-amd64/ollama.exe"), "ollamaModels": str(fixture / ".runtime/ollama-models"), "originalSourceHashes": originals, "frozenSourceHashes": frozen, "cells": cells}
+    manifest = {"schemaVersion": 1, "batchId": batch.name, "state": "PREPARED", "dateLocal": date_local, "timezone": "Pacific/Auckland", "sourceCommit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=repo, text=True).strip(), "repetitions": args.repetitions, "expectedDebates": len(cells), "expectedSpeeches": len(cells) * 25, "budgetLimitUsd": 4.50, "standardInputUsdPerMillion": 0.10, "standardOutputUsdPerMillion": 0.50, "budgetInputUsdPerMillion": 0.275, "budgetOutputUsdPerMillion": 1.10, "pricingSource": "https://developers.openai.com/api/docs/models/gpt-6-luna", "budgetMethod": "UTF-8 serialized request bytes plus 4096 protocol tokens bound input; full output cap reserved before dispatch. Short-context fast/cache-write/regional prices conservatively covered. Reported usage releases unused reservation; errors or missing usage retain full reservation. No automatic retries.", "models": {p: engine["models"][p] for p in ["study-luna", "study-qwen", "study-judge"]}, "localReasoning": "Disabled: Ollama think=false, frozen thinkingEnabled=false", "ollamaContextTokens": 131072, "ollamaEnvironment": {"OLLAMA_FLASH_ATTENTION": "1", "OLLAMA_KV_CACHE_TYPE": "q4_0", "OLLAMA_NUM_PARALLEL": "1", "OLLAMA_NO_CLOUD": "1"}, "ollamaExecutable": str(fixture / ".runtime/ollama-0.35.0-windows-amd64/ollama.exe"), "ollamaModels": str(fixture / ".runtime/ollama-models"), "originalSourceHashes": originals, "frozenSourceHashes": frozen, "cells": cells}
     manifest["localReasoning"] = "Disabled: Ollama think=false, frozen thinkingEnabled=false"
+    manifest["firstRepetition"] = args.first_repetition
+    manifest["lastRepetition"] = args.first_repetition + args.repetitions - 1
     manifest["ollamaThinkingEnabled"] = False
     manifest["rawOutputRetention"] = "Original judge reply text per attempt and native local method batches, plus complete public transcripts and evaluation reports"
+    manifest["nlpRuntimeSource"] = str(nlp_cache)
     write(batch / "manifest.json", manifest)
     print(json.dumps({"batch": str(batch), "debates": len(cells), "speeches": len(cells) * 25, "budgetLimitUsd": 4.5}))
 
