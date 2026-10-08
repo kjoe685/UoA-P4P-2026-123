@@ -1,0 +1,37 @@
+// Offline condition/index checks. No providers, credentials or artifact authoring.
+import assert from 'node:assert/strict';
+import {strategyCondition,studyConditionId,summaryKey,indexSentenceGroups} from './evaluation-study-schema.mjs';
+
+const parties=['LABOUR','NATIONAL','GREEN','ACT','NZ_FIRST'];
+const hashes={'prompts/strategies/TopicDerailment.txt':'a'.repeat(64),'prompts/strategies/StrawMan.txt':'b'.repeat(64)};
+const cell={topicKey:'fixture',policyTarget:'A fixture policy',groundingCount:10,repetition:2,speakingOrder:parties,settings:{rounds:5,members:parties.map(party=>({party,strategy:'NONE'}))}};
+const model={provider:'fake',model:'fixture-model'};
+const baseline=strategyCondition(cell,hashes);
+assert.equal(baseline.label,'NONE');assert.equal(baseline.partyCount,0);assert.equal(baseline.strategyCount,0);
+assert.deepEqual(baseline.speaker('ACT'),{strategy:'NONE',role:'BASELINE'});
+assert.equal(strategyCondition({...cell,settings:{...cell.settings,members:[...cell.settings.members].reverse()}},hashes).id,baseline.id);
+const changed=structuredClone(cell);changed.settings.members[3].strategy='STRAW_MAN';
+const one=strategyCondition(changed,hashes);
+assert.equal(one.label,'ACT=STRAW_MAN');assert.equal(one.parties,'ACT');assert.equal(one.partyCount,1);
+assert.equal(one.speaker('ACT').role,'ASSIGNED');assert.equal(one.speaker('GREEN').role,'OTHER');
+assert.notEqual(one.id,baseline.id);
+changed.settings.members[2].strategy='TOPIC_DERAILMENT';changed.settings.members[3].strategy=['TOPIC_DERAILMENT','STRAW_MAN','STRAW_MAN'];
+const many=strategyCondition(changed,hashes);
+assert.equal(many.partyCount,2);assert.equal(many.strategyCount,2);
+assert.equal(many.speaker('ACT').strategy,'STRAW_MAN+TOPIC_DERAILMENT');
+assert.notEqual(many.id,one.id);
+assert.notEqual(strategyCondition(changed,{...hashes,'prompts/strategies/StrawMan.txt':'c'.repeat(64)}).id,many.id);
+assert.notEqual(studyConditionId(cell,model,baseline,'corpus'),studyConditionId(cell,model,one,'corpus'));
+assert.notEqual(studyConditionId(cell,model,baseline,'corpus'),studyConditionId({...cell,repetition:3},model,baseline,'corpus'));
+assert.notEqual(summaryKey('G1','fake [fixture]',10,baseline.id),summaryKey('G1','fake [fixture]',10,one.id));
+const pooled=new Map();for(const [strategy,score] of [[baseline,0],[one,4],[many,2]]) pooled.set(summaryKey('G1','fake [fixture]',10,strategy.id),score);
+assert.equal(pooled.size,3);assert.equal(pooled.get(summaryKey('G1','fake [fixture]',10,baseline.id)),0);
+assert.throws(()=>strategyCondition({...cell,settings:{members:[{party:'ACT',strategy:['NONE','STRAW_MAN']}]}},hashes));
+assert.throws(()=>strategyCondition({...cell,settings:{members:[{party:'ACT',strategy:'NONE'},{party:'ACT',strategy:'NONE'}]}},hashes));
+assert.throws(()=>strategyCondition({...cell,settings:{}},hashes));
+assert.throws(()=>strategyCondition(cell,{}));
+const sentence=(method,index,status='ok')=>{const row=Array(36).fill(null);row[1]='run';row[7]='turn';row[8]=method;row[9]=index;row[13]=status;row[15]=0;return row;};
+const indexed=indexSentenceGroups([sentence('vader-sentiment',0),sentence('vader-sentiment',1),sentence('cardiff-sentiment',0),sentence('vader-sentiment',null),sentence('vader-sentiment',2,'failed')]);
+assert.equal(indexed.groups.get('run|turn|vader-sentiment').length,2);assert.equal(indexed.groups.get('run|turn|vader-sentiment')[0][15],0);
+assert.equal(indexed.widths.get('vader-sentiment'),2);assert.equal(indexed.widths.get('cardiff-sentiment'),1);
+console.log(JSON.stringify({state:'PASS',checks:['canonical assignment order','NONE baseline','one-party assignment','multiple parties and strategies','speaker roles','strategy provenance change','unique condition/repetition identity','separate summary groups','zero scores preserved','missing/failed chunks excluded','linear chunk index'],paidCalls:0}));
