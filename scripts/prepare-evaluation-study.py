@@ -20,6 +20,8 @@ def main():
     parser.add_argument("batch", type=Path)
     parser.add_argument("--repetitions", type=int, default=1, choices=range(1, 6))
     parser.add_argument("--first-repetition", type=int, default=1, choices=range(1, 6))
+    parser.add_argument("--generators", nargs="+", choices=["study-luna", "study-qwen"], default=["study-qwen", "study-luna"])
+    parser.add_argument("--previous-batch", type=Path)
     args = parser.parse_args()
     date_local = datetime.now(ZoneInfo("Pacific/Auckland")).date().isoformat()
     if args.first_repetition + args.repetitions - 1 > 5:
@@ -29,16 +31,36 @@ def main():
         raise SystemExit("Batch already exists; inspect its manifest instead of overwriting it")
     if subprocess.check_output(["git", "branch", "--show-current"], cwd=repo, text=True).strip() != "codex/dual-interface-integration":
         raise SystemExit("Wrong working branch")
+    previous = args.previous_batch.resolve() if args.previous_batch else None
+    previous_manifest = previous_ledger = None
+    prior_committed = 0
+    global_limit = 4.5
+    resource_source = repo
+    if previous:
+        previous_manifest = json.loads((previous / "manifest.json").read_text(encoding="utf-8"))
+        if previous_manifest["state"] not in {"COLLECTED", "ANALYZED"} or any(c["state"] != "COMPLETE" for c in previous_manifest["cells"]):
+            raise SystemExit("Previous batch must be complete before extending the study")
+        if args.first_repetition <= previous_manifest.get("lastRepetition", max(c["repetition"] for c in previous_manifest["cells"])):
+            raise SystemExit("Additional repetition IDs must follow the previous batch")
+        previous_ledger = json.loads((previous / "operations/usage.json").read_text(encoding="utf-8"))
+        prior_committed = previous_manifest.get("priorBudgetCommittedUsd", 0) + sum(c["budgetUsd"] for c in previous_ledger["calls"])
+        global_limit = min(4.5, previous_manifest.get("cumulativeBudgetLimitUsd", previous_manifest["budgetLimitUsd"]))
+        if prior_committed >= global_limit:
+            raise SystemExit("No cumulative study allowance remains")
+        resource_source = previous / "application"
+        for relative, expected in previous_manifest["frozenSourceHashes"].items():
+            if hashlib.sha256((resource_source / relative).read_bytes()).hexdigest() != expected:
+                raise SystemExit("Previous frozen study resource changed")
     batch.mkdir(parents=True)
     root = batch / "application"
     originals = {}
     for directory in ["config", "prompts", "evaluation"]:
-        shutil.copytree(repo / directory, root / directory)
+        shutil.copytree(resource_source / directory, root / directory)
     for relative in ["data/hansard/excerpts.json", "nlp/uv.lock", "nlp/pyproject.toml", "nlp/config/models.json"]:
         target = root / relative
         target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(repo / relative, target)
-    shutil.copytree(repo / "nlp/src", root / "nlp/src", ignore=shutil.ignore_patterns("__pycache__"))
+        shutil.copyfile(resource_source / relative, target)
+    shutil.copytree(resource_source / "nlp/src", root / "nlp/src", ignore=shutil.ignore_patterns("__pycache__"))
     for file in root.rglob("*"):
         if file.is_file():
             originals[file.relative_to(root).as_posix()] = hashlib.sha256(file.read_bytes()).hexdigest()
@@ -80,7 +102,7 @@ def main():
             rotation = (ti + repetition - 1) % len(parties)
             order = parties[rotation:] + parties[:rotation]
             for grounding in [100, 0, 10]:
-                for preset in ["study-qwen", "study-luna"]:
+                for preset in dict.fromkeys(args.generators):
                     cell_id = f"{topic_key}_h{grounding}_{preset}_r{repetition}"
                     settings = {"topics": [{"title": title, "policyTarget": target}], "rounds": 5, "groundingCount": grounding, "agentModelPreset": preset, "evaluatorModelPreset": "study-judge", "members": [{"party": p, "strategy": "NONE"} for p in order]}
                     cells.append({"cellId": cell_id, "topicKey": topic_key, "topicTitle": title, "policyTarget": target, "groundingCount": grounding, "repetition": repetition, "modelPreset": preset, "speakingOrder": order, "settings": settings, "state": "PENDING"})
@@ -93,8 +115,19 @@ def main():
     manifest["ollamaThinkingEnabled"] = False
     manifest["rawOutputRetention"] = "Original judge reply text per attempt and native local method batches, plus complete public transcripts and evaluation reports"
     manifest["nlpRuntimeSource"] = str(nlp_cache)
+    manifest["generatorPresets"] = list(dict.fromkeys(args.generators))
+    manifest["cumulativeBudgetLimitUsd"] = global_limit
+    manifest["priorBudgetCommittedUsd"] = prior_committed
+    manifest["budgetLimitUsd"] = global_limit - prior_committed
+    manifest["budgetGroupId"] = previous_manifest.get("budgetGroupId", previous_manifest["batchId"]) if previous else batch.name
+    if previous:
+        if frozen != previous_manifest["frozenSourceHashes"]:
+            raise SystemExit("Extended batch resources differ from the original frozen study")
+        manifest["previousBatch"] = str(previous)
+        manifest["previousBatchId"] = previous_manifest["batchId"]
+        manifest["previousUsageSha256"] = hashlib.sha256((previous / "operations/usage.json").read_bytes()).hexdigest()
     write(batch / "manifest.json", manifest)
-    print(json.dumps({"batch": str(batch), "debates": len(cells), "speeches": len(cells) * 25, "budgetLimitUsd": 4.5}))
+    print(json.dumps({"batch": str(batch), "debates": len(cells), "speeches": len(cells) * 25, "generatorPresets": manifest["generatorPresets"], "budgetLimitUsd": manifest["budgetLimitUsd"], "priorBudgetCommittedUsd": prior_committed}))
 
 
 if __name__ == "__main__":

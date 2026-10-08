@@ -96,6 +96,13 @@ public final class CollectEvaluationStudy {
         var manifest=(Map<String,Object>)Json.parse(Files.readString(batch.resolve("manifest.json")));
         if (!manifest.get("state").equals("PREPARED") || Files.exists(batch.resolve("operations/usage.json")))
             throw new IllegalStateException("Already-started batch; inspect retained evidence, never restart inference automatically");
+        if(manifest.get("previousBatch") instanceof String prior) {
+            Path previous=Path.of(prior);
+            if(!Hashes.sha256(Files.readAllBytes(previous.resolve("operations/usage.json"))).equals(manifest.get("previousUsageSha256")))
+                throw new IllegalStateException("Prior study ledger changed; recompute remaining allowance before dispatch");
+            double total=((Number)manifest.get("priorBudgetCommittedUsd")).doubleValue()+((Number)manifest.get("budgetLimitUsd")).doubleValue();
+            if(total>4.5+1e-12) throw new IllegalStateException("Cumulative study budget exceeds USD4.50");
+        }
         for (var e:((Map<String,String>)manifest.get("frozenSourceHashes")).entrySet())
             if (!Hashes.sha256(Files.readAllBytes(root.resolve(e.getKey()))).equals(e.getValue())) throw new IllegalStateException("Frozen study source changed");
         var ledger=new Ledger(batch.resolve("operations/usage.json"),((Number)manifest.get("budgetLimitUsd")).doubleValue());
