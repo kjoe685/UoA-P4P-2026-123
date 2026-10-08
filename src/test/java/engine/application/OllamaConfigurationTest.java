@@ -11,6 +11,23 @@ import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 class OllamaConfigurationTest {
+    @org.junit.jupiter.api.Test void optionalThinkingPreservesLegacyStrictnessAndFrozenConfiguration() throws Exception {
+        var legacy=engine.config.OllamaConfig.defaults();
+        String old="{\"schemaVersion\":1,\"baseUrl\":\"http://127.0.0.1:11434\",\"contextTokens\":16384,\"startupTimeoutSeconds\":30,\"downloadTimeoutSeconds\":7200}";
+        assertEquals(legacy,Json.read(old,engine.config.OllamaConfig.class));
+        var disabled=Json.read(old.substring(0,old.length()-1)+",\"thinkingEnabled\":false}",engine.config.OllamaConfig.class);
+        assertFalse(disabled.thinkingEnabled());
+        assertFalse(disabled.effective(key -> key.equals("OLLAMA_CONTEXT_TOKENS") ? "32768" : null).thinkingEnabled());
+        assertEquals(disabled,Json.read(Json.write(disabled),engine.config.OllamaConfig.class));
+        for(String value:java.util.List.of("0","1","\"false\"","[]","{}"))
+            assertThrows(IllegalArgumentException.class,() -> Json.read(old.substring(0,old.length()-1)+",\"thinkingEnabled\":"+value+"}",engine.config.OllamaConfig.class));
+        Path root=java.nio.file.Files.createTempDirectory("thinking-config"); TestFixtures.copyResources(root);
+        var before=ConfigurationSnapshot.load(root); var assets=new AssetService(root);
+        assets.update("config/ollama.json",Json.write(disabled),true);
+        assertFalse(ConfigurationSnapshot.load(root).ollama().thinkingEnabled());
+        assertNull(before.ollama().thinkingEnabled());
+        assertTrue(ConfigurationSnapshot.load(root).sourceContents().get("selection/ollama-settings.json").contains("\"thinkingEnabled\":false"));
+    }
     @TempDir Path root;
     @Test void sharedEditorValidatesLocalSettingsAndRejectsSecretsNonloopbackAndInvalidLimits() throws Exception {
         var before=TestFixtures.copyResources(root); var assets=new AssetService(root);

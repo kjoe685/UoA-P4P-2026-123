@@ -116,6 +116,7 @@ class ProviderTest {
             }
             case "ollama" -> {
                 assertEquals("qwen3:8b:local",body.path("model").asText());
+                assertFalse(body.has("think"));
                 assertFalse(body.path("stream").asBoolean());
                 assertTrue(body.path("truncate").isBoolean()); assertFalse(body.path("truncate").asBoolean());
                 assertTrue(body.path("shift").isBoolean()); assertFalse(body.path("shift").asBoolean());
@@ -125,6 +126,18 @@ class ProviderTest {
                 assertFalse(headers.get(0).containsKey("Authorization"));
             }
         }
+    }
+    @ParameterizedTest @ValueSource(booleans = {false,true})
+    void sendsExplicitOllamaThinkingWithoutExposingThoughts(boolean enabled) {
+        response=valid("ollama");
+        var adapter=new OllamaChatManager(ProviderHttp.client(),base,16384,enabled);
+        var result=adapter.complete(request("ollama","PRIVATE_SENTINEL",false,10));
+        var body=Json.read(bodies.get(0),JsonNode.class);
+        assertTrue(body.path("think").isBoolean()); assertEquals(enabled,body.path("think").asBoolean());
+        assertEquals("Public words",result.requireCompletedText());
+        assertFalse(result.text().contains("THOUGHT_SENTINEL"));
+        assertEquals(16384,body.path("options").path("num_ctx").asInt());
+        assertFalse(body.path("truncate").asBoolean()); assertFalse(body.path("shift").asBoolean());
     }
     @ParameterizedTest @ValueSource(strings = {"gemini", "grok", "anthropic", "ollama"})
     void rejectsTruncatedMalformedAndUntrustedFailures(String name) {

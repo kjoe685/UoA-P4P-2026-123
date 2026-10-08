@@ -6,9 +6,29 @@ import java.nio.file.*;
 import java.util.Set;
 import java.util.Locale;
 import java.util.function.Function;
+import java.util.Map;
+import com.fasterxml.jackson.annotation.JsonCreator;
 
 /** Non-secret local runtime settings. Capture once per operation, never in public evidence. */
-public record OllamaConfig(int schemaVersion,URI baseUrl,int contextTokens,int startupTimeoutSeconds,int downloadTimeoutSeconds) {
+public record OllamaConfig(int schemaVersion,URI baseUrl,int contextTokens,int startupTimeoutSeconds,int downloadTimeoutSeconds,Boolean thinkingEnabled) {
+    public OllamaConfig(int schemaVersion,URI baseUrl,int contextTokens,int startupTimeoutSeconds,int downloadTimeoutSeconds) {
+        this(schemaVersion,baseUrl,contextTokens,startupTimeoutSeconds,downloadTimeoutSeconds,null);
+    }
+    /** Optional thinking control preserves existing five-field files without scalar coercion. */
+    @JsonCreator(mode=JsonCreator.Mode.DELEGATING)
+    public static OllamaConfig fromJson(Map<String,Object> value) {
+        if (!Set.of("schemaVersion","baseUrl","contextTokens","startupTimeoutSeconds","downloadTimeoutSeconds","thinkingEnabled").containsAll(value.keySet())
+                || !(value.get("baseUrl") instanceof String) || value.get("thinkingEnabled")!=null && !(value.get("thinkingEnabled") instanceof Boolean))
+            throw new IllegalArgumentException("Invalid loopback Ollama runtime settings");
+        return new OllamaConfig(exactInt(value,"schemaVersion"),URI.create((String)value.get("baseUrl")),exactInt(value,"contextTokens"),
+                exactInt(value,"startupTimeoutSeconds"),exactInt(value,"downloadTimeoutSeconds"),(Boolean)value.get("thinkingEnabled"));
+    }
+    private static int exactInt(Map<String,Object> value,String key) {
+        Object raw=value.get(key);
+        if (!(raw instanceof Integer) && !(raw instanceof Long)) throw new IllegalArgumentException("Invalid loopback Ollama runtime settings");
+        try { return Math.toIntExact(((Number)raw).longValue()); }
+        catch (ArithmeticException e) { throw new IllegalArgumentException("Invalid loopback Ollama runtime settings"); }
+    }
     public OllamaConfig {
         if (schemaVersion!=1 || baseUrl==null || !"http".equals(baseUrl.getScheme()) || baseUrl.getHost()==null
                 || !Set.of("localhost","127.0.0.1","[::1]").contains(baseUrl.getHost())
@@ -27,7 +47,7 @@ public record OllamaConfig(int schemaVersion,URI baseUrl,int contextTokens,int s
         String base=environment.apply("OLLAMA_BASE_URL"), context=environment.apply("OLLAMA_CONTEXT_TOKENS");
         try {
             return new OllamaConfig(schemaVersion,base==null || base.isBlank() ? baseUrl : URI.create(base),
-                    context==null || context.isBlank() ? contextTokens : Integer.parseInt(context),startupTimeoutSeconds,downloadTimeoutSeconds);
+                    context==null || context.isBlank() ? contextTokens : Integer.parseInt(context),startupTimeoutSeconds,downloadTimeoutSeconds,thinkingEnabled);
         } catch (RuntimeException e) { throw new IllegalArgumentException("Invalid Ollama environment settings"); }
     }
     public static void requireLocalModel(String model) {

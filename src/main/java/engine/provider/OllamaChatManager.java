@@ -20,12 +20,19 @@ public final class OllamaChatManager implements ChatManager {
     private final HttpClient client;
     private final URI endpoint;
     private final int contextTokens;
+    private final Boolean thinkingEnabled;
     public OllamaChatManager(URI base, int contextTokens) {
-        this(ProviderHttp.client(), validateBase(base).resolve("/api/chat"), contextTokens);
+        this(base,contextTokens,null);
+    }
+    public OllamaChatManager(URI base,int contextTokens,Boolean thinkingEnabled) {
+        this(ProviderHttp.client(), validateBase(base).resolve("/api/chat"), contextTokens,thinkingEnabled);
     }
     OllamaChatManager(HttpClient client, URI endpoint, int contextTokens) {
+        this(client,endpoint,contextTokens,null);
+    }
+    OllamaChatManager(HttpClient client,URI endpoint,int contextTokens,Boolean thinkingEnabled) {
         if (contextTokens < 1024 || contextTokens > 131072) throw new IllegalArgumentException("Invalid Ollama context limit");
-        this.client = client; this.endpoint = endpoint; this.contextTokens = contextTokens;
+        this.client = client; this.endpoint = endpoint; this.contextTokens = contextTokens; this.thinkingEnabled=thinkingEnabled;
     }
     private static URI validateBase(URI base) {
         if (base == null || !"http".equals(base.getScheme()) || base.getUserInfo() != null || base.getQuery() != null
@@ -51,6 +58,7 @@ public final class OllamaChatManager implements ChatManager {
         // Enforce local source in the server handler even if the inventory alias changes after preflight.
         body.put("model", engine.config.OllamaConfig.localModelReference(request.model().model())); body.put("messages", messages);
         body.put("stream", false); body.put("options", options);
+        if (thinkingEnabled!=null) body.put("think",thinkingEnabled);
         body.put("truncate",false); body.put("shift",false);
         if (request.outputSchema() != null) body.put("format", request.outputSchema().value());
         boolean acquired = false;

@@ -50,6 +50,10 @@ public final class CollectEvaluationStudy {
                 try {
                     ChatResponse response=delegate.complete(request);
                     synchronized(this) {
+                        if (purpose.equals("rubric") && response.text()!=null) {
+                            AtomicFiles.write(file.getParent().getParent().resolve("public/raw-evaluation/"+cell+"-judge-call-"+entry.get("callId")+".json"),response.text());
+                            entry.put("rawReplySha256",Hashes.sha256(response.text()));
+                        }
                         entry.put("status",response.status().name()); entry.put("usage",response.usage());
                         entry.put("latencyMillis",response.latencyMillis()); entry.put("endedAt",System.currentTimeMillis());
                         if (paid && response.usage()!=null) {
@@ -111,6 +115,12 @@ public final class CollectEvaluationStudy {
                 var qwen=models.stream().filter(m -> "qwen3:8b".equals(m.get("name"))).findFirst().orElseThrow();
                 manifest.put("observedOllamaModel",qwen);
                 manifest.put("observedOllamaVersion",Json.parse(http.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:11451/api/version")).GET().build(),HttpResponse.BodyHandlers.ofString()).body()));
+                var show=(Map<String,Object>)Json.parse(http.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:11451/api/show")).header("Content-Type","application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString("{\"model\":\"qwen3:8b\"}")).build(),HttpResponse.BodyHandlers.ofString()).body());
+                var modelInfo=(Map<String,Object>)show.get("model_info");
+                manifest.put("observedNativeContextTokens",modelInfo.get("qwen3.context_length"));
+                manifest.put("observedThinkingControl",show.get("thinking"));
+                if (!Boolean.FALSE.equals(OllamaConfig.load(root).thinkingEnabled())) throw new IllegalStateException("Requested disabled Qwen thinking must be frozen before collection");
                 String key=System.getenv("OPENAI_API_KEY");
                 if (key==null || key.isBlank()) key=Files.readString(repo.resolve("keys/openAi/OpenAI_Key.txt")).trim();
                 var access=http.send(HttpRequest.newBuilder(URI.create("https://api.openai.com/v1/models/gpt-6-luna")).timeout(Duration.ofSeconds(30)).header("Authorization","Bearer "+key.trim()).GET().build(),HttpResponse.BodyHandlers.discarding());
@@ -127,6 +137,7 @@ public final class CollectEvaluationStudy {
             try(var app=new DebateApplication(root,new RunStore(root.resolve("runs")),providers,null,managed)) {
                 manifest.put("state","RUNNING"); manifest.put("startedAt",System.currentTimeMillis()); saveManifest(batch,manifest);
                 for (var cell:(List<Map<String,Object>>)manifest.get("cells")) {
+                    if(Files.exists(batch.resolve("STOP"))) throw new IllegalStateException("Explicit study stop file");
                     ledger.cell=(String)cell.get("cellId"); ledger.purpose="generation";
                     System.out.println("START_CELL "+ledger.cell);
                     cell.put("state","GENERATING"); saveManifest(batch,manifest);
@@ -134,6 +145,7 @@ public final class CollectEvaluationStudy {
                     cell.put("runId",session.id()); saveManifest(batch,manifest);
                     long displayed=-1;
                     while (!session.isFinished()) {
+                        if(Files.exists(batch.resolve("STOP"))) session.adjourn();
                         long count=session.transcript().events().stream().filter(e -> e.type()==PublicEvent.Type.SPEECH).count();
                         if(count!=displayed) { displayed=count; cell.put("speechCount",count); saveManifest(batch,manifest); }
                         Thread.sleep(500);
@@ -146,6 +158,7 @@ public final class CollectEvaluationStudy {
                     cell.put("transcriptSha256",Hashes.sha256(publicJson));
                     AtomicFiles.write(batch.resolve("public/transcripts/"+ledger.cell+".json"),publicJson);
                     AtomicFiles.write(batch.resolve("public/transcripts/"+ledger.cell+".txt"),app.textExport(session.id()));
+                    if(Files.exists(batch.resolve("STOP"))) throw new IllegalStateException("Explicit study stop file");
                     if (fake) {
                         if (transcript.outcome()!=Transcript.Outcome.COMPLETE || speeches!=25 || transcript.roster().size()!=5 || transcript.events().stream().anyMatch(e -> e.type()==PublicEvent.Type.INTERJECTION)) throw new AssertionError("Matrix count/ordinary speaking failure");
                         cell.put("state","SYNTHETIC_COMPLETE"); saveManifest(batch,manifest); continue;
@@ -156,6 +169,10 @@ public final class CollectEvaluationStudy {
                     local=waitJob(app,local.id());
                     cell.put("localJobState",local.state().name());
                     AtomicFiles.write(batch.resolve("public/reports/"+ledger.cell+"-local.json"),Json.write(local.result()));
+                    if(local.result() instanceof engine.evaluation.local.LocalReport report) {
+                        for(var method:report.methods()) for(int bi=0;bi<method.batches().size();bi++)
+                            AtomicFiles.write(batch.resolve("public/raw-evaluation/"+ledger.cell+"-"+method.methodId()+"-batch-"+(bi+1)+".json"),Json.write(method.batches().get(bi)));
+                    }
                     AtomicFiles.write(batch.resolve("operations/"+ledger.cell+"-local-job.json"),Json.write(local));
                     ledger.purpose="rubric"; cell.put("state","EVALUATING_RUBRIC"); saveManifest(batch,manifest);
                     var judge=app.evaluateLlm(session.id(),Map.of("modelPreset","study-judge"));
@@ -187,6 +204,8 @@ public final class CollectEvaluationStudy {
         builder.environment().putAll((Map<String,String>)manifest.get("ollamaEnvironment"));
         builder.environment().put("OLLAMA_HOST","http://127.0.0.1:11451"); builder.environment().put("OLLAMA_MODELS",(String)manifest.get("ollamaModels"));
         builder.environment().put("OLLAMA_DEBUG_LOG_REQUESTS","false");
+        Path profile=batch.resolve("operations/ollama-profile"); Files.createDirectories(profile);
+        builder.environment().put("USERPROFILE",profile.toString());
         var process=builder.start();
         AtomicFiles.write(batch.resolve("operations/runtime-process.json"),Json.write(Map.of("pid",process.pid(),"executable",manifest.get("ollamaExecutable"),"port",11451)));
         return process;
@@ -212,6 +231,10 @@ public final class CollectEvaluationStudy {
         try { failed.wrap(r -> {throw new IllegalStateException("Fake failure");}).complete(request); } catch(IllegalStateException expected) { }
         if(failed.committed()<=ledger.committed()) throw new AssertionError("Failed request reservation lost");
         if(Files.readString(directory.resolve("ledger.json")).contains("Private sentinel")) throw new AssertionError("Private prompt leaked to operations");
+        ledger.purpose="rubric";
+        var rawReply=new ChatResponse("{\"score\":0}","openai","gpt-6-luna",ChatResponse.CompletionStatus.COMPLETED,new ChatResponse.TokenUsage(100,10),7);
+        ledger.wrap(r -> rawReply).complete(request);
+        if(!Files.readString(directory.getParent().resolve("public/raw-evaluation/self-test-judge-call-2.json")).equals(rawReply.text())) throw new AssertionError("Original judge reply changed");
         var invalid=new Ledger(directory.resolve("invalid-bound.json"),4.5);
         try { invalid.wrap(r -> new ChatResponse("Speech","openai","gpt-6-luna",ChatResponse.CompletionStatus.COMPLETED,new ChatResponse.TokenUsage(500000,10),1)).complete(request); throw new AssertionError("Bound violation missing"); } catch(IllegalStateException expected) { }
         try { invalid.wrap(r -> {called[0]=true; return reply;}).complete(request); throw new AssertionError("Bound violation did not stop future paid calls"); } catch(IllegalStateException expected) { if(called[0]) throw new AssertionError("Bound-violation paid dispatch"); }

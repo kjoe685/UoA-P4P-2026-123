@@ -40,7 +40,7 @@ public final class ProviderFactory {
         OllamaConfig.requireLocalModel(model.model());
         if (config==null) throw new IllegalArgumentException("Local runtime settings are required");
         return providers.computeIfAbsent("ollama:"+engine.utils.Json.write(config),key -> {
-            var adapter=new OllamaChatManager(config.baseUrl(),config.contextTokens());
+            var adapter=new OllamaChatManager(config.baseUrl(),config.contextTokens(),config.thinkingEnabled());
             return ollama==null ? adapter : request -> {
                 ollama.ensureRunning(config); ollama.requireCachedModel(config,request.model().model()); return adapter.complete(request);
             };
