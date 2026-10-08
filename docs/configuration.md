@@ -6,6 +6,8 @@ Save source resources as valid UTF-8. Run and evaluator snapshot loading refuses
 
 Model presets include the deterministic demo, OpenAI, Anthropic, Gemini, Grok and Ollama. Agent and judge presets are independent, with optional member overrides. Selecting a preset never downloads or substitutes a model. Credentials are resolved only when the selected provider is constructed, and adapters are reused safely with stateless requests.
 
+The opt-in `gpt-6-luna` preset uses OpenAI Chat Completions, reasoning effort `none`, no explicit temperature, a 4,096 completion-token cap and a 120-second timeout. Choose it as `agentModelPreset`, `evaluatorModelPreset` or a member's `modelPreset`; existing presets and default roles are unchanged. It supports native strict JSON schema for rubric judging. Supported efforts are `none`, `low`, `medium`, `high`, `xhigh` and `max`; `minimal` is rejected. Set `temperature` only with explicit `reasoningEffort: "none"`. Omitting the effort uses the API's `medium` default and therefore forbids temperature. This rule is scoped to the exact `gpt-6-luna` ID; older model/provider validation is retained. Protocol support was checked on 2026-10-08 against the [official model page](https://developers.openai.com/api/docs/models/gpt-6-luna) and [migration guide](https://developers.openai.com/api/docs/guides/latest-model). Account access and assessment quality still require deliberate live evaluation.
+
 | Provider | Credential/setup |
 |---|---|
 | OpenAI | `OPENAI_API_KEY` takes precedence; otherwise `keys/openAi/OpenAI_Key.txt`, with `keys/OpenAI_Key.txt` as legacy fallback. If both files exist and disagree, resolve the conflict or set the environment variable. |

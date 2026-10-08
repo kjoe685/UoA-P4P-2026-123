@@ -11,6 +11,29 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class AdvancedSettingsTest {
     @TempDir Path root;
+    @Test void lunaPresetIsOptInAndRoundTripsAlongsideOlderIndependentSelections() throws Exception {
+        var config=TestFixtures.copyResources(root).config();
+        assertEquals("demo",config.agentModelPreset());
+        assertEquals("gpt-5-nano",config.evaluatorModelPreset());
+        assertEquals(new ModelConfig("openai","gpt-4o-mini",1d,null,1024,120),config.models().get("gpt-4o-mini"));
+        assertEquals(new ModelConfig("openai","gpt-5-nano",null,"medium",4096,120),config.models().get("gpt-5-nano"));
+        assertEquals(new ModelConfig("openai","gpt-6-luna",null,"none",4096,120),config.models().get("gpt-6-luna"));
+        var service=new SettingsService(root.resolve("runs/settings"));
+        service.save("older",TestFixtures.settings(),config);
+        var input=new LinkedHashMap<>(TestFixtures.settings());
+        input.put("agentModelPreset","gpt-6-luna");
+        input.put("evaluatorModelPreset","gpt-4o-mini");
+        input.put("members",List.of(Map.of("party","LABOUR"),Map.of("party","NATIONAL","modelPreset","qwen3-local")));
+        service.save("luna",input,config);
+        var restarted=new SettingsService(root.resolve("runs/settings"));
+        var resolved=RunSpec.resolve(restarted.resolve(Map.of("settingsName","luna")),config);
+        assertEquals("gpt-6-luna",resolved.members().get(0).modelPreset());
+        assertEquals("qwen3-local",resolved.members().get(1).modelPreset());
+        assertEquals("gpt-4o-mini",resolved.evaluatorModelPreset());
+        var judge=RunSpec.resolve(restarted.resolve(Map.of("settingsName","older","evaluatorModelPreset","gpt-6-luna")),config);
+        assertEquals("demo",judge.agentModelPreset()); assertEquals("gpt-6-luna",judge.evaluatorModelPreset());
+        assertEquals("gpt-5-nano",RunSpec.resolve(restarted.read("older"),config).evaluatorModelPreset());
+    }
     @Test void namedSettingsPrecedenceKeepsIndependentJudgeAndExplicitMemberOverrides() throws Exception {
         var config=TestFixtures.copyResources(root).config();
         var service=new SettingsService(root.resolve("runs/settings"));

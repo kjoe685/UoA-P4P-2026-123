@@ -13,11 +13,8 @@ public record ModelConfig(String provider, String model, Double temperature, Str
         if (temperature != null && (!Double.isFinite(temperature) || temperature < 0 || temperature > 2)) {
             throw new IllegalArgumentException("Temperature must be between 0 and 2");
         }
-        if (reasoningEffort != null && !Set.of("minimal", "low", "medium", "high").contains(reasoningEffort)) {
+        if (reasoningEffort != null && !Set.of("none", "minimal", "low", "medium", "high", "xhigh", "max").contains(reasoningEffort)) {
             throw new IllegalArgumentException("Unsupported reasoning effort");
-        }
-        if (temperature != null && reasoningEffort != null) {
-            throw new IllegalArgumentException("Configure temperature or reasoning effort, not both");
         }
         if (maxCompletionTokens < 1 || maxCompletionTokens > 131072 || timeoutSeconds < 1 || timeoutSeconds > 3600) {
             throw new IllegalArgumentException("Invalid token limit or timeout");

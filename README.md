@@ -230,12 +230,14 @@ sh run.sh web
 
 | Provider | Environment variable | Bundled preset IDs |
 |---|---|---|
-| OpenAI | `OPENAI_API_KEY` | `gpt-4o-mini`, `gpt-5-nano` |
+| OpenAI | `OPENAI_API_KEY` | `gpt-4o-mini`, `gpt-5-nano`, `gpt-6-luna` |
 | Anthropic | `ANTHROPIC_API_KEY` | `claude-sonnet` |
 | Gemini | `GEMINI_API_KEY` | `gemini-flash` |
 | Grok | `XAI_API_KEY` | `grok` |
 
 Use the corresponding variable for another provider and select its preset in browser setup or `settings.json`. Cloud generation and judging use provider credit. These are configured examples; fake-provider checks do not establish current account/model availability.
+
+Select `gpt-6-luna` independently as `agentModelPreset` or `evaluatorModelPreset`, or pass it to `cli evaluate-llm RUN_ID gpt-6-luna`. Its preset uses reasoning `none` and a 4,096 completion-token cap. The [configuration reference](docs/configuration.md) explains supported reasoning and temperature combinations.
 
 OpenAI also supports copying `keys/openAi/OpenAI_Key_TEMPLATE.txt` to the Git-ignored `keys/openAi/OpenAI_Key.txt` and putting the key there; the environment variable takes precedence. Keep credentials out of settings files, prompts, public transcripts and reports. See the [configuration reference](docs/configuration.md) for credential resolution and editable presets.
 

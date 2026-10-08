@@ -54,6 +54,23 @@ public class LlmEvaluationTest {
         while (!jobs.find(id).terminal() && System.nanoTime()<until) Thread.sleep(10);
         assertTrue(jobs.find(id).terminal()); return jobs.find(id);
     }
+    @Test void lunaUsesNativeSchemaOnInitialAndRepairRequestsWithExistingEvidenceValidation() throws Exception {
+        TestFixtures.copyResources(root); var resources=LlmEvaluationResources.load(root);
+        var model=new ModelConfig("openai","gpt-6-luna",null,null,4096,5);
+        List<ChatRequest> requests=new ArrayList<>();
+        var result=new LLMEvaluator(request -> {
+            requests.add(request);
+            return requests.size()==1 ? new ChatResponse("{}","openai","gpt-6-luna",ChatResponse.CompletionStatus.COMPLETED,null,1)
+                    : fake(request,resources.rubric());
+        },model,resources).evaluate(evidence());
+        assertEquals(2,requests.size());
+        for (var request:requests) { assertEquals(model,request.model()); assertNotNull(request.outputSchema()); }
+        assertEquals(requests.get(0).outputSchema(),requests.get(1).outputSchema());
+        assertEquals(EvaluationStatus.OK,result.topics().get(0).status());
+        assertEquals(2,result.topics().get(0).attempts().size());
+        assertEquals(5,result.topics().get(0).assessment().participants().get(0).metrics().size());
+        assertEquals(EvaluationStatus.INSUFFICIENT_EVIDENCE,result.topics().get(1).status());
+    }
     @Test void strictEvidenceCoverageUsesEventOrderRatherThanLexicalIds() throws Exception {
         TestFixtures.copyResources(root); var resources=LlmEvaluationResources.load(root); var source=evidence();
         var result=answer("topic-1",source.events(),source.roster(),resources.rubric());
