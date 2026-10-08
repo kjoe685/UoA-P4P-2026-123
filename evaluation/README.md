@@ -1,5 +1,7 @@
 # LLM rubric evaluation
 
+For proposed provider/model comparisons, Hansard quantity treatments, sample-size assumptions and dated API budget scenarios, see [evaluation study design](../docs/evaluation-study-design.md). The estimates are planning material; no paid study has been run.
+
 Open a saved sitting and select **Evaluate LLM rubric**, use guided CLI choice 15, or run `run.cmd cli evaluate-llm RUN_ID [MODEL_PRESET]` against the running backend. The default is the sitting's saved evaluator choice; a browser override or command argument selects a different preset independently of debate agents. Imported sittings use the configured evaluator default. Cloud choices make paid provider calls using existing credentials. Ollama uses the configured loopback model. The deterministic demonstration cannot judge debate quality and is rejected before submission.
 
 Each job captures the committed public transcript, evaluator model, budget configuration, rubric, evaluator prompts and resource hashes. It reads no private agent prompts, grounding or assignments. Public topic/participant/speech/chair evidence is treated as untrusted data. One isolated assessment covers every participant for each stable topic ID. Participants without contributions and empty topics receive explicit insufficient evidence. Empty topics need no model call.

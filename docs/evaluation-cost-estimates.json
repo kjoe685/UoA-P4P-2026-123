@@ -1,0 +1,847 @@
+{
+  "schemaVersion": 1,
+  "priceCheckedDate": "2026-10-08",
+  "currency": "USD",
+  "evidenceType": "planning_estimate_no_model_calls",
+  "corpusSha256": "c0af37589846e2eb04b79046172c566cf34f8391d680bb4883db8906090bf25e",
+  "assumptions": {
+    "parties": 5,
+    "rounds": 3,
+    "topicsPerRun": 1,
+    "interjectionsEnabled": false,
+    "charactersPerToken": 4,
+    "generationInputWithoutGroundingPerRun": 40000,
+    "visibleTokensPerSpeech": 200,
+    "billedOutputTokensPerSpeech": 1000,
+    "expectedReasoningAllowancePerSpeech": 800,
+    "contingencyFraction": 0.3,
+    "cachingDiscountAssumed": false,
+    "batchDiscountAssumed": false,
+    "exclude": [
+      "tax",
+      "FX charges",
+      "hardware",
+      "electricity",
+      "human review",
+      "second judge"
+    ]
+  },
+  "levels": [
+    {
+      "count": 0,
+      "characters": 0,
+      "generationInputTokens": 40000
+    },
+    {
+      "count": 3,
+      "characters": 6988,
+      "generationInputTokens": 45241
+    },
+    {
+      "count": 10,
+      "characters": 29342,
+      "generationInputTokens": 62006.5
+    },
+    {
+      "count": 30,
+      "characters": 87566,
+      "generationInputTokens": 105674.5
+    },
+    {
+      "count": 100,
+      "characters": 296100,
+      "generationInputTokens": 262075
+    }
+  ],
+  "judge": {
+    "model": "claude-sonnet-4-6",
+    "inputUsdPerMillion": 3,
+    "outputUsdPerMillion": 15,
+    "inputTokens": 10000,
+    "outputTokens": 3000,
+    "repairFraction": 0.1,
+    "repairInputTokens": 13500,
+    "repairOutputTokens": 3000,
+    "usdPerDebate": 0.08355
+  },
+  "models": [
+    {
+      "provider": "openai",
+      "model": "gpt-5-nano",
+      "inputUsdPerMillion": 0.05,
+      "outputUsdPerMillion": 0.4,
+      "tokenMultiplier": 1,
+      "note": "configured; officially deprecated",
+      "source": "https://developers.openai.com/api/docs/models/gpt-5-nano"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-4o-mini",
+      "inputUsdPerMillion": 0.15,
+      "outputUsdPerMillion": 0.6,
+      "tokenMultiplier": 1,
+      "note": "configured; current completion cap 1024",
+      "source": "https://developers.openai.com/api/docs/models/gpt-4o-mini"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-5.6-luna",
+      "inputUsdPerMillion": 0.2,
+      "outputUsdPerMillion": 1.2,
+      "tokenMultiplier": 1,
+      "note": "new preset; adapter accepts low/medium reasoning effort",
+      "source": "https://developers.openai.com/api/docs/models/gpt-5.6-luna"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-6.1-sol",
+      "inputUsdPerMillion": 2,
+      "outputUsdPerMillion": 10,
+      "tokenMultiplier": 1,
+      "note": "pricing comparison; adapter cannot configure GPT-6 reasoning effort or native structured output",
+      "source": "https://developers.openai.com/api/docs/models/gpt-6.1-sol"
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-6-astra",
+      "inputUsdPerMillion": 10,
+      "outputUsdPerMillion": 50,
+      "tokenMultiplier": 1,
+      "note": "pricing comparison; adapter cannot configure GPT-6 reasoning effort or native structured output",
+      "source": "https://developers.openai.com/api/docs/models/gpt-6-astra"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-haiku-4-5",
+      "inputUsdPerMillion": 1,
+      "outputUsdPerMillion": 5,
+      "tokenMultiplier": 1,
+      "note": "new preset",
+      "source": "https://platform.claude.com/docs/en/about-claude/pricing"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-haiku-5-5",
+      "inputUsdPerMillion": 0.1,
+      "outputUsdPerMillion": 0.5,
+      "tokenMultiplier": 1.3,
+      "note": "pricing comparison; under 100000 prompt tokens; new model needs adapter/account review",
+      "source": "https://platform.claude.com/docs/en/about-claude/pricing"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-sonnet-4-6",
+      "inputUsdPerMillion": 3,
+      "outputUsdPerMillion": 15,
+      "tokenMultiplier": 1,
+      "note": "configured; reference fixed judge",
+      "source": "https://platform.claude.com/docs/en/about-claude/pricing"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-sonnet-5-5",
+      "inputUsdPerMillion": 2,
+      "outputUsdPerMillion": 10,
+      "tokenMultiplier": 1.3,
+      "note": "new preset; tokenizer adjustment is approximate",
+      "source": "https://platform.claude.com/docs/en/about-claude/pricing"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-opus-5-5",
+      "inputUsdPerMillion": 4,
+      "outputUsdPerMillion": 20,
+      "tokenMultiplier": 1.3,
+      "note": "new preset; tokenizer adjustment is approximate",
+      "source": "https://platform.claude.com/docs/en/about-claude/pricing"
+    },
+    {
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-lite",
+      "inputUsdPerMillion": 0.25,
+      "outputUsdPerMillion": 1.5,
+      "tokenMultiplier": 1,
+      "note": "new preset",
+      "source": "https://ai.google.dev/gemini-api/docs/pricing"
+    },
+    {
+      "provider": "gemini",
+      "model": "gemini-3.8-flash",
+      "inputUsdPerMillion": 0.75,
+      "outputUsdPerMillion": 3.75,
+      "tokenMultiplier": 1,
+      "note": "configured; promotional rates through 2026-12-31, double 2027-01-01",
+      "source": "https://ai.google.dev/gemini-api/docs/pricing"
+    },
+    {
+      "provider": "grok",
+      "model": "grok-4.3",
+      "inputUsdPerMillion": 1.25,
+      "outputUsdPerMillion": 2.5,
+      "tokenMultiplier": 1,
+      "note": "new preset",
+      "source": "https://docs.x.ai/developers/pricing"
+    },
+    {
+      "provider": "grok",
+      "model": "grok-4.7",
+      "inputUsdPerMillion": 2,
+      "outputUsdPerMillion": 6,
+      "tokenMultiplier": 1,
+      "note": "configured",
+      "source": "https://docs.x.ai/developers/pricing"
+    },
+    {
+      "provider": "ollama",
+      "model": "qwen3:8b",
+      "inputUsdPerMillion": 0,
+      "outputUsdPerMillion": 0,
+      "tokenMultiplier": 1,
+      "note": "configured; API cost only, excludes hardware/electricity/time and cloud judge",
+      "source": "local"
+    }
+  ],
+  "stages": [
+    {
+      "id": "pilot",
+      "runsPerModel": 40,
+      "generationInputTokens": 4119976,
+      "generationOutputTokens": 600000,
+      "judgeUsd": 3.342
+    },
+    {
+      "id": "core",
+      "runsPerModel": 250,
+      "generationInputTokens": 25749850,
+      "generationOutputTokens": 3750000,
+      "judgeUsd": 20.8875
+    },
+    {
+      "id": "adversarial_addition",
+      "runsPerModel": 300,
+      "generationInputTokens": 21851175,
+      "generationOutputTokens": 4500000,
+      "judgeUsd": 25.065
+    },
+    {
+      "id": "core_plus_adversarial",
+      "runsPerModel": 550,
+      "generationInputTokens": 47601025,
+      "generationOutputTokens": 8250000,
+      "judgeUsd": 45.9525
+    },
+    {
+      "id": "pilot_core_adversarial",
+      "runsPerModel": 590,
+      "generationInputTokens": 51721001,
+      "generationOutputTokens": 8850000,
+      "judgeUsd": 49.2945
+    }
+  ],
+  "estimates": [
+    {
+      "model": "gpt-5-nano",
+      "stages": [
+        {
+          "stage": "pilot",
+          "generationUsd": 0.44599880000000003,
+          "totalWithJudgeUsd": 3.7879988,
+          "budgetWith30PercentReserveUsd": 4.92439844
+        },
+        {
+          "stage": "core",
+          "generationUsd": 2.7874925,
+          "totalWithJudgeUsd": 23.6749925,
+          "budgetWith30PercentReserveUsd": 30.77749025
+        },
+        {
+          "stage": "adversarial_addition",
+          "generationUsd": 2.89255875,
+          "totalWithJudgeUsd": 27.95755875,
+          "budgetWith30PercentReserveUsd": 36.344826375000004
+        },
+        {
+          "stage": "core_plus_adversarial",
+          "generationUsd": 5.68005125,
+          "totalWithJudgeUsd": 51.63255125,
+          "budgetWith30PercentReserveUsd": 67.122316625
+        },
+        {
+          "stage": "pilot_core_adversarial",
+          "generationUsd": 6.126050050000001,
+          "totalWithJudgeUsd": 55.42055005,
+          "budgetWith30PercentReserveUsd": 72.046715065
+        }
+      ]
+    },
+    {
+      "model": "gpt-4o-mini",
+      "stages": [
+        {
+          "stage": "pilot",
+          "generationUsd": 0.9779964,
+          "totalWithJudgeUsd": 4.3199964,
+          "budgetWith30PercentReserveUsd": 5.615995320000001
+        },
+        {
+          "stage": "core",
+          "generationUsd": 6.1124775,
+          "totalWithJudgeUsd": 26.9999775,
+          "budgetWith30PercentReserveUsd": 35.099970750000004
+        },
+        {
+          "stage": "adversarial_addition",
+          "generationUsd": 5.97767625,
+          "totalWithJudgeUsd": 31.04267625,
+          "budgetWith30PercentReserveUsd": 40.355479125
+        },
+        {
+          "stage": "core_plus_adversarial",
+          "generationUsd": 12.09015375,
+          "totalWithJudgeUsd": 58.04265375,
+          "budgetWith30PercentReserveUsd": 75.455449875
+        },
+        {
+          "stage": "pilot_core_adversarial",
+          "generationUsd": 13.06815015,
+          "totalWithJudgeUsd": 62.36265015,
+          "budgetWith30PercentReserveUsd": 81.07144519500001
+        }
+      ]
+    },
+    {
+      "model": "gpt-5.6-luna",
+      "stages": [
+        {
+          "stage": "pilot",
+          "generationUsd": 1.5439952000000001,
+          "totalWithJudgeUsd": 4.8859952,
+          "budgetWith30PercentReserveUsd": 6.3517937600000005
+        },
+        {
+          "stage": "core",
+          "generationUsd": 9.64997,
+          "totalWithJudgeUsd": 30.53747,
+          "budgetWith30PercentReserveUsd": 39.698711
+        },
+        {
+          "stage": "adversarial_addition",
+          "generationUsd": 9.770235,
+          "totalWithJudgeUsd": 34.835235,
+          "budgetWith30PercentReserveUsd": 45.285805499999995
+        },
+        {
+          "stage": "core_plus_adversarial",
+          "generationUsd": 19.420205,
+          "totalWithJudgeUsd": 65.372705,
+          "budgetWith30PercentReserveUsd": 84.9845165
+        },
+        {
+          "stage": "pilot_core_adversarial",
+          "generationUsd": 20.964200200000004,
+          "totalWithJudgeUsd": 70.2587002,
+          "budgetWith30PercentReserveUsd": 91.33631026000002
+        }
+      ]
+    },
+    {
+      "model": "gpt-6.1-sol",
+      "stages": [
+        {
+          "stage": "pilot",
+          "generationUsd": 14.239952,
+          "totalWithJudgeUsd": 17.581952,
+          "budgetWith30PercentReserveUsd": 22.856537600000003
+        },
+        {
+          "stage": "core",
+          "generationUsd": 88.9997,
+          "totalWithJudgeUsd": 109.8872,
+          "budgetWith30PercentReserveUsd": 142.85336
+        },
+        {
+          "stage": "adversarial_addition",
+          "generationUsd": 88.70235,
+          "totalWithJudgeUsd": 113.76735,
+          "budgetWith30PercentReserveUsd": 147.89755499999998
+        },
+        {
+          "stage": "core_plus_adversarial",
+          "generationUsd": 177.70205,
+          "totalWithJudgeUsd": 223.65455000000003,
+          "budgetWith30PercentReserveUsd": 290.750915
+        },
+        {
+          "stage": "pilot_core_adversarial",
+          "generationUsd": 191.942002,
+          "totalWithJudgeUsd": 241.236502,
+          "budgetWith30PercentReserveUsd": 313.6074526
+        }
+      ]
+    },
+    {
+      "model": "gpt-6-astra",
+      "stages": [
+        {
+          "stage": "pilot",
+          "generationUsd": 71.19976,
+          "totalWithJudgeUsd": 74.54176,
+          "budgetWith30PercentReserveUsd": 96.904288
+        },
+        {
+          "stage": "core",
+          "generationUsd": 444.9985,
+          "totalWithJudgeUsd": 465.88599999999997,
+          "budgetWith30PercentReserveUsd": 605.6518
+        },
+        {
+          "stage": "adversarial_addition",
+          "generationUsd": 443.51175,
+          "totalWithJudgeUsd": 468.57675,
+          "budgetWith30PercentReserveUsd": 609.149775
+        },
+        {
+          "stage": "core_plus_adversarial",
+          "generationUsd": 888.51025,
+          "totalWithJudgeUsd": 934.46275,
+          "budgetWith30PercentReserveUsd": 1214.8015750000002
+        },
+        {
+          "stage": "pilot_core_adversarial",
+          "generationUsd": 959.71001,
+          "totalWithJudgeUsd": 1009.00451,
+          "budgetWith30PercentReserveUsd": 1311.705863
+        }
+      ]
+    },
+    {
+      "model": "claude-haiku-4-5",
+      "stages": [
+        {
+          "stage": "pilot",
+          "generationUsd": 7.119976,
+          "totalWithJudgeUsd": 10.461976,
+          "budgetWith30PercentReserveUsd": 13.6005688
+        },
+        {
+          "stage": "core",
+          "generationUsd": 44.49985,
+          "totalWithJudgeUsd": 65.38735,
+          "budgetWith30PercentReserveUsd": 85.003555
+        },
+        {
+          "stage": "adversarial_addition",
+          "generationUsd": 44.351175,
+          "totalWithJudgeUsd": 69.416175,
+          "budgetWith30PercentReserveUsd": 90.2410275
+        },
+        {
+          "stage": "core_plus_adversarial",
+          "generationUsd": 88.851025,
+          "totalWithJudgeUsd": 134.803525,
+          "budgetWith30PercentReserveUsd": 175.2445825
+        },
+        {
+          "stage": "pilot_core_adversarial",
+          "generationUsd": 95.971001,
+          "totalWithJudgeUsd": 145.265501,
+          "budgetWith30PercentReserveUsd": 188.8451513
+        }
+      ]
+    },
+    {
+      "model": "claude-haiku-5-5",
+      "stages": [
+        {
+          "stage": "pilot",
+          "generationUsd": 0.9255968800000001,
+          "totalWithJudgeUsd": 4.26759688,
+          "budgetWith30PercentReserveUsd": 5.547875944
+        },
+        {
+          "stage": "core",
+          "generationUsd": 5.7849805,
+          "totalWithJudgeUsd": 26.6724805,
+          "budgetWith30PercentReserveUsd": 34.67422465
+        },
+        {
+          "stage": "adversarial_addition",
+          "generationUsd": 5.76565275,
+          "totalWithJudgeUsd": 30.830652750000002,
+          "budgetWith30PercentReserveUsd": 40.07984857500001
+        },
+        {
+          "stage": "core_plus_adversarial",
+          "generationUsd": 11.55063325,
+          "totalWithJudgeUsd": 57.503133250000005,
+          "budgetWith30PercentReserveUsd": 74.75407322500001
+        },
+        {
+          "stage": "pilot_core_adversarial",
+          "generationUsd": 12.476230130000003,
+          "totalWithJudgeUsd": 61.770730130000004,
+          "budgetWith30PercentReserveUsd": 80.30194916900001
+        }
+      ]
+    },
+    {
+      "model": "claude-sonnet-4-6",
+      "stages": [
+        {
+          "stage": "pilot",
+          "generationUsd": 21.359928,
+          "totalWithJudgeUsd": 24.701928,
+          "budgetWith30PercentReserveUsd": 32.1125064
+        },
+        {
+          "stage": "core",
+          "generationUsd": 133.49955,
+          "totalWithJudgeUsd": 154.38705,
+          "budgetWith30PercentReserveUsd": 200.70316499999998
+        },
+        {
+          "stage": "adversarial_addition",
+          "generationUsd": 133.053525,
+          "totalWithJudgeUsd": 158.118525,
+          "budgetWith30PercentReserveUsd": 205.55408250000002
+        },
+        {
+          "stage": "core_plus_adversarial",
+          "generationUsd": 266.553075,
+          "totalWithJudgeUsd": 312.50557499999996,
+          "budgetWith30PercentReserveUsd": 406.25724749999995
+        },
+        {
+          "stage": "pilot_core_adversarial",
+          "generationUsd": 287.913003,
+          "totalWithJudgeUsd": 337.207503,
+          "budgetWith30PercentReserveUsd": 438.3697539
+        }
+      ]
+    },
+    {
+      "model": "claude-sonnet-5-5",
+      "stages": [
+        {
+          "stage": "pilot",
+          "generationUsd": 18.511937600000003,
+          "totalWithJudgeUsd": 21.853937600000002,
+          "budgetWith30PercentReserveUsd": 28.410118880000002
+        },
+        {
+          "stage": "core",
+          "generationUsd": 115.69961,
+          "totalWithJudgeUsd": 136.58711,
+          "budgetWith30PercentReserveUsd": 177.563243
+        },
+        {
+          "stage": "adversarial_addition",
+          "generationUsd": 115.313055,
+          "totalWithJudgeUsd": 140.37805500000002,
+          "budgetWith30PercentReserveUsd": 182.49147150000002
+        },
+        {
+          "stage": "core_plus_adversarial",
+          "generationUsd": 231.012665,
+          "totalWithJudgeUsd": 276.965165,
+          "budgetWith30PercentReserveUsd": 360.05471450000005
+        },
+        {
+          "stage": "pilot_core_adversarial",
+          "generationUsd": 249.52460259999998,
+          "totalWithJudgeUsd": 298.81910259999995,
+          "budgetWith30PercentReserveUsd": 388.46483337999996
+        }
+      ]
+    },
+    {
+      "model": "claude-opus-5-5",
+      "stages": [
+        {
+          "stage": "pilot",
+          "generationUsd": 37.023875200000006,
+          "totalWithJudgeUsd": 40.365875200000005,
+          "budgetWith30PercentReserveUsd": 52.475637760000005
+        },
+        {
+          "stage": "core",
+          "generationUsd": 231.39922,
+          "totalWithJudgeUsd": 252.28672,
+          "budgetWith30PercentReserveUsd": 327.972736
+        },
+        {
+          "stage": "adversarial_addition",
+          "generationUsd": 230.62611,
+          "totalWithJudgeUsd": 255.69111,
+          "budgetWith30PercentReserveUsd": 332.39844300000004
+        },
+        {
+          "stage": "core_plus_adversarial",
+          "generationUsd": 462.02533,
+          "totalWithJudgeUsd": 507.97783,
+          "budgetWith30PercentReserveUsd": 660.371179
+        },
+        {
+          "stage": "pilot_core_adversarial",
+          "generationUsd": 499.04920519999996,
+          "totalWithJudgeUsd": 548.3437051999999,
+          "budgetWith30PercentReserveUsd": 712.8468167599999
+        }
+      ]
+    },
+    {
+      "model": "gemini-3.1-flash-lite",
+      "stages": [
+        {
+          "stage": "pilot",
+          "generationUsd": 1.929994,
+          "totalWithJudgeUsd": 5.271994,
+          "budgetWith30PercentReserveUsd": 6.8535922000000005
+        },
+        {
+          "stage": "core",
+          "generationUsd": 12.0624625,
+          "totalWithJudgeUsd": 32.9499625,
+          "budgetWith30PercentReserveUsd": 42.834951249999996
+        },
+        {
+          "stage": "adversarial_addition",
+          "generationUsd": 12.21279375,
+          "totalWithJudgeUsd": 37.27779375,
+          "budgetWith30PercentReserveUsd": 48.461131875
+        },
+        {
+          "stage": "core_plus_adversarial",
+          "generationUsd": 24.27525625,
+          "totalWithJudgeUsd": 70.22775625,
+          "budgetWith30PercentReserveUsd": 91.296083125
+        },
+        {
+          "stage": "pilot_core_adversarial",
+          "generationUsd": 26.20525025,
+          "totalWithJudgeUsd": 75.49975025,
+          "budgetWith30PercentReserveUsd": 98.149675325
+        }
+      ]
+    },
+    {
+      "model": "gemini-3.8-flash",
+      "stages": [
+        {
+          "stage": "pilot",
+          "generationUsd": 5.339982,
+          "totalWithJudgeUsd": 8.681982,
+          "budgetWith30PercentReserveUsd": 11.2865766
+        },
+        {
+          "stage": "core",
+          "generationUsd": 33.3748875,
+          "totalWithJudgeUsd": 54.2623875,
+          "budgetWith30PercentReserveUsd": 70.54110375
+        },
+        {
+          "stage": "adversarial_addition",
+          "generationUsd": 33.26338125,
+          "totalWithJudgeUsd": 58.32838125000001,
+          "budgetWith30PercentReserveUsd": 75.826895625
+        },
+        {
+          "stage": "core_plus_adversarial",
+          "generationUsd": 66.63826875,
+          "totalWithJudgeUsd": 112.59076875,
+          "budgetWith30PercentReserveUsd": 146.367999375
+        },
+        {
+          "stage": "pilot_core_adversarial",
+          "generationUsd": 71.97825075,
+          "totalWithJudgeUsd": 121.27275075,
+          "budgetWith30PercentReserveUsd": 157.654575975
+        }
+      ]
+    },
+    {
+      "model": "grok-4.3",
+      "stages": [
+        {
+          "stage": "pilot",
+          "generationUsd": 6.64997,
+          "totalWithJudgeUsd": 9.99197,
+          "budgetWith30PercentReserveUsd": 12.989561
+        },
+        {
+          "stage": "core",
+          "generationUsd": 41.5623125,
+          "totalWithJudgeUsd": 62.44981249999999,
+          "budgetWith30PercentReserveUsd": 81.18475624999999
+        },
+        {
+          "stage": "adversarial_addition",
+          "generationUsd": 38.56396875,
+          "totalWithJudgeUsd": 63.62896875,
+          "budgetWith30PercentReserveUsd": 82.717659375
+        },
+        {
+          "stage": "core_plus_adversarial",
+          "generationUsd": 80.12628125,
+          "totalWithJudgeUsd": 126.07878125,
+          "budgetWith30PercentReserveUsd": 163.902415625
+        },
+        {
+          "stage": "pilot_core_adversarial",
+          "generationUsd": 86.77625125,
+          "totalWithJudgeUsd": 136.07075125,
+          "budgetWith30PercentReserveUsd": 176.891976625
+        }
+      ]
+    },
+    {
+      "model": "grok-4.7",
+      "stages": [
+        {
+          "stage": "pilot",
+          "generationUsd": 11.839952,
+          "totalWithJudgeUsd": 15.181952,
+          "budgetWith30PercentReserveUsd": 19.736537600000002
+        },
+        {
+          "stage": "core",
+          "generationUsd": 73.9997,
+          "totalWithJudgeUsd": 94.8872,
+          "budgetWith30PercentReserveUsd": 123.35336000000001
+        },
+        {
+          "stage": "adversarial_addition",
+          "generationUsd": 70.70235,
+          "totalWithJudgeUsd": 95.76735,
+          "budgetWith30PercentReserveUsd": 124.49755499999999
+        },
+        {
+          "stage": "core_plus_adversarial",
+          "generationUsd": 144.70205,
+          "totalWithJudgeUsd": 190.65455000000003,
+          "budgetWith30PercentReserveUsd": 247.85091500000004
+        },
+        {
+          "stage": "pilot_core_adversarial",
+          "generationUsd": 156.542002,
+          "totalWithJudgeUsd": 205.836502,
+          "budgetWith30PercentReserveUsd": 267.5874526
+        }
+      ]
+    },
+    {
+      "model": "qwen3:8b",
+      "stages": [
+        {
+          "stage": "pilot",
+          "generationUsd": 0,
+          "totalWithJudgeUsd": 3.342,
+          "budgetWith30PercentReserveUsd": 4.344600000000001
+        },
+        {
+          "stage": "core",
+          "generationUsd": 0,
+          "totalWithJudgeUsd": 20.8875,
+          "budgetWith30PercentReserveUsd": 27.15375
+        },
+        {
+          "stage": "adversarial_addition",
+          "generationUsd": 0,
+          "totalWithJudgeUsd": 25.065,
+          "budgetWith30PercentReserveUsd": 32.584500000000006
+        },
+        {
+          "stage": "core_plus_adversarial",
+          "generationUsd": 0,
+          "totalWithJudgeUsd": 45.9525,
+          "budgetWith30PercentReserveUsd": 59.73825
+        },
+        {
+          "stage": "pilot_core_adversarial",
+          "generationUsd": 0,
+          "totalWithJudgeUsd": 49.2945,
+          "budgetWith30PercentReserveUsd": 64.08285000000001
+        }
+      ]
+    }
+  ],
+  "heavyUsageScenario": {
+    "billedOutputTokensPerSpeech": 4000,
+    "judgeOutputTokensPerAttempt": 4000,
+    "judgeRepairFraction": 1,
+    "judgeInputTokens": 10000,
+    "judgeRepairInputTokens": 14500,
+    "note": "Sensitivity scenario, not a guaranteed upper bound or evidence of expected model behavior.",
+    "judgeUsdPerDebate": 0.1935,
+    "bundle": [
+      {
+        "stage": "pilot",
+        "runs": 160,
+        "totalUsd": 117.7538572,
+        "budgetWith30PercentReserveUsd": 153.08001436
+      },
+      {
+        "stage": "core",
+        "runs": 1000,
+        "totalUsd": 735.9616075,
+        "budgetWith30PercentReserveUsd": 956.75008975
+      },
+      {
+        "stage": "adversarial_addition",
+        "runs": 1200,
+        "totalUsd": 829.31449125,
+        "budgetWith30PercentReserveUsd": 1078.1088386249999
+      },
+      {
+        "stage": "core_plus_adversarial",
+        "runs": 2200,
+        "totalUsd": 1565.27609875,
+        "budgetWith30PercentReserveUsd": 2034.8589283750002
+      },
+      {
+        "stage": "pilot_core_adversarial",
+        "runs": 2360,
+        "totalUsd": 1683.0299559500002,
+        "budgetWith30PercentReserveUsd": 2187.938942735
+      }
+    ]
+  },
+  "bundleModels": [
+    "gpt-5.6-luna",
+    "claude-sonnet-4-6",
+    "gemini-3.8-flash",
+    "grok-4.7"
+  ],
+  "bundle": [
+    {
+      "stage": "pilot",
+      "runs": 160,
+      "totalUsd": 53.4518572,
+      "budgetWith30PercentReserveUsd": 69.48741436
+    },
+    {
+      "stage": "core",
+      "runs": 1000,
+      "totalUsd": 334.07410749999997,
+      "budgetWith30PercentReserveUsd": 434.29633974999996
+    },
+    {
+      "stage": "adversarial_addition",
+      "runs": 1200,
+      "totalUsd": 347.04949124999996,
+      "budgetWith30PercentReserveUsd": 451.16433862499997
+    },
+    {
+      "stage": "core_plus_adversarial",
+      "runs": 2200,
+      "totalUsd": 681.1235987499999,
+      "budgetWith30PercentReserveUsd": 885.4606783749999
+    },
+    {
+      "stage": "pilot_core_adversarial",
+      "runs": 2360,
+      "totalUsd": 734.57545595,
+      "budgetWith30PercentReserveUsd": 954.948092735
+    }
+  ]
+}
