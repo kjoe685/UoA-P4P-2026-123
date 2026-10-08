@@ -2,6 +2,8 @@
 
 Proposed 2026-10-08 in response to the user's follow-up. This is an exploratory alternative to the [larger study](evaluation-study-design.md), not evidence that either design is adequately powered. No application/configuration change, generation or paid call was made.
 
+For the user's later roughly USD10 constraint, see the [two-model budget proposal](evaluation-study-usd10.md): GPT-4o mini plus the existing local model, with the same cheap judge for both and explicit provider spend enforcement proposed before execution.
+
 **Recommendation.** Three prespecified, contrasting policy topics and 0, 10 and 100 Hansard excerpts per party form a practical first study. The three levels distinguish no grounding, a modest sample and the whole current party corpus. They can establish coarse differences but cannot locate the precise optimum between 10 and 100. Five rounds are useful for response development, sustained relevance, stance changes and consistency.
 
 Use one topic per fresh sitting, five parties and five ordinary rounds: **25 messages total, five per party per debate**. Every party has one ordinary message per round. The three topics together therefore mean three separate debates for each grounding/repetition/model condition. In the current scheduler, putting all topics into one sitting carries earlier public history into the later topics, creating topic/order effects and more repeated input.
