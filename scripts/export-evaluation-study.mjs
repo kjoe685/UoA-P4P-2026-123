@@ -17,10 +17,13 @@ const metrics = ['consistency','logical_reasoning','responsiveness','relevance',
 const metricLabels = ['Consistency','Logical reasoning','Responsiveness','Relevance','Disruptive rhetoric'];
 const methods = ['vader-sentiment','cardiff-sentiment','deberta-stance'];
 const records={runs:[],rubric:[],sentences:[],speeches:[],usage:[],protocol:[]};
-const seenRuns=new Set(), sourceBatches=[], groups=new Map();
+const seenRuns=new Set(), sourceBatches=[], groups=new Map(), budgetGroups=new Map();
 let capturedSpeeches=0, capturedRubric=0;
 for (const batchArgument of batchArguments) {
   const batch=path.resolve(batchArgument), m=await read(path.join(batch,'manifest.json'));
+  const budgetGroup=m.budgetGroupId??m.batchId, budgetCeiling=m.cumulativeBudgetLimitUsd??m.budgetLimitUsd;
+  if(budgetGroups.has(budgetGroup) && budgetGroups.get(budgetGroup)!==budgetCeiling) throw new Error('Inconsistent cumulative budget group');
+  budgetGroups.set(budgetGroup,budgetCeiling);
   if (String(m.state).startsWith('SYNTHETIC') || batch.includes('fake-matrix')) throw new Error('Synthetic fixtures cannot enter the research workbook');
   const model=m.models['study-judge'];
   const groupHash=sha(JSON.stringify([model,m.frozenSourceHashes['evaluation/rubric.json'],m.frozenSourceHashes['prompts/EvaluatorPrompt.txt'],m.frozenSourceHashes['prompts/EvaluatorCue.txt'],m.frozenSourceHashes['prompts/EvaluatorRepair.txt'],m.frozenSourceHashes['config/llm-evaluation.json']]));
@@ -30,7 +33,7 @@ for (const batchArgument of batchArguments) {
   const identity=await optional(path.join(batch,'operations/code-identity.json'));
   const replacementIdentity=await optional(path.join(batch,'operations/replacement-code-identity.json'));
   const attempts=new Map();
-  sourceBatches.push({batchId:m.batchId,state:m.state,manifest:batchArgument,cells:m.cells.length});
+  sourceBatches.push({batchId:m.batchId,state:m.state,manifest:batchArgument,cells:m.cells.length,budgetGroup,cumulativeBudgetLimitUsd:budgetCeiling,batchAllowanceUsd:m.budgetLimitUsd,priorAllowanceUsd:m.priorBudgetCommittedUsd??0});
   for (const call of ledger.calls) {
     records.usage.push([m.batchId,call.cellId,call.callId,call.purpose,call.provider,call.model,call.status,call.usage?.inputTokens??null,call.usage?.outputTokens??null,call.inputTokenBound,call.outputTokenCap,call.latencyMillis==null?null:call.latencyMillis/1000,call.standardPriceEstimateUsd??null,call.budgetUsd,call.startedAt?new Date(call.startedAt):null,call.endedAt?new Date(call.endedAt):null,call.requestSha256,call.providerError??null,null,null]);
   }
@@ -94,8 +97,9 @@ for (const batchArgument of batchArguments) {
     ['Batch',m.batchId],['Batch state',m.state],['Date and timezone',`${m.dateLocal} ${m.timezone}`],['Expected debates',m.expectedDebates],['Expected speeches',m.expectedSpeeches],['Repetitions',m.repetitions],['Preparation base commit',m.sourceCommit],['Application checkpoint',identity?.ApplicationCheckpoint??'Not recorded'],['Application build SHA256',identity?.ApplicationJarSha256??'Not recorded'],['First-pass collector class SHA256',identity?.CollectorClassSha256??'Not recorded'],['Replacement collector class SHA256',replacementIdentity?.CollectorClassSha256??'No replacement'],['Evaluation group',group],['Judge identity hash',groupHash],
     ...[...new Set(m.cells.map(c=>c.modelPreset))].map(preset=>['Generator: '+preset,JSON.stringify(m.models[preset])]),['Common judge',JSON.stringify(model)],['Qwen thinking',m.localReasoning],['Requested local context',m.ollamaContextTokens],['Observed native local context',m.observedNativeContextTokens??'Not observed'],['Ollama runtime',m.observedOllamaVersion?.version??'Not observed'],['Qwen model digest',m.observedOllamaModel?.digest??'Not observed'],['Ollama environment',JSON.stringify(m.ollamaEnvironment)],['Budget ceiling USD',m.budgetLimitUsd],['Pricing and budget method',m.budgetMethod],['Luna rates source',m.pricingSource],['Corpus SHA256',m.frozenSourceHashes['data/hansard/excerpts.json']],['Rubric SHA256',m.frozenSourceHashes['evaluation/rubric.json']],['Local models configuration SHA256',m.frozenSourceHashes['nlp/config/models.json']],['Replacement attempts',m.cells.filter(c=>c.previousRunIds?.length).map(c=>`${c.cellId}: ${c.previousRunIds.join(', ')} -> ${c.runId}`).join('; ')||'None'],['Public evidence folder',`evidence/${m.batchId}/`]
   ]) records.protocol.push([m.batchId,label,value]);
+  records.protocol.push([m.batchId,'Budget group',budgetGroup],[m.batchId,'Prior conservative allowance USD',m.priorBudgetCommittedUsd??0],[m.batchId,'Cumulative ceiling USD',budgetCeiling],[m.batchId,'First repetition',m.firstRepetition??Math.min(...m.cells.map(c=>c.repetition))],[m.batchId,'Last repetition',m.lastRepetition??Math.max(...m.cells.map(c=>c.repetition))]);
 }
-records.protocol.push(['All batches','Metric grain','Rubric: one participant/topic/metric. Sentiment and stance: sentence chunks. Speeches: mean of available chunks for that one speech.'],['All batches','Separate scales','Rubric 0–4. Higher rhetorical-tactics values mean more disruption. VADER compound −1 to 1. Cardiff/DeBERTa uncalibrated model scores 0–1.'],['All batches','Uncertainty','Abstained transformer chunks retain their scores and an explicit abstained field. Speech means include available raw scores, including abstained chunks.'],['All batches','Missing values','Blank numerical observations mean unavailable or insufficient evidence. They are never changed to zero. Pending and failed jobs stay visible in Runs.'],['All batches','Research scope','One fresh repetition per condition. Speeches and sentences within a debate are dependent observations. Automated judgments have not been validated against human ratings.'],['All batches','Graph construction','Use the named RubricScores, SpeechData or SentenceMetrics tables in Excel PivotTables. Filter by provider, model, topic, Hansard count, repetition, party and evaluation group. Keep each metric and method on its own scale. The five example charts show the first judge group.'],['All batches','Append later runs','Regenerate from the original and additional batch directories with this builder. Original run IDs are retained and duplicates are rejected. Additional models/repetitions create new rows, not new provider worksheets.'],['All batches','Cost meaning','Usage and Runs token/cost totals include all attempts, including archived failures. Standard-price estimate uses reported tokens and uncached Standard rates, excluding cache discounts. Budget allowance uses conservative prices and retains full reservations for failures/unknown usage. Neither is an account invoice.'],['All batches','Summary means','Complete debates only. Rubric means average participant/topic scores. Native method means average per-speech chunk means. Automated ratings and model confidence scores are separate measurements.']);
+records.protocol.push(['All batches','Metric grain','Rubric: one participant/topic/metric. Sentiment and stance: sentence chunks. Speeches: mean of available chunks for that one speech.'],['All batches','Separate scales','Rubric 0–4. Higher rhetorical-tactics values mean more disruption. VADER compound −1 to 1. Cardiff/DeBERTa uncalibrated model scores 0–1.'],['All batches','Uncertainty','Abstained transformer chunks retain their scores and an explicit abstained field. Speech means include available raw scores, including abstained chunks.'],['All batches','Missing values','Blank numerical scores mean unavailable or insufficient evidence. They are never changed to zero. Chunk counts are zero when no valid chunks are available. Pending and failed jobs stay visible in Runs.'],['All batches','Research scope','Repetition coverage is listed per model in Summary. Speeches and sentences within a debate are dependent observations. Automated judgments have not been validated against human ratings.'],['All batches','Graph construction','Use the named RubricScores, SpeechData or SentenceMetrics tables in Excel PivotTables. Filter by provider, model, topic, Hansard count, repetition, party and evaluation group. Keep each metric and method on its own scale. The five example charts show the first judge group and pool available complete repetitions.'],['All batches','Append later runs','Regenerate from the original and additional batch directories with this builder. Original run IDs are retained and duplicates are rejected. Additional models/repetitions create new rows, not new provider worksheets.'],['All batches','Cost meaning','Usage and Runs token/cost totals include all attempts, including archived failures. Related batches share one cumulative ceiling, with prior allowance reserved before a new batch starts. Standard-price estimate uses reported tokens and uncached Standard rates, excluding cache discounts. Budget allowance uses conservative prices and retains full reservations for failures/unknown usage. Neither is an account invoice.'],['All batches','Summary means','Complete debates only. Rubric means average participant/topic scores. Native method means average per-speech chunk means. Automated ratings and model confidence scores are separate measurements.']);
 
 const headers={
   runs:['Cell ID','Run ID','Model','Provider','Topic key','Topic','Hansard excerpts','Repetition','Rounds','Speeches','Outcome','Local evaluation','Rubric evaluation','Duration (s)','Generation input tokens (all attempts)','Generation output tokens (all attempts)','Judge input tokens (all attempts)','Judge output tokens (all attempts)','Standard estimate (USD)','Budget allowance (USD)','Temperature','Reasoning','Completion cap','Judge model','Judge reasoning','Judge temperature','Judge cap','Speaking order','Transcript SHA256','Corpus SHA256','Local model digest','Requested context','Native context','Cell state','Evaluation group','Batch','Attempt count','Archived run IDs','Model key'],
@@ -114,6 +118,32 @@ for(const key of ['rubric','speeches','sentences']) {
   headers[key].push('Provider','Model key');
   for(const row of records[key]) {const run=runById.get(row[1]);row.push(run[3],run[38]);}
 }
+// Project original chunk scores into their speech row. Row-local formulas remain
+// correct when either source table is sorted and avoid repeated full-table scans.
+const sentenceGroups=new Map();
+for(const row of records.sentences) if(row[13]==='ok' && row[9]!=null) {const key=JSON.stringify([row[1],row[7],row[8]]);if(!sentenceGroups.has(key)) sentenceGroups.set(key,[]);sentenceGroups.get(key).push(row);}
+const chunkColumns={};
+for(let mi=0;mi<methods.length;mi++) {
+  const method=methods[mi],width=Math.max(1,...[...sentenceGroups.entries()].filter(([key])=>JSON.parse(key)[2]===method).map(([,rows])=>rows.length));
+  chunkColumns[method]={width,scoreStart:headers.speeches.length+1};
+  for(let i=1;i<=width;i++) headers.speeches.push(`${['VADER compound','Cardiff Positive','DeBERTa Support'][mi]} chunk ${i}`);
+}
+for(const method of ['cardiff-sentiment','deberta-stance']) {
+  chunkColumns[method].flagStart=headers.speeches.length+1;
+  for(let i=1;i<=chunkColumns[method].width;i++) headers.speeches.push(`${method==='cardiff-sentiment'?'Cardiff':'DeBERTa'} abstained chunk ${i}`);
+}
+for(const row of records.speeches) {
+  for(let mi=0;mi<methods.length;mi++) {
+    const chunks=sentenceGroups.get(JSON.stringify([row[1],row[7],methods[mi]]))??[];
+    row.push(...Array.from({length:chunkColumns[methods[mi]].width},(_,i)=>chunks[i]?.[[15,18,19][mi]]??null));
+  }
+  for(const method of ['cardiff-sentiment','deberta-stance']) {
+    const chunks=sentenceGroups.get(JSON.stringify([row[1],row[7],method]))??[];
+    row.push(...Array.from({length:chunkColumns[method].width},(_,i)=>chunks[i]?.[25]==null?null:chunks[i][25]?1:0));
+  }
+}
+records.protocol.push(['All batches','Speech chunk projection','Speeches projects original native chunk scores and abstention flags into appended columns. Flags use 1=true, 0=false, blank=unavailable; Sentence metrics retains original booleans. Means/counts use row-local SUM/COUNT formulas; the full Sentence metrics table retains text, offsets, labels, uncertainty and provenance. Sorting either table preserves the speech calculations.']);
+for(const [key,rows] of Object.entries(records)) for(const row of rows) if(row.length!==headers[key].length) throw new Error(`Wrong final row width: ${key}`);
 const wb=Workbook.create();
 const summary=wb.worksheets.add('Summary');
 const sheetNames={speeches:'Speeches',rubric:'Rubric scores',sentences:'Sentence metrics',runs:'Runs',usage:'Usage',protocol:'Protocol'};
@@ -148,21 +178,19 @@ for(const key of Object.keys(sheetNames)) {
   if(key==='protocol') {sheet.getRange(`B1:B${rows.length+1}`).format.columnWidth=38; sheet.getRange(`C1:C${rows.length+1}`).format.columnWidth=110;sheet.getRange(`C2:C${rows.length+1}`).format.wrapText=true;sheet.getRange(`A2:C${rows.length+1}`).format.autofitRows();}
 }
 // Rebuilding from added batches extends these ranges; avoid evaluating thousands of empty observations.
-const nlpEnd=Math.max(2,records.sentences.length+1);
 const rubEnd=Math.max(2,records.rubric.length+1);
 const speechEnd=Math.max(2,records.speeches.length+1);
 const runEnd=Math.max(2,records.runs.length+1);
-const nlpRange=col=>`'Sentence metrics'!$${col}$2:$${col}$${nlpEnd}`;
+const chunkRange=(method,row,flags=false)=>{const group=chunkColumns[method],start=flags?group.flagStart:group.scoreStart;return `$${letter(start)}${row}:$${letter(start+group.width-1)}${row}`;};
 if(records.speeches.length) {
   const formulas=records.speeches.map((_,i)=>{
-    const r=i+2, criteria=method=>`${nlpRange('AK')},$B${r}&"|"&$H${r}&"|${method}"`;
-    const count=method=>`COUNTIFS(${criteria(method)})`;
-    const mean=(method,column)=>`=IF(${count(method)}=0,"",SUMIFS(${nlpRange(column)},${criteria(method)})/${count(method)})`;
-    const abstain=method=>`=IF(${count(method)}=0,"",COUNTIFS(${criteria(method)},${nlpRange('Z')},TRUE))`;
-    return [mean('vader-sentiment','P'),mean('cardiff-sentiment','S'),mean('deberta-stance','T'),`=IF(${count('vader-sentiment')}=0,"",${count('vader-sentiment')})`,abstain('cardiff-sentiment'),abstain('deberta-stance')];
+    const r=i+2, count=method=>`COUNT(${chunkRange(method,r)})`;
+    const mean=(method,countColumn)=>`=IF($${countColumn}${r}=0,"",SUM(${chunkRange(method,r)})/$${countColumn}${r})`;
+    const abstain=(method,countColumn)=>`=IF($${countColumn}${r}=0,"",SUM(${chunkRange(method,r,true)}))`;
+    return [mean('vader-sentiment','O'),mean('cardiff-sentiment','U'),mean('deberta-stance','V'),`=${count('vader-sentiment')}`,abstain('cardiff-sentiment','U'),abstain('deberta-stance','V')];
   });
   sheets.speeches.getRange(`L2:Q${records.speeches.length+1}`).formulas=formulas;
-  sheets.speeches.getRange(`U2:V${records.speeches.length+1}`).formulas=records.speeches.map((_,i)=>['cardiff-sentiment','deberta-stance'].map(method=>`=COUNTIFS(${nlpRange('AK')},$B${i+2}&"|"&$H${i+2}&"|${method}")`));
+  sheets.speeches.getRange(`U2:V${records.speeches.length+1}`).formulas=records.speeches.map((_,i)=>['cardiff-sentiment','deberta-stance'].map(method=>`=COUNT(${chunkRange(method,i+2)})`));
 }
 summary.showGridLines=false; summary.tabColor=navy;
 summary.getRange('A1:R94').format.font={name:font,size:10,color:ink};
@@ -173,23 +201,27 @@ summary.getRange('A5').values=[['Means include complete debates only. Original a
 summary.getRange('A4').format.font={italic:true,color:muted}; summary.getRange('A5').format.font={italic:true,color:muted};
 const combinations=[];
 for(const group of groups.values()) for(const model of [...new Set(records.runs.filter(r=>r[34]===group).map(r=>r[38]))]) for(const h of [...new Set(records.runs.filter(r=>r[34]===group && r[38]===model).map(r=>r[6]))].sort((a,b)=>a-b)) combinations.push([group,model,h]);
-const summaryHead=['Judge group','Model','Hansard excerpts','Complete debates','Consistency','Logical reasoning','Responsiveness','Relevance','Disruptive rhetoric','VADER compound','Cardiff positive','DeBERTa support'];
-summary.getRange('A7:L7').values=[summaryHead];
-summary.getRange('A7:L7').format={fill:navy,font:{name:font,size:10,bold:true,color:'#FFFFFF'},wrapText:true,rowHeight:46,horizontalAlignment:'center',verticalAlignment:'center'};
+const replicationCoverage=combinations.map(([group,model,h])=>[...new Set(records.runs.filter(row=>row[34]===group && row[38]===model && row[6]===h && row[10]==='COMPLETE').map(row=>row[7]))].sort((a,b)=>a-b));
+summary.getRange('A6').values=[['Summary means pool available complete repetitions; coverage differs by model and is listed in the last two columns.']];
+summary.getRange('A6').format.font={italic:true,color:muted};
+const summaryHead=['Judge group','Model','Hansard excerpts','Complete debates','Consistency','Logical reasoning','Responsiveness','Relevance','Disruptive rhetoric','VADER compound','Cardiff positive','DeBERTa support','Repetition IDs','Repetitions'];
+summary.getRange('A7:N7').values=[summaryHead];
+summary.getRange('A7:N7').format={fill:navy,font:{name:font,size:10,bold:true,color:'#FFFFFF'},wrapText:true,rowHeight:46,horizontalAlignment:'center',verticalAlignment:'center'};
 summary.getRange('B1:B94').format.columnWidth=26;
 const rrange=col=>`'Rubric scores'!$${col}$2:$${col}$${rubEnd}`;
 const srange=col=>`'Speeches'!$${col}$2:$${col}$${speechEnd}`;
 for(let i=0;i<combinations.length;i++) {
   const r=i+8; summary.getRange(`A${r}:C${r}`).values=[combinations[i]];
+  summary.getRange(`M${r}:N${r}`).values=[[replicationCoverage[i].join(', '),replicationCoverage[i].length]];
   summary.getRange(`D${r}`).formulas=[[`=COUNTIFS('Runs'!$AM$2:$AM$${runEnd},$B${r},'Runs'!$G$2:$G$${runEnd},$C${r},'Runs'!$K$2:$K$${runEnd},"COMPLETE",'Runs'!$AI$2:$AI$${runEnd},$A${r})`]];
   const criteria=`${rrange('Y')},$B${r},${rrange('E')},$C${r},${rrange('U')},$A${r},${rrange('J')},"OK",${rrange('W')},"COMPLETE",${rrange('I')}`;
   summary.getRange(`E${r}:I${r}`).formulas=[metrics.map(metric=>`=IF(COUNTIFS(${criteria},"${metric}")=0,"",SUMIFS(${rrange('K')},${criteria},"${metric}")/COUNTIFS(${criteria},"${metric}"))`)];
   summary.getRange(`J${r}:L${r}`).formulas=[[['L','O'],['M','U'],['N','V']].map(([col,countCol])=>`=IF(COUNTIFS(${srange('Y')},$B${r},${srange('E')},$C${r},${srange('S')},$A${r},${srange('W')},"COMPLETE",${srange(countCol)},">0")=0,"",SUMIFS(${srange(col)},${srange('Y')},$B${r},${srange('E')},$C${r},${srange('S')},$A${r},${srange('W')},"COMPLETE")/COUNTIFS(${srange('Y')},$B${r},${srange('E')},$C${r},${srange('S')},$A${r},${srange('W')},"COMPLETE",${srange(countCol)},">0"))`)];
 }
 summary.getRange(`E8:L${7+combinations.length}`).setNumberFormat('0.00');
-summary.getRange(`A7:L${7+combinations.length}`).format.borders={bottom:{style:'thin',color:'#DCE2EB'}};
+summary.getRange(`A7:N${7+combinations.length}`).format.borders={bottom:{style:'thin',color:'#DCE2EB'}};
 const totalRow=10+combinations.length;
-summary.getRange(`A${totalRow}:F${totalRow+3}`).values=[['Recorded speeches',null,null,'Scored rubric observations',null,null],['Completed debates',null,null,'Standard API estimate (USD)',null,null],['Requested debates',records.runs.length,null,'Budget allowance used (USD)',null,null],['Batch status',sourceBatches.map(x=>x.state).join(', '),null,'Budget ceiling (USD)',null,4.5*sourceBatches.length]];
+summary.getRange(`A${totalRow}:F${totalRow+3}`).values=[['Recorded speeches',null,null,'Scored rubric observations',null,null],['Completed debates',null,null,'Standard API estimate (USD)',null,null],['Requested debates',records.runs.length,null,'Budget allowance used (USD)',null,null],['Batch status',[...new Set(sourceBatches.map(x=>x.state))].join(', '),null,'Budget ceiling (USD)',null,[...budgetGroups.values()].reduce((a,b)=>a+b,0)]];
 summary.getRange(`B${totalRow}`).formulas=[[`=SUM('Runs'!J2:J${runEnd})`]];
 summary.getRange(`F${totalRow}`).formulas=[[`=COUNTIFS(${rrange('J')},"OK")`]];
 summary.getRange(`B${totalRow+1}`).formulas=[[`=COUNTIFS('Runs'!K2:K${runEnd},"COMPLETE")`]];
@@ -225,8 +257,6 @@ for(let mi=0;mi<metrics.length;mi++) {
 wb.recalculate();
 const summaryValues=summary.getRange(`D8:L${7+combinations.length}`).values;
 for(const row of summaryValues) for(const value of row) if(value!==null && value!=='' && (typeof value!=='number'||!Number.isFinite(value))) throw new Error('Unexpected nonnumeric summary calculation: '+JSON.stringify(summaryValues));
-const sentenceGroups=new Map();
-for(const row of records.sentences) if(row[13]==='ok' && row[9]!=null) {const key=JSON.stringify([row[1],row[7],row[8]]);if(!sentenceGroups.has(key)) sentenceGroups.set(key,[]);sentenceGroups.get(key).push(row);}
 const computedSpeechRows=records.speeches.length?sheets.speeches.getRange(`L2:V${records.speeches.length+1}`).values:[];
 for(let i=0;i<records.speeches.length;i++) {
   const row=records.speeches[i], actual=computedSpeechRows[i].slice(0,3);
@@ -234,6 +264,7 @@ for(let i=0;i<records.speeches.length;i++) {
     const chunks=sentenceGroups.get(JSON.stringify([row[1],row[7],methods[mi]]))??[];
     const expected=chunks.length?chunks.reduce((v,x)=>v+x[[15,18,19][mi]],0)/chunks.length:'';
     if(expected==='' ? actual[mi]!=='' && actual[mi]!==null : typeof actual[mi]!=='number' || Math.abs(actual[mi]-expected)>1e-9) throw new Error('Speech mean disagrees with native sentence scores');
+    if(mi>0 && chunks.length && computedSpeechRows[i][mi+3]!==chunks.filter(chunk=>chunk[25]===true).length) throw new Error('Speech abstention count disagrees with native flags');
   }
   row.splice(11,6,...computedSpeechRows[i].slice(0,6));
   row.splice(20,2,...computedSpeechRows[i].slice(9,11));
@@ -280,7 +311,7 @@ for(const [key,rows] of Object.entries(records)) {
   await fs.writeFile(path.join(output,key+'.csv'),[headers[key],...rows].map(row=>row.map(quote).join(',')).join('\r\n'),'utf8');
 }
 for(const sheetName of ['Summary',...Object.values(sheetNames)]) {
-  const range=sheetName==='Summary'?`A1:L${totalRow+4}`:sheetName==='Protocol'?'A1:C12':sheetName==='Speeches'?'C1:Q7':sheetName==='Rubric scores'?'C1:M9':sheetName==='Sentence metrics'?'C1:Z7':sheetName==='Runs'?'C1:T7':'C1:N9';
+  const range=sheetName==='Summary'?`A1:N${totalRow+4}`:sheetName==='Protocol'?'A1:C12':sheetName==='Speeches'?'C1:Q7':sheetName==='Rubric scores'?'C1:M9':sheetName==='Sentence metrics'?'C1:Z7':sheetName==='Runs'?'C1:T7':'C1:N9';
   const preview=await wb.render({sheetName,range,scale:1.25,format:'png'});
   await fs.writeFile(path.join(output,`preview-${sheetName.replaceAll(' ','-')}.png`),new Uint8Array(await preview.arrayBuffer()));
 }
@@ -292,6 +323,6 @@ for(const offset of [18,36]) {
 }
 const file=await SpreadsheetFile.exportXlsx(wb);
 await file.save(path.join(output,'debate-evaluation.xlsx'));
-const result={state:'EXPORTED',batches:sourceBatches,records:Object.fromEntries(Object.entries(records).map(([k,v])=>[k,v.length])),capturedSpeeches,capturedRubric,summaryCombinations:combinations,summaryValues,charts:5,generatedAt:new Date().toISOString(),workbook:path.join(output,'debate-evaluation.xlsx'),xlsxSha256:sha(await fs.readFile(path.join(output,'debate-evaluation.xlsx')))};
+const result={state:'EXPORTED',batches:sourceBatches,records:Object.fromEntries(Object.entries(records).map(([k,v])=>[k,v.length])),capturedSpeeches,capturedRubric,summaryCombinations:combinations,summaryValues,replicationCoverage,cumulativeBudgetCeilingUsd:[...budgetGroups.values()].reduce((a,b)=>a+b,0),charts:5,generatedAt:new Date().toISOString(),workbook:path.join(output,'debate-evaluation.xlsx'),xlsxSha256:sha(await fs.readFile(path.join(output,'debate-evaluation.xlsx')))};
 await fs.writeFile(path.join(output,'workbook-verification.json'),JSON.stringify(result,null,2));
 console.log(JSON.stringify(result));

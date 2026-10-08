@@ -89,7 +89,7 @@ public final class CollectEvaluationStudy {
     public static void main(String[] args) throws Exception {
         if (args.length==2 && args[0].equals("self-test")) { selfTest(Path.of(args[1])); return; }
         if(args.length==3 && args[0].equals("evaluate-local")) { recoverLocal(Path.of(args[2]).toAbsolutePath()); return; }
-        if(args.length==3 && args[0].equals("repair-local-debates")) { repairLocalDebates(Path.of(args[1]).toAbsolutePath(),Path.of(args[2]).toAbsolutePath()); return; }
+        if(args.length==3 && Set.of("repair-local-debates","collect-undispatched").contains(args[0])) { repairLocalDebates(Path.of(args[1]).toAbsolutePath(),Path.of(args[2]).toAbsolutePath(),args[0].equals("collect-undispatched")); return; }
         if (args.length!=3 || !Set.of("collect","self-test-matrix").contains(args[0])) throw new IllegalArgumentException("Use collect or self-test-matrix REPOSITORY BATCH, or self-test OUTPUT");
         boolean fake=args[0].equals("self-test-matrix");
         Path repo=Path.of(args[1]).toAbsolutePath(), batch=Path.of(args[2]).toAbsolutePath(), root=batch.resolve("application");
@@ -221,8 +221,8 @@ public final class CollectEvaluationStudy {
     }
     static BackgroundJob waitJob(DebateApplication app,String id) throws Exception { while(!app.background().find(id).terminal()) Thread.sleep(500); return app.background().find(id); }
     @SuppressWarnings("unchecked")
-    static void repairLocalDebates(Path repo,Path batch) throws Exception {
-        Set<String> approved=Set.of("four_day_week_h0_study-qwen_r1","four_day_week_h10_study-qwen_r1","nuclear_power_h10_study-qwen_r1","nuclear_power_h100_study-qwen_r1");
+    static void repairLocalDebates(Path repo,Path batch,boolean undispatched) throws Exception {
+        Set<String> approved=undispatched ? Set.of("four_day_week_h10_study-luna_r3") : Set.of("four_day_week_h0_study-qwen_r1","four_day_week_h10_study-qwen_r1","nuclear_power_h10_study-qwen_r1","nuclear_power_h100_study-qwen_r1");
         var manifest=(Map<String,Object>)Json.parse(Files.readString(batch.resolve("manifest.json")));
         if(!Set.of("COLLECTED","ANALYZED").contains(manifest.get("state"))) throw new IllegalStateException("Inspect completed original collection before explicit replacement");
         Path root=batch.resolve("application");
@@ -232,7 +232,19 @@ public final class CollectEvaluationStudy {
         var ledger=new Ledger(batch.resolve("operations/usage.json"),Math.min(4.5,((Number)manifest.get("budgetLimitUsd")).doubleValue()));
         var stored=(Map<String,Object>)Json.parse(Files.readString(ledger.file));ledger.calls.addAll((List<Map<String,Object>>)stored.get("calls"));
         ledger.boundViolated=ledger.calls.stream().anyMatch(c -> "USAGE_EXCEEDS_RESERVED_BOUND".equals(c.get("status")));
+        var store=new RunStore(root.resolve("runs"));
+        var generatorModel=snapshot.config().models().get("study-luna");
+        if(undispatched) {
+            var incomplete=((List<Map<String,Object>>)manifest.get("cells")).stream().filter(c -> !"COMPLETE".equals(c.get("generationOutcome"))).toList();
+            if(incomplete.size()!=1 || !approved.contains(incomplete.get(0).get("cellId"))) throw new IllegalStateException("Only the exact missing scheduled condition can be dispatched");
+            var missing=incomplete.get(0);
+            if(missing.containsKey("previousRunIds") || ledger.calls.stream().anyMatch(c -> Objects.equals(c.get("cellId"),missing.get("cellId")))) throw new IllegalStateException("Cannot repeat a previously dispatched condition");
+            if(store.transcript((String)missing.get("runId")).events().stream().anyMatch(e -> e.type()==PublicEvent.Type.SPEECH)) throw new IllegalStateException("Missing condition already contains speeches");
+            if(!Hashes.sha256(Files.readAllBytes(Path.of((String)manifest.get("previousBatch")).resolve("operations/usage.json"))).equals(manifest.get("previousUsageSha256"))) throw new IllegalStateException("Prior budget ledger changed");
+            if(ledger.limit+((Number)manifest.get("priorBudgetCommittedUsd")).doubleValue()>4.5+1e-12) throw new IllegalStateException("Cumulative budget exceeds USD4.50");
+        }
         long priorPaid=ledger.calls.stream().filter(c -> "openai".equals(c.get("provider"))).count();
+        int priorCalls=ledger.calls.size();
         requireFree(11451);requireFree(8766);
         for(String file:List.of("ollama.log","runtime-process.json")) {
             Path original=batch.resolve("operations/"+file),archive=batch.resolve("operations/first-collection-"+file);
@@ -243,16 +255,17 @@ public final class CollectEvaluationStudy {
             Thread.sleep(1500);
             var managed=new ManagedOllama(root);var factory=new ProviderFactory(repo,managed);
             java.util.function.BiFunction<ModelConfig,OllamaConfig,ChatManager> providers=(model,config) -> {
-                if(ledger.purpose.equals("generation") && !model.provider().equals("ollama")) throw new IllegalStateException("Paid generation forbidden in replacement mode");
+                if(ledger.purpose.equals("generation") && (undispatched ? !model.equals(generatorModel) : !model.provider().equals("ollama"))) throw new IllegalStateException("Generator outside the admitted scope");
                 if(ledger.purpose.equals("rubric") && !model.equals(judgeModel)) throw new IllegalStateException("Only approved common judge may be called");
                 var wrapped=ledger.wrap(factory.forModel(model,config));
                 return request -> {
-                    if(model.provider().equals("openai") && ledger.calls.stream().filter(c -> "openai".equals(c.get("provider"))).count()-priorPaid>=8)
-                        throw new IllegalStateException("Approved eight-call judgment limit reached");
+                    if(undispatched && ledger.calls.subList(priorCalls,ledger.calls.size()).stream().filter(c -> ledger.purpose.equals(c.get("purpose"))).count()>=(ledger.purpose.equals("generation")?25:2))
+                        throw new IllegalStateException("Missing condition purpose-specific call limit reached");
+                    if(model.provider().equals("openai") && ledger.calls.stream().filter(c -> "openai".equals(c.get("provider"))).count()-priorPaid>=(undispatched?27:8))
+                        throw new IllegalStateException("Admitted call limit reached");
                     return wrapped.complete(request);
                 };
             };
-            var store=new RunStore(root.resolve("runs"));
             try(var app=new DebateApplication(root,store,providers,null,managed)) {
                 boolean failed=false;
                 for(var cell:(List<Map<String,Object>>)manifest.get("cells")) {
@@ -260,8 +273,9 @@ public final class CollectEvaluationStudy {
                     String name=(String)cell.get("cellId"),previous=(String)cell.get("runId");
                     if(!approved.contains(name) || cell.containsKey("previousRunIds")) throw new IllegalStateException("Cell outside the approved one-replacement scope");
                     var original=store.setup(previous).settings();
-                    if(original.members().stream().anyMatch(member -> !snapshot.config().models().get(member.modelPreset()).provider().equals("ollama")))
-                        throw new IllegalStateException("Cloud generation cannot be repeated by local replacement");
+                    if(undispatched && (original.rounds()!=5 || original.topics().size()!=1 || original.members().size()!=5 || original.groundingCount()!=10)) throw new IllegalStateException("Missing condition sitting settings changed");
+                    if(original.members().stream().anyMatch(member -> !snapshot.config().models().get(member.modelPreset()).provider().equals(undispatched?"openai":"ollama")))
+                        throw new IllegalStateException("Generator provider outside the admitted scope");
                     if(app.find(previous).transcript().outcome()==Transcript.Outcome.COMPLETE) throw new IllegalStateException("Cannot repeat a completed debate");
                     for(String relative:List.of("transcripts/"+name+".json","transcripts/"+name+".txt","reports/"+name+"-local.json","reports/"+name+"-rubric.json")) {
                         Path file=batch.resolve("public/"+relative);
