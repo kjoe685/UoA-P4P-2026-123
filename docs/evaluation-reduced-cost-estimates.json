@@ -1,0 +1,208 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-08",
+  "priceCheckedDate": "2026-10-08",
+  "currency": "USD",
+  "evidenceType": "planning_estimate_no_model_calls",
+  "priceReference": "evaluation-cost-estimates.json",
+  "corpusSha256": "c0af37589846e2eb04b79046172c566cf34f8391d680bb4883db8906090bf25e",
+  "rounds": 5,
+  "topicsPerSitting": 1,
+  "topics": 3,
+  "parties": 5,
+  "groundingLevels": [
+    0,
+    10,
+    100
+  ],
+  "interjections": false,
+  "inputAssumptions": {
+    "promptTokensPerCall": 800,
+    "publicTokensPerContribution": 266.6666666666667,
+    "baseInputTokensPerSitting": 100000,
+    "charactersPerGroundingToken": 4
+  },
+  "outputAssumptions": {
+    "billedTokensPerCall": 1000,
+    "heavyBilledTokensPerCall": 4000,
+    "visibleTokensPerCall": 200
+  },
+  "judgeAssumptions": {
+    "model": "claude-sonnet-4-6",
+    "inputUsdPerMillion": 3,
+    "outputUsdPerMillion": 15,
+    "inputTokens": 13000,
+    "outputTokens": 3000,
+    "repairFraction": 0.1,
+    "repairInputTokens": 16500,
+    "repairOutputTokens": 3000,
+    "usdPerSitting": 0.09345,
+    "heavyInputTokens": 13000,
+    "heavyOutputTokens": 4000,
+    "heavyRepairInputTokens": 17500,
+    "heavyRepairFraction": 1,
+    "heavyUsdPerSitting": 0.2115
+  },
+  "levels": [
+    {
+      "count": 0,
+      "characters": 0,
+      "inputTokens": 100000
+    },
+    {
+      "count": 10,
+      "characters": 29342,
+      "inputTokens": 136677.5
+    },
+    {
+      "count": 100,
+      "characters": 296100,
+      "inputTokens": 470125
+    }
+  ],
+  "models": [
+    {
+      "provider": "openai",
+      "model": "gpt-5.6-luna",
+      "inputUsdPerMillion": 0.2,
+      "outputUsdPerMillion": 1.2,
+      "tokenMultiplier": 1,
+      "note": "new preset; adapter accepts low/medium reasoning effort",
+      "source": "https://developers.openai.com/api/docs/models/gpt-5.6-luna"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-sonnet-4-6",
+      "inputUsdPerMillion": 3,
+      "outputUsdPerMillion": 15,
+      "tokenMultiplier": 1,
+      "note": "configured; reference fixed judge",
+      "source": "https://platform.claude.com/docs/en/about-claude/pricing"
+    },
+    {
+      "provider": "gemini",
+      "model": "gemini-3.8-flash",
+      "inputUsdPerMillion": 0.75,
+      "outputUsdPerMillion": 3.75,
+      "tokenMultiplier": 1,
+      "note": "configured; promotional rates through 2026-12-31, double 2027-01-01",
+      "source": "https://ai.google.dev/gemini-api/docs/pricing"
+    },
+    {
+      "provider": "grok",
+      "model": "grok-4.7",
+      "inputUsdPerMillion": 2,
+      "outputUsdPerMillion": 6,
+      "tokenMultiplier": 1,
+      "note": "configured",
+      "source": "https://docs.x.ai/developers/pricing"
+    }
+  ],
+  "variants": [
+    {
+      "repetitions": 3,
+      "runsPerModel": 27,
+      "runsForFourModels": 108,
+      "messagesPerModel": 675,
+      "messagesPerPartyPerModel": 135,
+      "debatesPerGroundingPerModel": 9,
+      "messagesPerPartyPerGroundingPerModel": 45,
+      "totalInputTokensPerModel": 6361222.5,
+      "totalOutputTokensPerModel": 675000,
+      "models": [
+        {
+          "model": "gpt-5.6-luna",
+          "usdWithJudge": 4.6053945,
+          "heavyUsdWithJudge": 10.222744500000001
+        },
+        {
+          "model": "claude-sonnet-4-6",
+          "usdWithJudge": 31.731817500000002,
+          "heavyUsdWithJudge": 65.2941675
+        },
+        {
+          "model": "gemini-3.8-flash",
+          "usdWithJudge": 9.825316875,
+          "heavyUsdWithJudge": 20.606416875
+        },
+        {
+          "model": "grok-4.7",
+          "usdWithJudge": 19.295595000000002,
+          "heavyUsdWithJudge": 34.632945
+        }
+      ],
+      "bundleWith30PercentReserveUsd": 85.0955610375,
+      "heavyBundleWith30PercentReserveUsd": 169.9831560375
+    },
+    {
+      "repetitions": 5,
+      "runsPerModel": 45,
+      "runsForFourModels": 180,
+      "messagesPerModel": 1125,
+      "messagesPerPartyPerModel": 225,
+      "debatesPerGroundingPerModel": 15,
+      "messagesPerPartyPerGroundingPerModel": 75,
+      "totalInputTokensPerModel": 10602037.5,
+      "totalOutputTokensPerModel": 1125000,
+      "models": [
+        {
+          "model": "gpt-5.6-luna",
+          "usdWithJudge": 7.6756575,
+          "heavyUsdWithJudge": 17.0379075
+        },
+        {
+          "model": "claude-sonnet-4-6",
+          "usdWithJudge": 52.8863625,
+          "heavyUsdWithJudge": 108.8236125
+        },
+        {
+          "model": "gemini-3.8-flash",
+          "usdWithJudge": 16.375528125,
+          "heavyUsdWithJudge": 34.344028125
+        },
+        {
+          "model": "grok-4.7",
+          "usdWithJudge": 32.159325,
+          "heavyUsdWithJudge": 57.721575
+        }
+      ],
+      "bundleWith30PercentReserveUsd": 141.8259350625,
+      "heavyBundleWith30PercentReserveUsd": 283.3052600625
+    },
+    {
+      "repetitions": 10,
+      "runsPerModel": 90,
+      "runsForFourModels": 360,
+      "messagesPerModel": 2250,
+      "messagesPerPartyPerModel": 450,
+      "debatesPerGroundingPerModel": 30,
+      "messagesPerPartyPerGroundingPerModel": 150,
+      "totalInputTokensPerModel": 21204075,
+      "totalOutputTokensPerModel": 2250000,
+      "models": [
+        {
+          "model": "gpt-5.6-luna",
+          "usdWithJudge": 15.351315,
+          "heavyUsdWithJudge": 34.075815
+        },
+        {
+          "model": "claude-sonnet-4-6",
+          "usdWithJudge": 105.772725,
+          "heavyUsdWithJudge": 217.647225
+        },
+        {
+          "model": "gemini-3.8-flash",
+          "usdWithJudge": 32.75105625,
+          "heavyUsdWithJudge": 68.68805625
+        },
+        {
+          "model": "grok-4.7",
+          "usdWithJudge": 64.31865,
+          "heavyUsdWithJudge": 115.44315
+        }
+      ],
+      "bundleWith30PercentReserveUsd": 283.651870125,
+      "heavyBundleWith30PercentReserveUsd": 566.610520125
+    }
+  ]
+}

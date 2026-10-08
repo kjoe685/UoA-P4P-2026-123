@@ -2,6 +2,8 @@
 
 Planning date: 2026-10-08 (Pacific/Auckland). Based on application checkpoint T63 `c6105df` and delivery T64 `e88281c`, on `codex/dual-interface-integration`. This is a proposed research design and an API budget estimate. No new debates, model calls, human labels or empirical accuracy results were produced.
 
+The user's follow-up proposes a smaller first study: five rounds, three topics and 0/10/100 excerpts. See the [reduced-design assessment](evaluation-study-reduced.md) for message-versus-debate replication, current scoring support and recalculated costs. The larger design below remains a broader reference option.
+
 Start with **40 pilot debates per model**, then **250 debates per model for grounding**, and add **300 per model for adversarial behavior** if that is a research priority. Four models therefore need 160 pilot debates, 1,000 core debates and 1,200 additional adversarial debates: **2,360 total**. The core is a useful initial comparison on ten specified topics; whether it is sufficiently powered depends on pilot variance, topic dependence and the smallest effect that matters.
 
 For the illustrative four-model bundle GPT-5.6 Luna, Claude Sonnet 4.6, Gemini 3.8 Flash and Grok 4.7, allow approximately **$435 USD for the core** or **$955 USD for pilot + core + adversarial follow-up**, including a fixed cloud judge and 30% reserve. A heavier billed-output/repair scenario increases these budgets to about **$960 / $2,190**. These are workload scenarios, not guaranteed bounds. Per-model alternatives and calculation inputs are below and in [evaluation-cost-estimates.json](evaluation-cost-estimates.json).
