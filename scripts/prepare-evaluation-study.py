@@ -14,6 +14,31 @@ def write(path, value):
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
+def previous_repetitions(previous):
+    """Follow the accounted lineage; each generator has its own repetition count."""
+    counts, seen, conditions = {}, set(), set()
+    current = previous
+    while current:
+        current = current.resolve()
+        if current in seen:
+            raise SystemExit("Previous batch lineage contains a cycle")
+        seen.add(current)
+        manifest = json.loads((current / "manifest.json").read_text(encoding="utf-8"))
+        if manifest["state"] not in {"COLLECTED", "ANALYZED"} or any(c["state"] != "COMPLETE" for c in manifest["cells"]):
+            raise SystemExit("Every prior batch must be complete before extending the study")
+        for cell in manifest["cells"]:
+            condition = (cell["modelPreset"], cell["topicKey"], cell["groundingCount"], cell["repetition"])
+            if condition in conditions:
+                raise SystemExit("Duplicate baseline condition in prior batch lineage")
+            conditions.add(condition)
+            counts[cell["modelPreset"]] = max(counts.get(cell["modelPreset"], 0), cell["repetition"])
+        parent = Path(manifest["previousBatch"]) if manifest.get("previousBatch") else None
+        if parent and hashlib.sha256((parent / "operations/usage.json").read_bytes()).hexdigest() != manifest["previousUsageSha256"]:
+            raise SystemExit("Prior lineage ledger changed")
+        current = parent
+    return counts
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("repository", type=Path)
@@ -36,12 +61,14 @@ def main():
     prior_committed = 0
     global_limit = 4.5
     resource_source = repo
+    repetition_history = {}
     if previous:
         previous_manifest = json.loads((previous / "manifest.json").read_text(encoding="utf-8"))
         if previous_manifest["state"] not in {"COLLECTED", "ANALYZED"} or any(c["state"] != "COMPLETE" for c in previous_manifest["cells"]):
             raise SystemExit("Previous batch must be complete before extending the study")
-        if args.first_repetition <= previous_manifest.get("lastRepetition", max(c["repetition"] for c in previous_manifest["cells"])):
-            raise SystemExit("Additional repetition IDs must follow the previous batch")
+        repetition_history = previous_repetitions(previous)
+        if any(args.first_repetition != repetition_history.get(preset, 0) + 1 for preset in set(args.generators)):
+            raise SystemExit("Additional repetition IDs must follow each selected generator's prior repetitions")
         previous_ledger = json.loads((previous / "operations/usage.json").read_text(encoding="utf-8"))
         prior_committed = previous_manifest.get("priorBudgetCommittedUsd", 0) + sum(c["budgetUsd"] for c in previous_ledger["calls"])
         global_limit = min(4.5, previous_manifest.get("cumulativeBudgetLimitUsd", previous_manifest["budgetLimitUsd"]))
@@ -116,6 +143,7 @@ def main():
     manifest["rawOutputRetention"] = "Original judge reply text per attempt and native local method batches, plus complete public transcripts and evaluation reports"
     manifest["nlpRuntimeSource"] = str(nlp_cache)
     manifest["generatorPresets"] = list(dict.fromkeys(args.generators))
+    manifest["previousRepetitionsByGenerator"] = repetition_history
     manifest["cumulativeBudgetLimitUsd"] = global_limit
     manifest["priorBudgetCommittedUsd"] = prior_committed
     manifest["budgetLimitUsd"] = global_limit - prior_committed
