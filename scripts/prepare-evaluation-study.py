@@ -8,14 +8,31 @@ import shutil
 import subprocess
 from zoneinfo import ZoneInfo
 
+TREATMENTS = ("baseline", "adversarial-topic-v1")
+ADVERSARIAL_ASSIGNMENTS = {
+    "retirement": ("TOPIC_DERAILMENT", ["NZ_FIRST", "GREEN", "LABOUR", "ACT", "NATIONAL"]),
+    "four_day_week": ("STRAW_MAN", ["ACT", "NATIONAL", "NZ_FIRST", "GREEN", "LABOUR"]),
+    "nuclear_power": ("PROCEDURAL_MANIPULATION", ["GREEN", "NATIONAL", "LABOUR", "NZ_FIRST", "ACT"]),
+}
+
+
+def assignment_key(cell):
+    return tuple(sorted((m["party"], m["strategy"]) for m in cell["settings"]["members"]))
+
+
+def members_for(order, topic, repetition, treatment):
+    strategy, actors = ADVERSARIAL_ASSIGNMENTS[topic]
+    actor = actors[repetition - 1] if treatment == "adversarial-topic-v1" else None
+    return [{"party": p, "strategy": strategy if p == actor else "NONE"} for p in order]
+
 
 def write(path, value):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-def previous_repetitions(previous):
-    """Follow the accounted lineage; each generator has its own repetition count."""
+def previous_repetitions(previous, treatment="baseline", controls=None):
+    """Follow all usage, with repetition counts specific to generator and treatment."""
     counts, seen, conditions = {}, set(), set()
     current = previous
     while current:
@@ -27,11 +44,15 @@ def previous_repetitions(previous):
         if manifest["state"] not in {"COLLECTED", "ANALYZED"} or any(c["state"] != "COMPLETE" for c in manifest["cells"]):
             raise SystemExit("Every prior batch must be complete before extending the study")
         for cell in manifest["cells"]:
-            condition = (cell["modelPreset"], cell["topicKey"], cell["groundingCount"], cell["repetition"])
+            condition = (cell["modelPreset"], cell["topicKey"], cell["groundingCount"], cell["repetition"], assignment_key(cell))
             if condition in conditions:
-                raise SystemExit("Duplicate baseline condition in prior batch lineage")
+                raise SystemExit("Duplicate study condition in prior batch lineage")
             conditions.add(condition)
-            counts[cell["modelPreset"]] = max(counts.get(cell["modelPreset"], 0), cell["repetition"])
+            baseline = all(m["strategy"] == "NONE" for m in cell["settings"]["members"])
+            if manifest.get("treatmentId", "baseline") == treatment:
+                counts[cell["modelPreset"]] = max(counts.get(cell["modelPreset"], 0), cell["repetition"])
+            if controls is not None and baseline:
+                controls[condition[:4]] = (current, manifest, cell)
         parent = Path(manifest["previousBatch"]) if manifest.get("previousBatch") else None
         if parent and hashlib.sha256((parent / "operations/usage.json").read_bytes()).hexdigest() != manifest["previousUsageSha256"]:
             raise SystemExit("Prior lineage ledger changed")
@@ -47,6 +68,9 @@ def main():
     parser.add_argument("--first-repetition", type=int, default=1, choices=range(1, 6))
     parser.add_argument("--generators", nargs="+", choices=["study-luna", "study-qwen"], default=["study-qwen", "study-luna"])
     parser.add_argument("--previous-batch", type=Path)
+    parser.add_argument("--treatment", choices=TREATMENTS, default="baseline")
+    parser.add_argument("--budget-mode", choices=["fixed-usd", "prepaid-account"],
+                        help="Use prepaid-account only when the user authorizes the loaded account balance")
     args = parser.parse_args()
     date_local = datetime.now(ZoneInfo("Pacific/Auckland")).date().isoformat()
     if args.first_repetition + args.repetitions - 1 > 5:
@@ -57,27 +81,39 @@ def main():
     if subprocess.check_output(["git", "branch", "--show-current"], cwd=repo, text=True).strip() != "codex/dual-interface-integration":
         raise SystemExit("Wrong working branch")
     previous = args.previous_batch.resolve() if args.previous_batch else None
+    if args.treatment != "baseline" and previous is None:
+        raise SystemExit("Adversarial preparation requires the complete accounted baseline lineage")
     previous_manifest = previous_ledger = None
     prior_committed = 0
     global_limit = 4.5
     resource_source = repo
     repetition_history = {}
+    controls = {}
+    budget_mode = args.budget_mode or "fixed-usd"
     if previous:
         previous_manifest = json.loads((previous / "manifest.json").read_text(encoding="utf-8"))
         if previous_manifest["state"] not in {"COLLECTED", "ANALYZED"} or any(c["state"] != "COMPLETE" for c in previous_manifest["cells"]):
             raise SystemExit("Previous batch must be complete before extending the study")
-        repetition_history = previous_repetitions(previous)
+        repetition_history = previous_repetitions(previous, args.treatment, controls)
         if any(args.first_repetition != repetition_history.get(preset, 0) + 1 for preset in set(args.generators)):
             raise SystemExit("Additional repetition IDs must follow each selected generator's prior repetitions")
         previous_ledger = json.loads((previous / "operations/usage.json").read_text(encoding="utf-8"))
         prior_committed = previous_manifest.get("priorBudgetCommittedUsd", 0) + sum(c["budgetUsd"] for c in previous_ledger["calls"])
-        global_limit = min(4.5, previous_manifest.get("cumulativeBudgetLimitUsd", previous_manifest["budgetLimitUsd"]))
-        if prior_committed >= global_limit:
+        inherited_limit = previous_manifest.get("cumulativeBudgetLimitUsd", previous_manifest["budgetLimitUsd"])
+        global_limit = min(4.5, inherited_limit) if inherited_limit is not None else 4.5
+        if budget_mode == "fixed-usd" and prior_committed >= global_limit:
             raise SystemExit("No cumulative study allowance remains")
         resource_source = previous / "application"
         for relative, expected in previous_manifest["frozenSourceHashes"].items():
             if hashlib.sha256((resource_source / relative).read_bytes()).hexdigest() != expected:
                 raise SystemExit("Previous frozen study resource changed")
+        if args.treatment != "baseline":
+            for repetition in range(args.first_repetition, args.first_repetition + args.repetitions):
+                for topic in ADVERSARIAL_ASSIGNMENTS:
+                    for grounding in [0, 10, 100]:
+                        for preset in set(args.generators):
+                            if (preset, topic, grounding, repetition) not in controls:
+                                raise SystemExit("Missing matched NONE control; prepare controls separately first")
     batch.mkdir(parents=True)
     root = batch / "application"
     originals = {}
@@ -130,9 +166,19 @@ def main():
             order = parties[rotation:] + parties[:rotation]
             for grounding in [100, 0, 10]:
                 for preset in dict.fromkeys(args.generators):
-                    cell_id = f"{topic_key}_h{grounding}_{preset}_r{repetition}"
-                    settings = {"topics": [{"title": title, "policyTarget": target}], "rounds": 5, "groundingCount": grounding, "agentModelPreset": preset, "evaluatorModelPreset": "study-judge", "members": [{"party": p, "strategy": "NONE"} for p in order]}
-                    cells.append({"cellId": cell_id, "topicKey": topic_key, "topicTitle": title, "policyTarget": target, "groundingCount": grounding, "repetition": repetition, "modelPreset": preset, "speakingOrder": order, "settings": settings, "state": "PENDING"})
+                    suffix = "_adversarial_v1" if args.treatment != "baseline" else ""
+                    cell_id = f"{topic_key}_h{grounding}_{preset}_r{repetition}{suffix}"
+                    settings = {"topics": [{"title": title, "policyTarget": target}], "rounds": 5, "groundingCount": grounding, "agentModelPreset": preset, "evaluatorModelPreset": "study-judge", "members": members_for(order, topic_key, repetition, args.treatment)}
+                    cell = {"cellId": cell_id, "topicKey": topic_key, "topicTitle": title, "policyTarget": target, "groundingCount": grounding, "repetition": repetition, "modelPreset": preset, "speakingOrder": order, "settings": settings, "state": "PENDING"}
+                    if args.treatment != "baseline":
+                        control_batch, control_manifest, control = controls[(preset, topic_key, grounding, repetition)]
+                        baseline_settings = {**settings, "members": [{"party": p, "strategy": "NONE"} for p in order]}
+                        if baseline_settings != control["settings"] or control_manifest["models"] != {p: engine["models"][p] for p in ["study-luna", "study-qwen", "study-judge"]}:
+                            raise SystemExit("Adversarial condition differs from its control beyond the assignment")
+                        if hashlib.sha256((control_batch / "public/transcripts" / (control["cellId"] + ".json")).read_bytes()).hexdigest() != control["transcriptSha256"]:
+                            raise SystemExit("Matched NONE transcript changed")
+                        cell["matchedBaseline"] = {"batchId": control_manifest["batchId"], "cellId": control["cellId"], "runId": control["runId"], "transcriptSha256": control["transcriptSha256"]}
+                    cells.append(cell)
     fixture = repo / "target/official-ollama-04b2594c962d4316b01a30741935aebf with spaces"
     frozen = {f.relative_to(root).as_posix(): hashlib.sha256(f.read_bytes()).hexdigest() for f in root.rglob("*") if f.is_file() and ".runtime" not in f.parts and ".models" not in f.parts}
     manifest = {"schemaVersion": 1, "batchId": batch.name, "state": "PREPARED", "dateLocal": date_local, "timezone": "Pacific/Auckland", "sourceCommit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=repo, text=True).strip(), "repetitions": args.repetitions, "expectedDebates": len(cells), "expectedSpeeches": len(cells) * 25, "budgetLimitUsd": 4.50, "standardInputUsdPerMillion": 0.10, "standardOutputUsdPerMillion": 0.50, "budgetInputUsdPerMillion": 0.275, "budgetOutputUsdPerMillion": 1.10, "pricingSource": "https://developers.openai.com/api/docs/models/gpt-6-luna", "budgetMethod": "UTF-8 serialized request bytes plus 4096 protocol tokens bound input; full output cap reserved before dispatch. Short-context fast/cache-write/regional prices conservatively covered. Reported usage releases unused reservation; errors or missing usage retain full reservation. No automatic retries.", "models": {p: engine["models"][p] for p in ["study-luna", "study-qwen", "study-judge"]}, "localReasoning": "Disabled: Ollama think=false, frozen thinkingEnabled=false", "ollamaContextTokens": 131072, "ollamaEnvironment": {"OLLAMA_FLASH_ATTENTION": "1", "OLLAMA_KV_CACHE_TYPE": "q4_0", "OLLAMA_NUM_PARALLEL": "1", "OLLAMA_NO_CLOUD": "1"}, "ollamaExecutable": str(fixture / ".runtime/ollama-0.35.0-windows-amd64/ollama.exe"), "ollamaModels": str(fixture / ".runtime/ollama-models"), "originalSourceHashes": originals, "frozenSourceHashes": frozen, "cells": cells}
@@ -144,10 +190,15 @@ def main():
     manifest["nlpRuntimeSource"] = str(nlp_cache)
     manifest["generatorPresets"] = list(dict.fromkeys(args.generators))
     manifest["previousRepetitionsByGenerator"] = repetition_history
-    manifest["cumulativeBudgetLimitUsd"] = global_limit
+    manifest["treatmentId"] = args.treatment
+    manifest["budgetMode"] = budget_mode
+    manifest["cumulativeBudgetLimitUsd"] = global_limit if budget_mode == "fixed-usd" else None
     manifest["priorBudgetCommittedUsd"] = prior_committed
-    manifest["budgetLimitUsd"] = global_limit - prior_committed
+    manifest["budgetLimitUsd"] = global_limit - prior_committed if budget_mode == "fixed-usd" else None
     manifest["budgetGroupId"] = previous_manifest.get("budgetGroupId", previous_manifest["batchId"]) if previous else batch.name
+    if budget_mode == "prepaid-account":
+        manifest["budgetGroupId"] = batch.name + ":prepaid-account"
+        manifest["budgetMethod"] += " User-authorized prepaid account balance replaces the fixed USD admission gate; usage is still recorded, without balance polling."
     if previous:
         if frozen != previous_manifest["frozenSourceHashes"]:
             raise SystemExit("Extended batch resources differ from the original frozen study")

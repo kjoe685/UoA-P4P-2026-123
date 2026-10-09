@@ -68,6 +68,7 @@ def main():
     speech_means = {}
     speech_inputs = {}
     strategy_by_run = {}
+    prepaid_batches = []
     for directory in args.batches:
         batch = directory.resolve()
         manifest = read(batch / "manifest.json")
@@ -76,7 +77,12 @@ def main():
         for relative, sha in manifest["frozenSourceHashes"].items():
             assert digest(batch / "application" / relative) == sha, relative
         ledger = read(batch / "operations/usage.json")
-        assert sum(c["budgetUsd"] for c in ledger["calls"]) <= manifest["budgetLimitUsd"] + 1e-12
+        if manifest.get("budgetMode") == "prepaid-account":
+            assert manifest["budgetLimitUsd"] is None and manifest["cumulativeBudgetLimitUsd"] is None
+            assert ledger["budgetMode"] == "prepaid-account" and ledger["budgetLimitUsd"] is None
+            prepaid_batches.append(manifest["batchId"])
+        else:
+            assert sum(c["budgetUsd"] for c in ledger["calls"]) <= manifest["budgetLimitUsd"] + 1e-12
         assert len({c["callId"] for c in ledger["calls"]}) == len(ledger["calls"])
         identity = read(batch / "operations/code-identity.json")
         if "PreviousLedgerSha256" in identity:
@@ -189,7 +195,11 @@ def main():
     assert all(c["status"] == "COMPLETED" and c["usage"] for c in paid)
     standard = sum(c["standardPriceEstimateUsd"] for c in paid)
     allowance = sum(c["budgetUsd"] for c in paid)
-    assert standard < allowance <= exported["cumulativeBudgetCeilingUsd"] <= 4.5 < 5
+    assert standard < allowance
+    if prepaid_batches:
+        assert exported["cumulativeBudgetCeilingUsd"] is None
+    else:
+        assert allowance <= exported["cumulativeBudgetCeilingUsd"] <= 4.5 < 5
     assert abs(sum(float(r["Standard estimate (USD)"] or 0) for r in csv_data["usage"]) - standard) < 1e-12
     for name in ["runs","rubric","speeches","sentences"]:
         for row in csv_data[name]:
@@ -289,7 +299,10 @@ def main():
         total_row = 10 + len(exported["summaryCombinations"])
         assert value(summary["B" + str(total_row)]) == expected["speeches"]
         assert value(summary["F" + str(total_row)]) == statuses["OK"]
-        assert abs(value(summary["F" + str(total_row + 3)]) - exported["cumulativeBudgetCeilingUsd"]) < 1e-12
+        if prepaid_batches:
+            assert value(summary["F" + str(total_row + 3)]) == "Loaded account credit"
+        else:
+            assert abs(value(summary["F" + str(total_row + 3)]) - exported["cumulativeBudgetCeilingUsd"]) < 1e-12
         charts = [n for n in names if re.fullmatch(r"xl/(?:drawings/)?charts/chart\d+\.xml", n)]
         assert len(charts) == exported["charts"] == 8
         expected_series = len(exported["chartConditions"])
@@ -329,11 +342,12 @@ def main():
     result = {"state": "PASS", "records": dict(expected), "rubricStatuses": dict(statuses), "modelCoverage": coverage, "strategyConditions":len({m["Strategy condition ID"] for m in strategy_by_run.values()}),"strategyAssignmentsAndGroupingVerified":True,"localSpeechCoverage": dict(native_coverage), "abstainedChunks": dict(abstentions), "localProvenance": local_provenance, "standardEstimateUsd": standard, "conservativeAllowanceUsd": allowance, "cumulativeCeilingUsd": exported["cumulativeBudgetCeilingUsd"], "paidRequests": len(paid), "priorLedgerChecks": protected, "sourceAndPublicCopyHashesVerified": True, "csvAndNativeXlsxCachesVerified": True, "nativeCharts": len(charts), "exportStageSeconds":exported["exportStageSeconds"],"workbookSha256": digest(xlsx)}
     (output / "data-verification.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
     descriptions = "\n".join("- " + model + ": repetitions " + ", ".join(map(str, c["repetitions"])) + "; " + str(c["debates"]) + " complete debates and " + str(c["speeches"]) + " speeches." for model, c in coverage.items())
+    spending_boundary = "User-authorized loaded account credit; no fixed USD admission gate or balance polling for " + ", ".join(prepaid_batches) if prepaid_batches else f"One cumulative gate: US${exported['cumulativeBudgetCeilingUsd']:.2f}"
     readme = f"""# Extended debate evaluation dataset
 
 {descriptions}
 
-All conditions use the original three topics, 0/10/100 Hansard excerpts per party, five rounds and all five parties. Strategy conditions are recorded in Strategy assignments and separated in every summary/chart series. This delivery adds Qwen repetitions2/3 using NONE and zero interruptions. Original frozen corpus, prompts, rubric, model settings and local methods are preserved. Speaking order uses the original declared topic/repetition rotation. Technical replacements retain their repetition ID; original failures remain archived.
+All conditions use the original three topics, 0/10/100 Hansard excerpts per party, five rounds and all five parties. Strategy conditions are recorded in Strategy assignments and separated in every summary/chart series. This delivery contains the selected baseline and/or assigned batches, with zero interruptions. Original frozen corpus, prompts, rubric, model settings and local methods are preserved. Speaking order uses the original declared topic/repetition rotation. Technical replacements retain their repetition ID; original failures remain archived. Assigned conditions are treatments, not evidence of successful tactic enactment. In the one-strategy-per-topic extension, tactic and topic are confounded.
 
 GPT-6 Luna generation: temperature0.6, reasoning none, maximum4096completion tokens, timeout180seconds. Common GPT-6 Luna judge: temperature0, reasoning none, maximum8192completion tokens, timeout180seconds and at most one repair. Qwen3:8b: temperature0.6, think=false, cap4096, timeout600seconds, Q4_K_M, Ollama0.35.0; requested context131072/observed native40960, flash attention/q4_0KV cache/serial inference. Full configuration/source/model hashes are in Protocol and saved raw reports.
 
@@ -341,7 +355,7 @@ The eight-sheet workbook contains seven named source tables, five independent0â€
 
 Rubric scores are participant/topic/metric observations. Sentiment and stance are sentence observations, with per-speech means. Speeches appends original raw chunk scores and abstention flags(1=true,0=false,blank=unavailable); bounded row-local SUM/COUNT formulas remain correct when either source table is sorted. Full sentence text/offsets/provenance remain in Sentence metrics. Transformer scores are uncalibrated0â€“1. Higher disruptive rhetoric means more disruption. Missing scores remain blank and numeric zeros remain zero. Abstained raw transformer scores/flags are retained, including in means. No combined or normalized quality score is calculated. Speeches/sentences within debates are dependent; automated scores have not been validated against human ratings. Repetition coverage is recorded explicitly.
 
-OpenAI Standard-price estimate from reported usage: US${standard:.7f}. Conservative allowance used: US${allowance:.9f}; one cumulative gate: US${exported['cumulativeBudgetCeilingUsd']:.2f}. Costs include all retained original/replacement/new paid attempts and exclude cache discounts; they are estimates, not an account invoice. No account spending-limit setting was changed.
+OpenAI Standard-price estimate from reported usage in the selected batches: US${standard:.7f}. Conservative allowance recorded: US${allowance:.9f}. {spending_boundary}. Costs include all retained original/replacement/new paid attempts in these batches and exclude cache discounts; they are estimates, not an account invoice. Prior allowance is recorded in Protocol when some ancestor batches are outside this delivery. No account spending-limit setting was changed.
 
 `evidence/<batch>/transcripts/` contains JSON/TXT transcripts; `reports/` contains complete evaluations and retained earlier failed reports; `raw-evaluation/` contains exact judge replies per initial/repair call and original native method batch fields/chunks/scores/uncertainty/provenance (serialized JSON, rather than original HTTP whitespace). `archived-attempts/` preserves technically incomplete original runs outside the final data tables. `index.json` links current/previous run and job IDs. The optional excluded-thinking-enabled directory holds the earlier stopped21-speech/no-paid-call/no-evaluation attempt outside the research tables. CSV files mirror every source worksheet; `data-verification.json` and `workbook-verification.json` record coverage, usage and artifact checks.
 

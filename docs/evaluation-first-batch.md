@@ -1,5 +1,7 @@
 # First live evaluation batch
 
+For the authorized first matched adversarial block, see [adversarial testing batch 1](evaluation-adversarial-batch1.md). It preserves the recorded LLM settings and uses the loaded account balance instead of the earlier fixed USD gate. The historical baseline accounting below remains unchanged.
+
 For a proposed one-strategy-per-topic follow-up and assigned-party rotation, see the [adversarial assignment proposal](evaluation-adversarial-proposal.md). The completed baseline below remains all `NONE`.
 
 On2026-10-09 the user also authorizes Qwen repetitions2and3, following the completed Luna extension. New batch `runs/studies/2026-10-09-qwen-r2-r3/` uses the original frozen qwen3:8b temperature0.6/think=false/cap4096 and common Luna temperature0/reasoning none/cap8192 judge, with no strategies/interjections. It adds18debates/450speeches; when complete each generator has27debates/675speeches over three repetitions. Provider-specific repetition history follows the complete original and Luna batches, rejects duplicates and checks every parent ledger hash. The latest cumulative conservative allowanceUSD1.480673425leavesUSD3.019326575under the same4.50gate. Use the latest completed accounted batch for any future preparation; historical per-provider repetition maxima cannot replace cumulative spending lineage.

@@ -17,11 +17,11 @@ public final class CollectEvaluationStudy {
     private static final double INPUT_RATE = .275 / 1_000_000, OUTPUT_RATE = 1.10 / 1_000_000;
     static final class Ledger {
         final Path file;
-        final double limit;
+        final Double limit;
         final List<Map<String,Object>> calls = new ArrayList<>();
         boolean boundViolated;
         volatile String cell = "self-test", purpose = "generation";
-        Ledger(Path file, double limit) { this.file=file; this.limit=limit; }
+        Ledger(Path file, Double limit) { this.file=file; this.limit=limit; }
         synchronized double committed() { return calls.stream().mapToDouble(c -> ((Number)c.get("budgetUsd")).doubleValue()).sum(); }
         static long bound(ChatRequest request) {
             return Json.write(Map.of("messages", ChatCompletionsProvider.messages(request,true), "schema",request.outputSchema()==null ? Map.of() : request.outputSchema().value()))
@@ -37,7 +37,7 @@ public final class CollectEvaluationStudy {
                 Map<String,Object> entry=new LinkedHashMap<>();
                 synchronized(this) {
                     if (paid && boundViolated) throw new IllegalStateException("Study usage bound violated; further paid dispatch refused");
-                    if (committed()+reservation>limit) throw new IllegalStateException("Study USD4.50 budget admission refused before dispatch");
+                    if (limit!=null && committed()+reservation>limit) throw new IllegalStateException("Study fixed USD budget admission refused before dispatch");
                     entry.put("callId",calls.size()+1); entry.put("cellId",cell); entry.put("purpose",purpose);
                     entry.put("provider",request.model().provider()); entry.put("model",request.model().model());
                     entry.put("settings",request.model()); entry.put("startedAt",System.currentTimeMillis());
@@ -83,7 +83,13 @@ public final class CollectEvaluationStudy {
                 }
             };
         }
-        synchronized void save() { AtomicFiles.write(file,Json.write(Map.of("schemaVersion",1,"budgetLimitUsd",limit,"budgetCommittedUsd",committed(),"calls",calls))); }
+        synchronized void save() {
+            var value=new LinkedHashMap<String,Object>();
+            value.put("schemaVersion",1);value.put("budgetLimitUsd",limit);
+            value.put("budgetMode",limit==null?"prepaid-account":"fixed-usd");
+            value.put("budgetCommittedUsd",committed());value.put("calls",calls);
+            AtomicFiles.write(file,Json.write(value));
+        }
     }
     @SuppressWarnings("unchecked")
     public static void main(String[] args) throws Exception {
@@ -96,16 +102,23 @@ public final class CollectEvaluationStudy {
         var manifest=(Map<String,Object>)Json.parse(Files.readString(batch.resolve("manifest.json")));
         if (!manifest.get("state").equals("PREPARED") || Files.exists(batch.resolve("operations/usage.json")))
             throw new IllegalStateException("Already-started batch; inspect retained evidence, never restart inference automatically");
+        boolean prepaid="prepaid-account".equals(manifest.get("budgetMode"));
+        if(prepaid && (manifest.get("budgetLimitUsd")!=null || manifest.get("cumulativeBudgetLimitUsd")!=null))
+            throw new IllegalStateException("Prepaid-account policy must explicitly omit the fixed USD gate");
+        if(!prepaid && !(manifest.get("budgetLimitUsd") instanceof Number))
+            throw new IllegalStateException("Fixed study budget missing");
         if(manifest.get("previousBatch") instanceof String prior) {
             Path previous=Path.of(prior);
             if(!Hashes.sha256(Files.readAllBytes(previous.resolve("operations/usage.json"))).equals(manifest.get("previousUsageSha256")))
                 throw new IllegalStateException("Prior study ledger changed; recompute remaining allowance before dispatch");
-            double total=((Number)manifest.get("priorBudgetCommittedUsd")).doubleValue()+((Number)manifest.get("budgetLimitUsd")).doubleValue();
-            if(total>4.5+1e-12) throw new IllegalStateException("Cumulative study budget exceeds USD4.50");
+            if(!prepaid) {
+                double total=((Number)manifest.get("priorBudgetCommittedUsd")).doubleValue()+((Number)manifest.get("budgetLimitUsd")).doubleValue();
+                if(total>4.5+1e-12) throw new IllegalStateException("Cumulative study budget exceeds USD4.50");
+            }
         }
         for (var e:((Map<String,String>)manifest.get("frozenSourceHashes")).entrySet())
             if (!Hashes.sha256(Files.readAllBytes(root.resolve(e.getKey()))).equals(e.getValue())) throw new IllegalStateException("Frozen study source changed");
-        var ledger=new Ledger(batch.resolve("operations/usage.json"),((Number)manifest.get("budgetLimitUsd")).doubleValue());
+        var ledger=new Ledger(batch.resolve("operations/usage.json"),prepaid?null:((Number)manifest.get("budgetLimitUsd")).doubleValue());
         Process runtime=null;
         try {
             if (!fake) {
@@ -140,8 +153,9 @@ public final class CollectEvaluationStudy {
             var managed=new ManagedOllama(root);
             var factory=new ProviderFactory(repo,managed);
             java.util.function.BiFunction<ModelConfig,OllamaConfig,ChatManager> providers=(model,config) -> ledger.wrap(fake
-                ? request -> { try { Thread.sleep(100); } catch(InterruptedException e) { Thread.currentThread().interrupt(); throw new IllegalStateException("Fake interrupted"); }
-                    return new ChatResponse("Mr Speaker, this is a synthetic harness speech about the topic. This text verifies scheduling only.",model.provider(),model.model(),ChatResponse.CompletionStatus.COMPLETED,new ChatResponse.TokenUsage(100,25),100); }
+                ? request -> { try { Thread.sleep(350); } catch(InterruptedException e) { Thread.currentThread().interrupt(); throw new IllegalStateException("Fake interrupted"); }
+                    checkFakePrivacy(request,manifest,root,ledger);
+                    return new ChatResponse("Mr Speaker, this is a synthetic harness speech about the topic. This text verifies scheduling only.",model.provider(),model.model(),ChatResponse.CompletionStatus.COMPLETED,new ChatResponse.TokenUsage(100,25),350); }
                 : factory.forModel(model,config));
             try(var app=new DebateApplication(root,new RunStore(root.resolve("runs")),providers,null,managed)) {
                 manifest.put("state","RUNNING"); manifest.put("startedAt",System.currentTimeMillis()); saveManifest(batch,manifest);
@@ -170,6 +184,12 @@ public final class CollectEvaluationStudy {
                     if(Files.exists(batch.resolve("STOP"))) throw new IllegalStateException("Explicit study stop file");
                     if (fake) {
                         if (transcript.outcome()!=Transcript.Outcome.COMPLETE || speeches!=25 || transcript.roster().size()!=5 || transcript.events().stream().anyMatch(e -> e.type()==PublicEvent.Type.INTERJECTION)) throw new AssertionError("Matrix count/ordinary speaking failure");
+                        ledger.purpose="rubric";
+                        var judge=app.evaluateLlm(session.id(),Map.of("modelPreset","study-judge"));
+                        waitJob(app,judge.id());
+                        long blindCalls=ledger.calls.stream().filter(c -> ledger.cell.equals(c.get("cellId")) && "rubric".equals(c.get("purpose"))).count();
+                        if(blindCalls!=2) throw new AssertionError("Fake invalid judge response must exercise both bounded blind attempts");
+                        cell.put("verifiedBlindJudgeCalls",blindCalls);
                         cell.put("state","SYNTHETIC_COMPLETE"); saveManifest(batch,manifest); continue;
                     }
                     cell.put("state","EVALUATING_LOCAL"); saveManifest(batch,manifest);
@@ -342,6 +362,23 @@ public final class CollectEvaluationStudy {
         }
     }
     static void saveManifest(Path batch,Map<String,Object> manifest) { AtomicFiles.write(batch.resolve("manifest.json"),Json.write(manifest)); }
+    @SuppressWarnings("unchecked")
+    static void checkFakePrivacy(ChatRequest request,Map<String,Object> manifest,Path root,Ledger ledger) {
+        var cell=((List<Map<String,Object>>)manifest.get("cells")).stream().filter(c -> ledger.cell.equals(c.get("cellId"))).findFirst().orElseThrow();
+        var members=(List<Map<String,Object>>)((Map<String,Object>)cell.get("settings")).get("members");
+        long ordinal=ledger.calls.stream().filter(c -> ledger.cell.equals(c.get("cellId")) && "generation".equals(c.get("purpose"))).count()-1;
+        String expected=ledger.purpose.equals("rubric")?"NONE":(String)members.get((int)(ordinal%members.size())).get("strategy");
+        String system=request.systemInstructions().replace("\r\n","\n");
+        String publicMessages=Json.write(request.messages()).replace("\\r\\n","\\n");
+        var names=Map.of("TOPIC_DERAILMENT","TopicDerailment.txt","STRAW_MAN","StrawMan.txt","PROCEDURAL_MANIPULATION","ProceduralManipulation.txt");
+        for(var tactic:names.entrySet()) {
+            try {
+                String prompt=Files.readString(root.resolve("prompts/strategies/"+tactic.getValue())).replace("\r\n","\n").strip();
+                if(system.contains(prompt)!=expected.equals(tactic.getKey())) throw new AssertionError("Private tactic delivered to wrong recipient");
+                if(publicMessages.contains(prompt) || request.messages().stream().anyMatch(m -> m.content().replace("\r\n","\n").contains(prompt))) throw new AssertionError("Private tactic leaked to public messages or blind judge");
+            } catch(java.io.IOException e) { throw new IllegalStateException("Fake privacy source unavailable",e); }
+        }
+    }
     static void selfTest(Path directory) throws Exception {
         Files.createDirectories(directory);
         var model=new ModelConfig("openai","gpt-6-luna",.6,"none",4096,180);
@@ -351,7 +388,7 @@ public final class CollectEvaluationStudy {
         ledger.wrap(r -> reply).complete(request);
         if(Math.abs(ledger.committed()-(100*INPUT_RATE+10*OUTPUT_RATE))>1e-12) throw new AssertionError("Usage reconciliation");
         boolean[] called={false};
-        var refused=new Ledger(directory.resolve("refused.json"),0);
+        var refused=new Ledger(directory.resolve("refused.json"),0.0);
         try { refused.wrap(r -> {called[0]=true; return reply;}).complete(request); throw new AssertionError("Budget refusal missing"); }
         catch(IllegalStateException expected) { if(called[0] || !refused.calls.isEmpty()) throw new AssertionError("Paid dispatch before budget admission"); }
         var uncertain=new Ledger(directory.resolve("uncertain.json"),4.5);
@@ -368,7 +405,11 @@ public final class CollectEvaluationStudy {
         var invalid=new Ledger(directory.resolve("invalid-bound.json"),4.5);
         try { invalid.wrap(r -> new ChatResponse("Speech","openai","gpt-6-luna",ChatResponse.CompletionStatus.COMPLETED,new ChatResponse.TokenUsage(500000,10),1)).complete(request); throw new AssertionError("Bound violation missing"); } catch(IllegalStateException expected) { }
         try { invalid.wrap(r -> {called[0]=true; return reply;}).complete(request); throw new AssertionError("Bound violation did not stop future paid calls"); } catch(IllegalStateException expected) { if(called[0]) throw new AssertionError("Bound-violation paid dispatch"); }
-        AtomicFiles.write(directory.resolve("result.json"),Json.write(Map.of("state","PASS","checks",List.of("usage reconciliation","pre-dispatch budget refusal","unknown usage retained","failed request retained","private prompt absent","UTF-8 input bound","stop after usage bound violation"),"paidCalls",0)));
+        var prepaid=new Ledger(directory.resolve("prepaid.json"),null);
+        prepaid.calls.add(new LinkedHashMap<>(Map.of("budgetUsd",5.0)));
+        prepaid.wrap(r -> reply).complete(request);
+        if(prepaid.committed()<=5 || !Files.readString(prepaid.file).contains("\"budgetLimitUsd\":null")) throw new AssertionError("Prepaid policy must retain accounting beyond the former gate");
+        AtomicFiles.write(directory.resolve("result.json"),Json.write(Map.of("state","PASS","checks",List.of("usage reconciliation","pre-dispatch budget refusal","unknown usage retained","failed request retained","private prompt absent","UTF-8 input bound","stop after usage bound violation","prepaid accounting beyond former gate"),"paidCalls",0)));
         System.out.println("SELF_TEST_PASS");
     }
 }
