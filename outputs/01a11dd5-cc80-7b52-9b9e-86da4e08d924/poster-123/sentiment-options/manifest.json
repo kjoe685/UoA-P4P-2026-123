@@ -1,0 +1,125 @@
+{
+  "task": "T79",
+  "source": "Completed two-model, three-repetition NONE baseline",
+  "counts": {
+    "debates": 54,
+    "speeches": 1350,
+    "chunks_per_method": 4378,
+    "cardiff_uncertain_chunks": 1162
+  },
+  "input_sha256": {
+    "runs.csv": "9c9da761a50e447cad195593fd41d9848c7a19ca47b13d3839de123dc4dd28c4",
+    "speeches.csv": "1ceecb6ca1204159e47038fa2620babc47f34564ca7d667b759ffbc06ba4760f",
+    "sentences.csv": "fa0d6f75489f30a2ad2c470a7ce18213e6d2461c314ac0ff441427ce9a454b76"
+  },
+  "poster_sha256": "d23dc60cc6571e8c1c26c95cae5eb329c0b2fe479d15193ec932222e7065ea2a",
+  "poster_chart_slots": [
+    {
+      "x_mm": 24.13,
+      "y_mm": 598.0,
+      "width_mm": 181.74,
+      "height_mm": 81.0
+    },
+    {
+      "x_mm": 212.13,
+      "y_mm": 598.0,
+      "width_mm": 181.74,
+      "height_mm": 81.0
+    },
+    {
+      "x_mm": 400.13,
+      "y_mm": 598.0,
+      "width_mm": 181.74,
+      "height_mm": 81.0
+    }
+  ],
+  "assets": [
+    {
+      "name": "option-1-grounding-trends",
+      "width_mm": 557.74,
+      "height_mm": 81.0,
+      "png_pixels": [
+        13174,
+        1913
+      ],
+      "dpi": 600,
+      "description": "Sentiment scores and uncertainty by grounding"
+    },
+    {
+      "name": "option-1-vader",
+      "width_mm": 181.74,
+      "height_mm": 81.0,
+      "png_pixels": [
+        4293,
+        1913
+      ],
+      "dpi": 600,
+      "description": "Individual insert for the retained poster chart slot"
+    },
+    {
+      "name": "option-1-cardiff",
+      "width_mm": 181.74,
+      "height_mm": 81.0,
+      "png_pixels": [
+        4293,
+        1913
+      ],
+      "dpi": 600,
+      "description": "Individual insert for the retained poster chart slot"
+    },
+    {
+      "name": "option-1-cardiff-uncertainty",
+      "width_mm": 181.74,
+      "height_mm": 81.0,
+      "png_pixels": [
+        4293,
+        1913
+      ],
+      "dpi": 600,
+      "description": "Individual insert for the retained poster chart slot"
+    },
+    {
+      "name": "option-2-label-distributions",
+      "width_mm": 557.74,
+      "height_mm": 81.0,
+      "png_pixels": [
+        13174,
+        1913
+      ],
+      "dpi": 600,
+      "description": "Separate VADER and Cardiff label distributions"
+    },
+    {
+      "name": "option-3-debate-variability",
+      "width_mm": 557.74,
+      "height_mm": 81.0,
+      "png_pixels": [
+        13174,
+        1913
+      ],
+      "dpi": 600,
+      "description": "Separate sentiment results with debate variability"
+    }
+  ],
+  "method_provenance": [
+    {
+      "method": "cardiff-sentiment",
+      "model": "cardiffnlp/twitter-roberta-base-sentiment-latest",
+      "revision": "3216a57f2a0d9c45a2e6c20157c20c49fb4bf9c7",
+      "implementation": "0.3.0",
+      "config_sha256": "f3a822d5988e47abef5b923b055fe3945adee7186a627da3d26d9fa1250ff05b"
+    },
+    {
+      "method": "vader-sentiment",
+      "model": "vaderSentiment",
+      "revision": "3.3.2",
+      "implementation": "0.3.0",
+      "config_sha256": "f3a822d5988e47abef5b923b055fe3945adee7186a627da3d26d9fa1250ff05b"
+    }
+  ],
+  "aggregation": "Chunk scores or label proportions within speech, equal speech means within debate, equal debate means within model/grounding.",
+  "abstention": "Uncertain Cardiff raw scores stay in positive-score means. Uncertain labels stay visible as a separate category.",
+  "inference_performed": false,
+  "poster_modified": false,
+  "quality_score_created": false
+}
