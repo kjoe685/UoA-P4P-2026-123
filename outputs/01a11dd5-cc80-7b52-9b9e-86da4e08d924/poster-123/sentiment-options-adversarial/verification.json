@@ -1,0 +1,19 @@
+{
+  "status": "PASS",
+  "native_local_reports": 72,
+  "native_sentiment_chunks": 11752,
+  "speech_method_means": 3600,
+  "debate_method_means": 144,
+  "scope_method_summaries": 84,
+  "matched_debate_method_pairs": 36,
+  "baseline_values_unchanged": true,
+  "svg_plotted_values_checked": 570,
+  "png_geometry_dpi_transparency": "PASS",
+  "pdfs": 5,
+  "combined_pdf_pages": 12,
+  "vector_geometry_no_raster_images": "PASS",
+  "protected_files_unchanged": 97892,
+  "previous_progress_preserved": true,
+  "inference_performed": false,
+  "builder_sha256": "e50cc8e13026e52afc669a93b60218b3fd284b8c1be6b97a4dda63ed088f2948"
+}

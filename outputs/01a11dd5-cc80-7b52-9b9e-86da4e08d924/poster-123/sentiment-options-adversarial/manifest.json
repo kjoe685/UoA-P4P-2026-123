@@ -1,0 +1,361 @@
+{
+  "task": "T81",
+  "source": "Complete T80 public dataset, 54 baseline and 18 assigned debates",
+  "counts": {
+    "debates": 72,
+    "baseline_debates": 54,
+    "assigned_debates": 18,
+    "matched_control_debates": 18,
+    "speeches": 1800,
+    "chunks_per_method": 5876,
+    "cardiff_uncertain_chunks": 1540
+  },
+  "scopes": {
+    "baseline": {
+      "topic": null,
+      "condition": "NONE",
+      "label": "All-topic NONE baseline",
+      "context": "3 topics x 3 repetitions; 9 debates per point"
+    },
+    "retirement-topic-derailment": {
+      "topic": "retirement",
+      "condition": "NZ_FIRST=TOPIC_DERAILMENT",
+      "party": "NZ_FIRST",
+      "strategy": "TOPIC_DERAILMENT",
+      "label": "Retirement / NZ First: topic derailment",
+      "context": "Retirement | NZ First: topic derailment"
+    },
+    "workweek-straw-man": {
+      "topic": "four_day_week",
+      "condition": "ACT=STRAW_MAN",
+      "party": "ACT",
+      "strategy": "STRAW_MAN",
+      "label": "Four-day workweek / ACT: straw man",
+      "context": "Workweek | ACT: straw man"
+    },
+    "nuclear-procedural-manipulation": {
+      "topic": "nuclear_power",
+      "condition": "GREEN=PROCEDURAL_MANIPULATION",
+      "party": "GREEN",
+      "strategy": "PROCEDURAL_MANIPULATION",
+      "label": "Nuclear power / Green: procedural manipulation",
+      "context": "Nuclear | Green: procedural manipulation"
+    }
+  },
+  "assets": [
+    {
+      "scope": "baseline",
+      "name": "option-1-grounding-trends",
+      "width_mm": 557.74,
+      "height_mm": 81.0,
+      "png_pixels": [
+        13174,
+        1913
+      ],
+      "dpi": 600
+    },
+    {
+      "scope": "baseline",
+      "name": "option-1-vader",
+      "width_mm": 181.74,
+      "height_mm": 81.0,
+      "png_pixels": [
+        4293,
+        1913
+      ],
+      "dpi": 600
+    },
+    {
+      "scope": "baseline",
+      "name": "option-1-cardiff",
+      "width_mm": 181.74,
+      "height_mm": 81.0,
+      "png_pixels": [
+        4293,
+        1913
+      ],
+      "dpi": 600
+    },
+    {
+      "scope": "baseline",
+      "name": "option-1-cardiff-uncertainty",
+      "width_mm": 181.74,
+      "height_mm": 81.0,
+      "png_pixels": [
+        4293,
+        1913
+      ],
+      "dpi": 600
+    },
+    {
+      "scope": "baseline",
+      "name": "option-2-label-distributions",
+      "width_mm": 557.74,
+      "height_mm": 81.0,
+      "png_pixels": [
+        13174,
+        1913
+      ],
+      "dpi": 600
+    },
+    {
+      "scope": "baseline",
+      "name": "option-3-debate-variability",
+      "width_mm": 557.74,
+      "height_mm": 81.0,
+      "png_pixels": [
+        13174,
+        1913
+      ],
+      "dpi": 600
+    },
+    {
+      "scope": "retirement-topic-derailment",
+      "name": "option-1-grounding-trends",
+      "width_mm": 557.74,
+      "height_mm": 81.0,
+      "png_pixels": [
+        13174,
+        1913
+      ],
+      "dpi": 600
+    },
+    {
+      "scope": "retirement-topic-derailment",
+      "name": "option-1-vader",
+      "width_mm": 181.74,
+      "height_mm": 81.0,
+      "png_pixels": [
+        4293,
+        1913
+      ],
+      "dpi": 600
+    },
+    {
+      "scope": "retirement-topic-derailment",
+      "name": "option-1-cardiff",
+      "width_mm": 181.74,
+      "height_mm": 81.0,
+      "png_pixels": [
+        4293,
+        1913
+      ],
+      "dpi": 600
+    },
+    {
+      "scope": "retirement-topic-derailment",
+      "name": "option-1-cardiff-uncertainty",
+      "width_mm": 181.74,
+      "height_mm": 81.0,
+      "png_pixels": [
+        4293,
+        1913
+      ],
+      "dpi": 600
+    },
+    {
+      "scope": "retirement-topic-derailment",
+      "name": "option-2-label-distributions",
+      "width_mm": 557.74,
+      "height_mm": 81.0,
+      "png_pixels": [
+        13174,
+        1913
+      ],
+      "dpi": 600
+    },
+    {
+      "scope": "retirement-topic-derailment",
+      "name": "option-3-debate-variability",
+      "width_mm": 557.74,
+      "height_mm": 81.0,
+      "png_pixels": [
+        13174,
+        1913
+      ],
+      "dpi": 600
+    },
+    {
+      "scope": "workweek-straw-man",
+      "name": "option-1-grounding-trends",
+      "width_mm": 557.74,
+      "height_mm": 81.0,
+      "png_pixels": [
+        13174,
+        1913
+      ],
+      "dpi": 600
+    },
+    {
+      "scope": "workweek-straw-man",
+      "name": "option-1-vader",
+      "width_mm": 181.74,
+      "height_mm": 81.0,
+      "png_pixels": [
+        4293,
+        1913
+      ],
+      "dpi": 600
+    },
+    {
+      "scope": "workweek-straw-man",
+      "name": "option-1-cardiff",
+      "width_mm": 181.74,
+      "height_mm": 81.0,
+      "png_pixels": [
+        4293,
+        1913
+      ],
+      "dpi": 600
+    },
+    {
+      "scope": "workweek-straw-man",
+      "name": "option-1-cardiff-uncertainty",
+      "width_mm": 181.74,
+      "height_mm": 81.0,
+      "png_pixels": [
+        4293,
+        1913
+      ],
+      "dpi": 600
+    },
+    {
+      "scope": "workweek-straw-man",
+      "name": "option-2-label-distributions",
+      "width_mm": 557.74,
+      "height_mm": 81.0,
+      "png_pixels": [
+        13174,
+        1913
+      ],
+      "dpi": 600
+    },
+    {
+      "scope": "workweek-straw-man",
+      "name": "option-3-debate-variability",
+      "width_mm": 557.74,
+      "height_mm": 81.0,
+      "png_pixels": [
+        13174,
+        1913
+      ],
+      "dpi": 600
+    },
+    {
+      "scope": "nuclear-procedural-manipulation",
+      "name": "option-1-grounding-trends",
+      "width_mm": 557.74,
+      "height_mm": 81.0,
+      "png_pixels": [
+        13174,
+        1913
+      ],
+      "dpi": 600
+    },
+    {
+      "scope": "nuclear-procedural-manipulation",
+      "name": "option-1-vader",
+      "width_mm": 181.74,
+      "height_mm": 81.0,
+      "png_pixels": [
+        4293,
+        1913
+      ],
+      "dpi": 600
+    },
+    {
+      "scope": "nuclear-procedural-manipulation",
+      "name": "option-1-cardiff",
+      "width_mm": 181.74,
+      "height_mm": 81.0,
+      "png_pixels": [
+        4293,
+        1913
+      ],
+      "dpi": 600
+    },
+    {
+      "scope": "nuclear-procedural-manipulation",
+      "name": "option-1-cardiff-uncertainty",
+      "width_mm": 181.74,
+      "height_mm": 81.0,
+      "png_pixels": [
+        4293,
+        1913
+      ],
+      "dpi": 600
+    },
+    {
+      "scope": "nuclear-procedural-manipulation",
+      "name": "option-2-label-distributions",
+      "width_mm": 557.74,
+      "height_mm": 81.0,
+      "png_pixels": [
+        13174,
+        1913
+      ],
+      "dpi": 600
+    },
+    {
+      "scope": "nuclear-procedural-manipulation",
+      "name": "option-3-debate-variability",
+      "width_mm": 557.74,
+      "height_mm": 81.0,
+      "png_pixels": [
+        13174,
+        1913
+      ],
+      "dpi": 600
+    }
+  ],
+  "input_sha256": {
+    "runs.csv": "c587c71b21feaddb9c99a091e65e98fa6e8a82b6728954cf0deb5a98edfdc6d8",
+    "speeches.csv": "ea3497de8eaa38840647becdd44fa3b041a7f348a7d50faddfdbad8e353fd740",
+    "sentences.csv": "cd794b0f200fe638e386d0c5675f82c0c396f1bc4c096256b015c7dadc32a4db",
+    "matched-local.csv": "7012e03c708f6e8029f55955ace6d983a65c89682e2ce923150f588834586f4e"
+  },
+  "poster_sha256": "d23dc60cc6571e8c1c26c95cae5eb329c0b2fe479d15193ec932222e7065ea2a",
+  "poster_chart_slots": [
+    {
+      "x_mm": 24.13,
+      "y_mm": 598.0,
+      "width_mm": 181.74,
+      "height_mm": 81.0
+    },
+    {
+      "x_mm": 212.13,
+      "y_mm": 598.0,
+      "width_mm": 181.74,
+      "height_mm": 81.0
+    },
+    {
+      "x_mm": 400.13,
+      "y_mm": 598.0,
+      "width_mm": 181.74,
+      "height_mm": 81.0
+    }
+  ],
+  "method_provenance": [
+    {
+      "method": "cardiff-sentiment",
+      "model": "cardiffnlp/twitter-roberta-base-sentiment-latest",
+      "revision": "3216a57f2a0d9c45a2e6c20157c20c49fb4bf9c7",
+      "implementation": "0.3.0",
+      "config_sha256": "f3a822d5988e47abef5b923b055fe3945adee7186a627da3d26d9fa1250ff05b"
+    },
+    {
+      "method": "vader-sentiment",
+      "model": "vaderSentiment",
+      "revision": "3.3.2",
+      "implementation": "0.3.0",
+      "config_sha256": "f3a822d5988e47abef5b923b055fe3945adee7186a627da3d26d9fa1250ff05b"
+    }
+  ],
+  "aggregation": "Chunks within speech, 25 equal speech means within debate. Baseline points: nine equal debates. Matched points: one debate. Matched label distributions: three equal debates across grounding levels.",
+  "abstention": "Raw uncertain Cardiff positive scores stay in means; uncertain labels are a separate category.",
+  "matched_controls": "Same model, topic, grounding, speaking order, block-one model settings and corpus; exact run IDs in sentiment-matched-debates.csv.",
+  "limitations": "One assigned repetition and one tactic per topic. Assigned conditions include the assigned party plus four NONE parties. Descriptive outputs do not establish enactment, causal effects, robustness or human rating accuracy.",
+  "inference_performed": false,
+  "poster_modified": false,
+  "quality_score_created": false
+}
