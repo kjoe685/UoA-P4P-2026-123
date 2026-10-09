@@ -25,6 +25,18 @@ The preparer records each matched control's run ID and transcript hash. Treatmen
 
 Fake verification checks all 18 fresh schedules, 450 ordinary speeches, exactly one private tactic delivered to its assigned recipient, and no private tactic text in ordinary agents' messages or either blind judge attempt. Synthetic results are excluded from research export. Live generation, native local analysis and automated judging are recorded separately from fake software checks and human research validation.
 
-Public transcripts, raw judge responses and native local outputs remain separate from private setup and operational records. The researcher workbook records assignments and speaker roles in separate metadata. Its selected source batches are original repetition one plus this new assigned block, making the control/treatment coverage equal. Separate rubric and local method scores retain their original scales; no overall quality score is produced. One strategy per topic confounds topic and tactic, and one fresh assigned repetition supports descriptive exploration only. Assignment does not establish successful enactment, and automated evidence validation does not establish scoring accuracy.
+Public transcripts, raw judge responses and native local outputs remain separate from private setup and operational records. The researcher workbook records assignments and speaker roles in separate metadata. The user's subsequent spreadsheet update retains all54baseline debates/repetitions1–3 and adds this18-debate assigned block, for72debates/1800speeches. Its separate matched comparison tables use only the18original repetition-one controls and18assigned debates, keeping direct comparison coverage equal. The general Summary pools all available NONE topics/repetitions while each assignment is topic-specific; use the matched tables or filter Topic for direct comparisons. Separate rubric and local method scores retain their original scales; no overall quality score is produced. One strategy per topic confounds topic and tactic, and one fresh assigned repetition supports descriptive exploration only. Assignment does not establish successful enactment, and automated evidence validation does not establish scoring accuracy.
+
+The user directly approves replacing the three technically incomplete conditions: Luna retirement/0, Qwen workweek/0 and Luna workweek/10. `RepairAdversarialStudy` uses each original run's frozen settings, preserves all first-pass evidence/usage and permits one replacement per named cell, bounded to25generation and2judge calls each. The separate corrected application JAR changes only the local atomic-write class; the provider/debate/evaluation classes, model settings and frozen resources are byte-identical. All three replacements complete; the final assigned batch has18complete debates/450speeches, with the original failures preserved. Independent artifact verification is recorded in the tracker.
+
+Reproduce the matched tables from retained evidence before packaging the extended workbook:
+
+```text
+python scripts/export-adversarial-batch1-comparisons.py OUTPUT ORIGINAL_REPETITION_ONE_BATCH ASSIGNED_BATCH
+node scripts/export-evaluation-study.mjs OUTPUT ORIGINAL_BATCH LUNA_REPETITIONS_2_3 QWEN_REPETITIONS_2_3 ASSIGNED_BATCH
+python scripts/verify-and-package-evaluation-study.py OUTPUT ORIGINAL_BATCH LUNA_REPETITIONS_2_3 QWEN_REPETITIONS_2_3 ASSIGNED_BATCH --previous-delivery ORIGINAL_DELIVERY --previous-delivery LUNA_DELIVERY --previous-delivery BOTH_MODELS_DELIVERY
+```
+
+These export/verification commands make no model calls. Use the bundled spreadsheet runtime for workbook authoring. Exact existing public evidence copies are reused by SHA256, avoiding unnecessary Windows overwrites.
 
 Collection outcome, final artifacts and exact usage are recorded in the [progress tracker](implementation-progress.md) after the run and independent verification.

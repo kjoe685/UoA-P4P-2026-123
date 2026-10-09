@@ -69,6 +69,7 @@ def main():
     speech_inputs = {}
     strategy_by_run = {}
     prepaid_batches = []
+    rubric_values, matched_runs = {}, {}
     for directory in args.batches:
         batch = directory.resolve()
         manifest = read(batch / "manifest.json")
@@ -118,6 +119,8 @@ def main():
             assignments = {m["party"]:m["strategy"] for m in cell["settings"]["members"]}
             assert all(m["strategy"] == assignments[m["party"]] and m["modelPreset"] == cell["modelPreset"] for m in setup["settings"]["members"])
             strategy_by_run[run_id] = strategy_metadata(cell,manifest)
+            if cell.get("matchedBaseline"):
+                matched_runs[run_id] = cell["matchedBaseline"]["runId"]
             expected["assignments"] += sum(len(a["strategies"]) for a in strategy_by_run[run_id]["assignments"])
             assert setup["configuration"]["models"][cell["modelPreset"]] == manifest["models"][cell["modelPreset"]]
             selection = json.loads(setup["sourceContents"]["selection/hansard.json"])
@@ -145,6 +148,8 @@ def main():
                     for participant in topics[0]["assessment"]["participants"]:
                         assert len(participant["metrics"]) == 5
                         for metric in participant["metrics"]:
+                            party = next(p["party"] for p in transcript["roster"] if p["id"] == participant["participantId"])
+                            rubric_values[(run_id, party, metric["metricId"])] = (metric["status"], metric["score"] if metric["status"] == "OK" else None)
                             expected["rubric"] += 1
                             statuses[metric["status"]] += 1
                             if metric["status"] == "OK":
@@ -184,6 +189,43 @@ def main():
         if count == 10 and (corpus, 100) in groundings:
             assert all(entries == groundings[(corpus, 100)][party][:10] for party, entries in parties.items())
     expected["usage"] = len(calls)
+    matched_counts = {}
+    if matched_runs:
+        assert all(control in transcript_by_run for control in matched_runs.values()), "Matched controls must be selected"
+        for name, source in [("matched-rubric.csv", rubric_values), ("matched-local.csv", speech_means)]:
+            with (output / name).open(encoding="utf-8", newline="") as f:
+                rows = list(csv.DictReader(f))
+            expected_count = len(matched_runs) * 5 * (5 if name == "matched-rubric.csv" else 3)
+            assert len(rows) == expected_count
+            seen = set()
+            for row in rows:
+                assigned_run, control = row["Assigned run ID"], row["NONE run ID"]
+                assert matched_runs[assigned_run] == control
+                party, method = row["Party"], row.get("Metric", row.get("Method"))
+                key = (assigned_run, party, method)
+                assert key not in seen
+                seen.add(key)
+                strategies = next(a["strategies"] for a in strategy_by_run[assigned_run]["assignments"] if a["party"] == party)
+                assert row["Speaker strategy"] == "+".join(strategies)
+                assert row["Strategy role"] == ("OTHER" if strategies == ["NONE"] else "ASSIGNED")
+                if name == "matched-rubric.csv":
+                    normal_status, normal = source[(control, party, method)]
+                    assigned_status, assigned = source[key]
+                    assert row["NONE status"] == normal_status and row["Assigned status"] == assigned_status
+                    labels = ["NONE score", "Assigned-condition score"]
+                else:
+                    def mean(run):
+                        turns = [e["id"] for e in transcript_by_run[run]["events"] if e["type"] == "SPEECH" and e["speaker"]["party"] == party]
+                        assert len(turns) == 5
+                        values = [source[(run, turn, method)] for turn in turns]
+                        return sum(values) / len(values)
+                    normal, assigned = mean(control), mean(assigned_run)
+                    assert row["NONE speeches"] == row["Assigned speeches"] == "5"
+                    labels = ["NONE mean", "Assigned-condition mean"]
+                for label, number in zip(labels, [normal, assigned]):
+                    assert row[label] == "" if number is None else abs(float(row[label]) - number) < 1e-12
+                assert row["Assigned minus NONE"] == "" if normal is None or assigned is None else abs(float(row["Assigned minus NONE"]) - (assigned - normal)) < 1e-12
+            matched_counts[name] = len(rows)
     csv_data = {}
     for name, count in exported["records"].items():
         with (output / (name + ".csv")).open(encoding="utf-8", newline="") as file:
@@ -309,7 +351,9 @@ def main():
         definitions = {d["title"]:d for d in exported["chartDefinitions"]}
         assert len(definitions) == 8 and sum(d["section"]=="local" for d in definitions.values()) == 3
         seen_titles = set()
-        palette = ["315A96", "CB7435", "669966", "9066A5"]
+        palette = [color.lstrip("#").upper() for color in exported.get("chartColors", ["315A96", "CB7435", "669966", "9066A5"])]
+        assert all(re.fullmatch(r"[0-9A-F]{6}", color) for color in palette)
+        if expected_series == 8: assert len(palette) >= 8 and len(set(palette[:8])) == 8
         for name in charts:
             chart = ET.fromstring(file.read(name))
             title = "".join(t.text or "" for t in chart.findall(".//c:title//a:t",ns))
@@ -320,6 +364,8 @@ def main():
             series = chart.findall(".//c:lineChart/c:ser", ns)
             assert len(series) == expected_series
             for i, s in enumerate(series):
+                label = "".join(t.text or "" for t in s.findall("c:tx/c:v", ns) + s.findall("c:tx/c:strRef/c:strCache/c:pt/c:v", ns))
+                assert label == exported["chartLabels"][i]
                 ref = s.find("c:val/c:numRef/c:f", ns).text
                 match = re.fullmatch(r"'Summary'!\$([A-Z]+)\$(\d+):\$\1\$(\d+)", ref)
                 assert match is not None and int(match[3]) - int(match[2]) == 2
@@ -339,13 +385,16 @@ def main():
             if p.is_file() and p.suffix in {".json", ".txt"}:
                 shutil.copyfile(p, destination / p.name)
     coverage = {k: {**v, "repetitions": sorted(v["repetitions"])} for k, v in models.items()}
-    result = {"state": "PASS", "records": dict(expected), "rubricStatuses": dict(statuses), "modelCoverage": coverage, "strategyConditions":len({m["Strategy condition ID"] for m in strategy_by_run.values()}),"strategyAssignmentsAndGroupingVerified":True,"localSpeechCoverage": dict(native_coverage), "abstainedChunks": dict(abstentions), "localProvenance": local_provenance, "standardEstimateUsd": standard, "conservativeAllowanceUsd": allowance, "cumulativeCeilingUsd": exported["cumulativeBudgetCeilingUsd"], "paidRequests": len(paid), "priorLedgerChecks": protected, "sourceAndPublicCopyHashesVerified": True, "csvAndNativeXlsxCachesVerified": True, "nativeCharts": len(charts), "exportStageSeconds":exported["exportStageSeconds"],"workbookSha256": digest(xlsx)}
+    result = {"state": "PASS", "records": dict(expected), "rubricStatuses": dict(statuses), "modelCoverage": coverage, "strategyConditions":len({m["Strategy condition ID"] for m in strategy_by_run.values()}),"strategyAssignmentsAndGroupingVerified":True,"localSpeechCoverage": dict(native_coverage), "abstainedChunks": dict(abstentions), "localProvenance": local_provenance, "standardEstimateUsd": standard, "conservativeAllowanceUsd": allowance, "cumulativeCeilingUsd": exported["cumulativeBudgetCeilingUsd"], "prepaidBatches":prepaid_batches,"matchedComparisonRows":matched_counts,"paidRequests": len(paid), "priorLedgerChecks": protected, "sourceAndPublicCopyHashesVerified": True, "csvAndNativeXlsxCachesVerified": True, "nativeCharts": len(charts), "exportStageSeconds":exported["exportStageSeconds"],"workbookSha256": digest(xlsx)}
     (output / "data-verification.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
     descriptions = "\n".join("- " + model + ": repetitions " + ", ".join(map(str, c["repetitions"])) + "; " + str(c["debates"]) + " complete debates and " + str(c["speeches"]) + " speeches." for model, c in coverage.items())
     spending_boundary = "User-authorized loaded account credit; no fixed USD admission gate or balance polling for " + ", ".join(prepaid_batches) if prepaid_batches else f"One cumulative gate: US${exported['cumulativeBudgetCeilingUsd']:.2f}"
+    matched_note = "For direct block-one control comparisons, use matched-rubric.csv and matched-local.csv (both retain paired run IDs), described in MATCHED-COMPARISONS.md. The general Summary pools NONE topics, whereas each assigned condition belongs to one topic; compare paired rows or filter by Topic rather than comparing that pooled baseline with a single topic/tactic. Rebuild these tables before packaging with `python scripts/export-adversarial-batch1-comparisons.py OUTPUT CONTROL_BATCH ASSIGNED_BATCH`; this reads retained evidence and makes no model calls." if matched_runs else ""
     readme = f"""# Extended debate evaluation dataset
 
 {descriptions}
+
+{matched_note}
 
 All conditions use the original three topics, 0/10/100 Hansard excerpts per party, five rounds and all five parties. Strategy conditions are recorded in Strategy assignments and separated in every summary/chart series. This delivery contains the selected baseline and/or assigned batches, with zero interruptions. Original frozen corpus, prompts, rubric, model settings and local methods are preserved. Speaking order uses the original declared topic/repetition rotation. Technical replacements retain their repetition ID; original failures remain archived. Assigned conditions are treatments, not evidence of successful tactic enactment. In the one-strategy-per-topic extension, tactic and topic are confounded.
 
@@ -362,7 +411,8 @@ OpenAI Standard-price estimate from reported usage in the selected batches: US${
 Earlier deliveries/batches remain unchanged. Rebuild later with `node scripts/export-evaluation-study.mjs OUTPUT ORIGINAL_BATCH [ADDITIONAL_BATCH ...]`, using the bundled artifact runtime. The exporter indexes calls/chunks/groups once, writes formula blocks in batches and records elapsed stage timings; it avoids per-speech scans of the full sentence table. New rows retain stable batch/run/repetition/provider/model/topic/grounding/party/strategy/turn/metric keys. Future preparation must account for the latest cumulative allowance before further authorized inference. Private prompts/setup, credentials, service profiles, model caches and operational logs remain separate and excluded from this researcher bundle.
 """
     (output / "README.md").write_text(readme, encoding="utf-8")
-    files = [xlsx, output / "README.md", output / "data-verification.json", output / "workbook-verification.json", *sorted(output.glob("*.csv")), *sorted(p for p in (output / "evidence").rglob("*") if p.is_file())]
+    extras = [output / name for name in ["MATCHED-COMPARISONS.md", "matched-verification.json"] if (output / name).is_file()]
+    files = [xlsx, output / "README.md", output / "data-verification.json", output / "workbook-verification.json", *extras, *sorted(output.glob("*.csv")), *sorted(p for p in (output / "evidence").rglob("*") if p.is_file())]
     for p in files:
         assert p.name not in {"setup.json", ".env"} and "private-setup" not in str(p)
         if p.suffix != ".xlsx":
