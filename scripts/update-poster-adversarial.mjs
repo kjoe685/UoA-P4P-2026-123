@@ -1,4 +1,4 @@
-// T82–T85: focused native-object revision of the supplied A1 poster, without inference.
+// T82–T86: focused native-object revision of the supplied A1 poster, without inference.
 // Usage: node scripts/update-poster-adversarial.mjs FACTS_JSON BUILD_DIR OUTPUT_DIR REVISION
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -93,13 +93,13 @@ for (const [i,[metric,title]] of metrics.entries()){
 add('Truncated axis disclosure','Vertical axes are truncated. Rubric scores range from 0 to 4.',24.13,659,557.74,8,20.5,{color:C.muted});
 const findings=edit(83,"Co-operative agents: Consistency stays high, but Qwen falls from 3.93 to 3.62. Luna's reasoning stays near 3.0; Qwen's stays between 2.62 and 2.67. Responsiveness changes little for either model. More Hansard gives no consistent gain.",24.13,670,557.74,23,24.5,{color:C.heading});
 findings.text.get('Co-operative agents:').bold=true;
-const assigned=add('Adversarial findings',"Adversarial agents: Qwen's reasoning varies from 2.0 to 2.8; Luna's procedural responsiveness rises from 3.2 to 4.0. Disruption scores are 2/4 for Qwen ACT only at 0 excerpts and 0 for assigned Luna MPs; Qwen Green's paired changes span -1 to +1. Assignment alone does not establish success.",24.13,696,557.74,21,24.5,{color:C.red});assigned.text.get('Adversarial agents:').bold=true;
+const assigned=add('Adversarial findings',"Adversarial agents: Qwen's reasoning varies from 2.0 to 2.8; Luna's procedural responsiveness rises from 3.2 to 4.0. Disruption scores are 2/4 for Qwen ACT only at 0 excerpts and 0 for adversarial Luna MPs; Qwen Green's paired changes span -1 to +1. Adversarial assignment alone is insufficient.",24.13,696,557.74,21,24.5,{color:C.red});assigned.text.get('Adversarial agents:').bold=true;
 edit(84,'Co-operative points average 9 debates (45 ratings); each strategy point averages five MPs. GPT-6 Luna used a consistent rating prompt. Topic, party and repeats limit comparison.',24.13,723,557.74,18,20.5,{italic:true,color:C.muted});
 
 move(85,24.13,747,19.8,19.8);move(86,51,745.5,530,25);
 const outcome=edit(87,'Platform: An AI debate engine with replaceable components and a browser-based frontend.\nWe found no consistent gain in performance metrics from extra Hansard.',24.13,774,178,35,21.5,{spacing:1.02});outcome.text.get('Platform:').bold=true;
 const next=edit(88,'Next: Expand testing with more providers and higher-performance language models.\nHost the web browser platform on a server accessible through the internet.',216,774,175,35,21.5,{spacing:1.02});next.text.get('Next:').bold=true;
-const credit=edit(89,'Contributions: Albert Sun — frontend, live chamber,\ninitial CLI and Hansard grounding.\nKieran Joe — engine, architecture and\nsupervisor coordination.',405,774,177,35,21.5,{spacing:1});credit.text.get('Contributions:').bold=true;credit.text.get('Albert Sun').bold=true;credit.text.get('Kieran Joe').bold=true;
+const credit=edit(89,'Albert Sun — frontend, live chamber,\ninitial CLI and Hansard grounding.\nKieran Joe — engine, architecture and\nsupervisor coordination.',405,774,177,35,21.5,{spacing:1});credit.text.get('Albert Sun').bold=true;credit.text.get('Kieran Joe').bold=true;
 move(90,0,814,606,39);
 edit(92,'[1] Du et al. (2024). Multiagent Debate.\n[2] Rauh & Schwalbach (2020). ParlSpeech V2.',24.13,829,234,17,20,{color:C.muted,spacing:1.02});
 edit(93,'Acknowledgements',223,817,160,10,22,{bold:true,color:C.heading,align:'center'});

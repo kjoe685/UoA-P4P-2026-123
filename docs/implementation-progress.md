@@ -1,5 +1,17 @@
 # Implementation progress and recovery
 
+## T86 final poster wording corrections
+
+**T86 — Apply the three latest copy annotations (REQ-19, 27–30, 34, 37–43, 55, 57–58).**
+
+Recorded before edits, 2026-10-11 Pacific/Auckland. Dependency: verified T85 `471c95b`; annotated source is the retained `poster-123-final-edits/Poster_123_Updated.pptx`. In the adversarial findings, change “assigned Luna MPs” to “adversarial Luna MPs” and use the exact closing sentence “Adversarial assignment alone is insufficient.” Delete “Contributions:” so the credit block starts with Albert Sun. Retain all other text/layout, native graphs, public data, source images, centred header, footer clearance, portrait A1 trim and 6 mm bleed. No study, rescore, model calls, application/settings changes, upload or push.
+
+Acceptance: verify the exact two revised native text objects, compare every other native layout object and all chart XML/cache/workbook data to T85, inspect final full-page/details for fit, confirm source/evidence/reference preservation and exact A1/bleed PDF geometry, then commit the verified local checkpoint on the allowed branch. New delivery: `outputs/01a12824-15b8-7b32-8a23-945b4c18dc65/poster-123-copy-final/`; private validation: `target/T86-poster/`. Next freeze preservation, make the focused copy edit, render and validate the revised poster/PDF, record acceptance and commit/deliver without pushing.
+
+T86 verified r11, 2026-10-11 Pacific/Auckland: the adversarial paragraph says “adversarial Luna MPs” and ends exactly “Adversarial assignment alone is insufficient.” The credits start with Albert Sun and omit “Contributions:”, retaining both names, roles and name emphasis. Only these two native text objects differ from T85; every other native layout object, slide geometry, header/font formatting, source image and all three chart XML definitions remain exact. All 24 native series, 72 cache/workbook values, opaque markers and public sample provenance are preserved. Package/font/layout/workbook/import checks pass with zero findings; native and final Poppler full-page/detail renders show the requested text fitting cleanly. The original evidence certification is inherited unchanged, with no study or rescore. Native PowerPoint execution remains unverified.
+
+PPTX: 289,114 bytes / SHA256 `5d43fe817ea3dcfdd321b1140cf2d8c18938e54482891b2075c82a4582d24aac`; PDF: 3,585,406 bytes / SHA256 `d4b3752eaff8c8c46d6ae48d65fa303bd873d3c495f640125736b9fcf37d3acb`. The lossless 300 dpi PDF retains 594 × 841 mm A1 portrait trim, 606 × 853 mm media and 6 mm bleed on each edge, below 50 MB. All 445 protected files, six reference tips, main ancestry and six excluded evaluation ancestors pass preservation checks. The sole owned chart snapshot is retained privately; public-content checks find no credentials or private prompt payloads. No inference, paid calls, application/settings change, upload or push occurred. Next stage exactly the two owned source/tracker edits and five new delivery files, verify staged bytes, commit this checked T86 checkpoint locally and deliver the poster/PDF.
+
 ## T85 poster final styling and copy revisions
 
 **T85 — Apply the eleven latest poster annotations (REQ-11–15, 19, 27–30, 34, 37–44, 53, 55, 57–58).**
