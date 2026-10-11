@@ -1,0 +1,1072 @@
+{
+  "source": "C:\\Users\\kiera\\Downloads\\Poster_123 (1).pptx",
+  "sourceSha256": "d29df47fdb4b5772bee8e387fddeb6f64b0c71066b1a990575892e06c802e444",
+  "study": "C:\\Git_Repositories\\UoA-P4P-2026-123\\outputs\\01a11f04-d4c3-7b51-8f85-f996967db913\\adversarial-batch1",
+  "baselineDebates": 54,
+  "assignedDebates": 18,
+  "speeches": 1800,
+  "rubricScoresCheckedAgainstRawReports": 1800,
+  "matchedMetricPairsChecked": 450,
+  "baselineValues": {
+    "gpt-6-luna": {
+      "0": {
+        "consistency": 4.0,
+        "logical_reasoning": 3.0,
+        "responsiveness": 3.488888888888889,
+        "relevance": 4.0,
+        "rhetorical_tactics": 0.0
+      },
+      "10": {
+        "consistency": 4.0,
+        "logical_reasoning": 2.977777777777778,
+        "responsiveness": 3.4,
+        "relevance": 4.0,
+        "rhetorical_tactics": 0.0
+      },
+      "100": {
+        "consistency": 4.0,
+        "logical_reasoning": 3.066666666666667,
+        "responsiveness": 3.422222222222222,
+        "relevance": 4.0,
+        "rhetorical_tactics": 0.0
+      }
+    },
+    "qwen3:8b": {
+      "0": {
+        "consistency": 3.933333333333333,
+        "logical_reasoning": 2.6444444444444444,
+        "responsiveness": 2.6666666666666665,
+        "relevance": 3.977777777777778,
+        "rhetorical_tactics": 0.022222222222222223
+      },
+      "10": {
+        "consistency": 3.911111111111111,
+        "logical_reasoning": 2.6666666666666665,
+        "responsiveness": 2.688888888888889,
+        "relevance": 4.0,
+        "rhetorical_tactics": 0.022222222222222223
+      },
+      "100": {
+        "consistency": 3.6222222222222222,
+        "logical_reasoning": 2.6222222222222222,
+        "responsiveness": 2.7111111111111112,
+        "relevance": 3.977777777777778,
+        "rhetorical_tactics": 0.044444444444444446
+      }
+    }
+  },
+  "table": [
+    [
+      "Topic, assigned MP and tactic",
+      "Luna: control / assigned",
+      "Qwen: control / assigned"
+    ],
+    [
+      "Retirement, NZ First: topic derailment",
+      "0.00 / 0.00",
+      "0.00 / 0.00"
+    ],
+    [
+      "Workweek, ACT: straw man",
+      "0.00 / 0.00",
+      "0.00 / 0.67"
+    ],
+    [
+      "Nuclear, Green: procedural manipulation",
+      "0.00 / 0.00",
+      "0.33 / 0.33"
+    ]
+  ],
+  "tableEvidence": [
+    {
+      "model": "gpt-6-luna",
+      "topic": "retirement",
+      "control": 0.0,
+      "assigned": 0.0,
+      "pairs": [
+        {
+          "Model": "gpt-6-luna",
+          "Topic key": "retirement",
+          "Hansard excerpts": "100",
+          "Repetition": "1",
+          "Party": "NZ_FIRST",
+          "Speaker strategy": "TOPIC_DERAILMENT",
+          "Strategy role": "ASSIGNED",
+          "Metric": "rhetorical_tactics",
+          "NONE score": "0",
+          "Assigned-condition score": "0",
+          "Assigned minus NONE": "0",
+          "NONE status": "OK",
+          "Assigned status": "OK",
+          "NONE run ID": "27d054f5-b1e6-4550-b437-34897224a110",
+          "Assigned run ID": "0af53893-47da-42ba-a0bf-ffad794cdc96"
+        },
+        {
+          "Model": "gpt-6-luna",
+          "Topic key": "retirement",
+          "Hansard excerpts": "0",
+          "Repetition": "1",
+          "Party": "NZ_FIRST",
+          "Speaker strategy": "TOPIC_DERAILMENT",
+          "Strategy role": "ASSIGNED",
+          "Metric": "rhetorical_tactics",
+          "NONE score": "0",
+          "Assigned-condition score": "0",
+          "Assigned minus NONE": "0",
+          "NONE status": "OK",
+          "Assigned status": "OK",
+          "NONE run ID": "b4a2936f-6e35-4aad-8942-4ed81e419b0e",
+          "Assigned run ID": "f705a8b9-3bf4-4ae8-b9b4-60e25de7ff18"
+        },
+        {
+          "Model": "gpt-6-luna",
+          "Topic key": "retirement",
+          "Hansard excerpts": "10",
+          "Repetition": "1",
+          "Party": "NZ_FIRST",
+          "Speaker strategy": "TOPIC_DERAILMENT",
+          "Strategy role": "ASSIGNED",
+          "Metric": "rhetorical_tactics",
+          "NONE score": "0",
+          "Assigned-condition score": "0",
+          "Assigned minus NONE": "0",
+          "NONE status": "OK",
+          "Assigned status": "OK",
+          "NONE run ID": "128373ac-3467-4183-a963-0ffe7b710658",
+          "Assigned run ID": "ae496976-39ad-4b01-9dec-583869b0b975"
+        }
+      ]
+    },
+    {
+      "model": "qwen3:8b",
+      "topic": "retirement",
+      "control": 0.0,
+      "assigned": 0.0,
+      "pairs": [
+        {
+          "Model": "qwen3:8b",
+          "Topic key": "retirement",
+          "Hansard excerpts": "100",
+          "Repetition": "1",
+          "Party": "NZ_FIRST",
+          "Speaker strategy": "TOPIC_DERAILMENT",
+          "Strategy role": "ASSIGNED",
+          "Metric": "rhetorical_tactics",
+          "NONE score": "0",
+          "Assigned-condition score": "0",
+          "Assigned minus NONE": "0",
+          "NONE status": "OK",
+          "Assigned status": "OK",
+          "NONE run ID": "ded43838-f9e6-46a8-9f3e-b94038e44f81",
+          "Assigned run ID": "022c59b7-11c1-4da2-a8b2-19aee334f2f6"
+        },
+        {
+          "Model": "qwen3:8b",
+          "Topic key": "retirement",
+          "Hansard excerpts": "0",
+          "Repetition": "1",
+          "Party": "NZ_FIRST",
+          "Speaker strategy": "TOPIC_DERAILMENT",
+          "Strategy role": "ASSIGNED",
+          "Metric": "rhetorical_tactics",
+          "NONE score": "0",
+          "Assigned-condition score": "0",
+          "Assigned minus NONE": "0",
+          "NONE status": "OK",
+          "Assigned status": "OK",
+          "NONE run ID": "23e98ab2-28ae-432d-a68e-4f143a4b3e78",
+          "Assigned run ID": "2ac3ca7d-808c-4bde-ad7a-c72d24daeb62"
+        },
+        {
+          "Model": "qwen3:8b",
+          "Topic key": "retirement",
+          "Hansard excerpts": "10",
+          "Repetition": "1",
+          "Party": "NZ_FIRST",
+          "Speaker strategy": "TOPIC_DERAILMENT",
+          "Strategy role": "ASSIGNED",
+          "Metric": "rhetorical_tactics",
+          "NONE score": "0",
+          "Assigned-condition score": "0",
+          "Assigned minus NONE": "0",
+          "NONE status": "OK",
+          "Assigned status": "OK",
+          "NONE run ID": "e7275734-fd7f-4e05-80d1-34722432c23e",
+          "Assigned run ID": "f3b8df24-14e1-4f74-9a7e-9c6f3f15530c"
+        }
+      ]
+    },
+    {
+      "model": "gpt-6-luna",
+      "topic": "four_day_week",
+      "control": 0.0,
+      "assigned": 0.0,
+      "pairs": [
+        {
+          "Model": "gpt-6-luna",
+          "Topic key": "four_day_week",
+          "Hansard excerpts": "100",
+          "Repetition": "1",
+          "Party": "ACT",
+          "Speaker strategy": "STRAW_MAN",
+          "Strategy role": "ASSIGNED",
+          "Metric": "rhetorical_tactics",
+          "NONE score": "0",
+          "Assigned-condition score": "0",
+          "Assigned minus NONE": "0",
+          "NONE status": "OK",
+          "Assigned status": "OK",
+          "NONE run ID": "871e06bb-bf8a-455e-839c-cf67c2cd2ad7",
+          "Assigned run ID": "c3f628c5-aa31-486b-9cd3-323986ab5dde"
+        },
+        {
+          "Model": "gpt-6-luna",
+          "Topic key": "four_day_week",
+          "Hansard excerpts": "0",
+          "Repetition": "1",
+          "Party": "ACT",
+          "Speaker strategy": "STRAW_MAN",
+          "Strategy role": "ASSIGNED",
+          "Metric": "rhetorical_tactics",
+          "NONE score": "0",
+          "Assigned-condition score": "0",
+          "Assigned minus NONE": "0",
+          "NONE status": "OK",
+          "Assigned status": "OK",
+          "NONE run ID": "38078d89-e171-43e7-a609-a78850b35926",
+          "Assigned run ID": "969baae8-1279-4178-97e0-f9fbc3e7f834"
+        },
+        {
+          "Model": "gpt-6-luna",
+          "Topic key": "four_day_week",
+          "Hansard excerpts": "10",
+          "Repetition": "1",
+          "Party": "ACT",
+          "Speaker strategy": "STRAW_MAN",
+          "Strategy role": "ASSIGNED",
+          "Metric": "rhetorical_tactics",
+          "NONE score": "0",
+          "Assigned-condition score": "0",
+          "Assigned minus NONE": "0",
+          "NONE status": "OK",
+          "Assigned status": "OK",
+          "NONE run ID": "a62e5c2e-e2f7-4dc7-8ff8-f86648209bfd",
+          "Assigned run ID": "2b67a5c8-214a-4718-a7ce-d8aeeae62680"
+        }
+      ]
+    },
+    {
+      "model": "qwen3:8b",
+      "topic": "four_day_week",
+      "control": 0.0,
+      "assigned": 0.6666666666666666,
+      "pairs": [
+        {
+          "Model": "qwen3:8b",
+          "Topic key": "four_day_week",
+          "Hansard excerpts": "100",
+          "Repetition": "1",
+          "Party": "ACT",
+          "Speaker strategy": "STRAW_MAN",
+          "Strategy role": "ASSIGNED",
+          "Metric": "rhetorical_tactics",
+          "NONE score": "0",
+          "Assigned-condition score": "0",
+          "Assigned minus NONE": "0",
+          "NONE status": "OK",
+          "Assigned status": "OK",
+          "NONE run ID": "63f7274f-f80f-49b0-be4f-6490778326d3",
+          "Assigned run ID": "cb97b705-e834-401a-8598-897c742a37bf"
+        },
+        {
+          "Model": "qwen3:8b",
+          "Topic key": "four_day_week",
+          "Hansard excerpts": "0",
+          "Repetition": "1",
+          "Party": "ACT",
+          "Speaker strategy": "STRAW_MAN",
+          "Strategy role": "ASSIGNED",
+          "Metric": "rhetorical_tactics",
+          "NONE score": "0",
+          "Assigned-condition score": "2",
+          "Assigned minus NONE": "2",
+          "NONE status": "OK",
+          "Assigned status": "OK",
+          "NONE run ID": "6f5d6d6f-93e7-4acc-96f5-1617d3df2fef",
+          "Assigned run ID": "89705948-09a6-401e-b7fb-ce24798a7190"
+        },
+        {
+          "Model": "qwen3:8b",
+          "Topic key": "four_day_week",
+          "Hansard excerpts": "10",
+          "Repetition": "1",
+          "Party": "ACT",
+          "Speaker strategy": "STRAW_MAN",
+          "Strategy role": "ASSIGNED",
+          "Metric": "rhetorical_tactics",
+          "NONE score": "0",
+          "Assigned-condition score": "0",
+          "Assigned minus NONE": "0",
+          "NONE status": "OK",
+          "Assigned status": "OK",
+          "NONE run ID": "b52e81be-7157-4dcf-a69e-632ea9c6eed8",
+          "Assigned run ID": "71e7144d-e462-4b3b-8ee6-9893b1a55229"
+        }
+      ]
+    },
+    {
+      "model": "gpt-6-luna",
+      "topic": "nuclear_power",
+      "control": 0.0,
+      "assigned": 0.0,
+      "pairs": [
+        {
+          "Model": "gpt-6-luna",
+          "Topic key": "nuclear_power",
+          "Hansard excerpts": "100",
+          "Repetition": "1",
+          "Party": "GREEN",
+          "Speaker strategy": "PROCEDURAL_MANIPULATION",
+          "Strategy role": "ASSIGNED",
+          "Metric": "rhetorical_tactics",
+          "NONE score": "0",
+          "Assigned-condition score": "0",
+          "Assigned minus NONE": "0",
+          "NONE status": "OK",
+          "Assigned status": "OK",
+          "NONE run ID": "77a4d725-7275-430f-bbb6-a0ca13dcc5fc",
+          "Assigned run ID": "97c45e3a-0f9d-4b53-a419-e8f4bda0ffc8"
+        },
+        {
+          "Model": "gpt-6-luna",
+          "Topic key": "nuclear_power",
+          "Hansard excerpts": "0",
+          "Repetition": "1",
+          "Party": "GREEN",
+          "Speaker strategy": "PROCEDURAL_MANIPULATION",
+          "Strategy role": "ASSIGNED",
+          "Metric": "rhetorical_tactics",
+          "NONE score": "0",
+          "Assigned-condition score": "0",
+          "Assigned minus NONE": "0",
+          "NONE status": "OK",
+          "Assigned status": "OK",
+          "NONE run ID": "b3f296b0-2481-4a23-9ccd-4472c9223cc7",
+          "Assigned run ID": "e0d1de72-0ae2-49d3-a218-08040fb67319"
+        },
+        {
+          "Model": "gpt-6-luna",
+          "Topic key": "nuclear_power",
+          "Hansard excerpts": "10",
+          "Repetition": "1",
+          "Party": "GREEN",
+          "Speaker strategy": "PROCEDURAL_MANIPULATION",
+          "Strategy role": "ASSIGNED",
+          "Metric": "rhetorical_tactics",
+          "NONE score": "0",
+          "Assigned-condition score": "0",
+          "Assigned minus NONE": "0",
+          "NONE status": "OK",
+          "Assigned status": "OK",
+          "NONE run ID": "7b843259-ea36-4510-849e-f2ceea2654b9",
+          "Assigned run ID": "e479e6fb-eba2-4a63-aeb8-11aa314d5fe4"
+        }
+      ]
+    },
+    {
+      "model": "qwen3:8b",
+      "topic": "nuclear_power",
+      "control": 0.3333333333333333,
+      "assigned": 0.3333333333333333,
+      "pairs": [
+        {
+          "Model": "qwen3:8b",
+          "Topic key": "nuclear_power",
+          "Hansard excerpts": "100",
+          "Repetition": "1",
+          "Party": "GREEN",
+          "Speaker strategy": "PROCEDURAL_MANIPULATION",
+          "Strategy role": "ASSIGNED",
+          "Metric": "rhetorical_tactics",
+          "NONE score": "1",
+          "Assigned-condition score": "0",
+          "Assigned minus NONE": "-1",
+          "NONE status": "OK",
+          "Assigned status": "OK",
+          "NONE run ID": "5de5c1e7-5049-4a2a-984d-4ae585f87686",
+          "Assigned run ID": "2bee1b01-3df9-4f8e-bdd3-ac907aac2ac1"
+        },
+        {
+          "Model": "qwen3:8b",
+          "Topic key": "nuclear_power",
+          "Hansard excerpts": "0",
+          "Repetition": "1",
+          "Party": "GREEN",
+          "Speaker strategy": "PROCEDURAL_MANIPULATION",
+          "Strategy role": "ASSIGNED",
+          "Metric": "rhetorical_tactics",
+          "NONE score": "0",
+          "Assigned-condition score": "1",
+          "Assigned minus NONE": "1",
+          "NONE status": "OK",
+          "Assigned status": "OK",
+          "NONE run ID": "331e1a00-49f1-43ff-aa88-5b2ffb84c134",
+          "Assigned run ID": "96e27e09-8aef-41ad-99a8-bcba51f6c3a0"
+        },
+        {
+          "Model": "qwen3:8b",
+          "Topic key": "nuclear_power",
+          "Hansard excerpts": "10",
+          "Repetition": "1",
+          "Party": "GREEN",
+          "Speaker strategy": "PROCEDURAL_MANIPULATION",
+          "Strategy role": "ASSIGNED",
+          "Metric": "rhetorical_tactics",
+          "NONE score": "0",
+          "Assigned-condition score": "0",
+          "Assigned minus NONE": "0",
+          "NONE status": "OK",
+          "Assigned status": "OK",
+          "NONE run ID": "9413bacf-e549-4802-9b38-39f3eae7dcf9",
+          "Assigned run ID": "f1fbd1e0-2038-4024-8630-170a7464d166"
+        }
+      ]
+    }
+  ],
+  "sourceHashes": {
+    "runs.csv": "c587c71b21feaddb9c99a091e65e98fa6e8a82b6728954cf0deb5a98edfdc6d8",
+    "rubric.csv": "733e1987d067a2a7b0170bbd911915cf274a918143a7c3ac1cb25623abf1f5ea",
+    "matched-rubric.csv": "8fef20bb4958ebdd4d10b63f84c1542ed506b538be471323bf4fcf67de4aa100"
+  },
+  "noInference": true,
+  "matchedValues": {
+    "gpt-6-luna": {
+      "0": {
+        "consistency": {
+          "cooperative": 4.0,
+          "adversarial": 4.0
+        },
+        "logical_reasoning": {
+          "cooperative": 3.0,
+          "adversarial": 3.0
+        },
+        "responsiveness": {
+          "cooperative": 3.533333333333333,
+          "adversarial": 3.2666666666666666
+        },
+        "relevance": {
+          "cooperative": 4.0,
+          "adversarial": 4.0
+        },
+        "rhetorical_tactics": {
+          "cooperative": 0.0,
+          "adversarial": 0.0
+        }
+      },
+      "10": {
+        "consistency": {
+          "cooperative": 4.0,
+          "adversarial": 4.0
+        },
+        "logical_reasoning": {
+          "cooperative": 3.0,
+          "adversarial": 3.0
+        },
+        "responsiveness": {
+          "cooperative": 3.3333333333333335,
+          "adversarial": 3.6
+        },
+        "relevance": {
+          "cooperative": 4.0,
+          "adversarial": 4.0
+        },
+        "rhetorical_tactics": {
+          "cooperative": 0.0,
+          "adversarial": 0.0
+        }
+      },
+      "100": {
+        "consistency": {
+          "cooperative": 4.0,
+          "adversarial": 4.0
+        },
+        "logical_reasoning": {
+          "cooperative": 3.2,
+          "adversarial": 3.0
+        },
+        "responsiveness": {
+          "cooperative": 3.533333333333333,
+          "adversarial": 3.3333333333333335
+        },
+        "relevance": {
+          "cooperative": 4.0,
+          "adversarial": 4.0
+        },
+        "rhetorical_tactics": {
+          "cooperative": 0.0,
+          "adversarial": 0.0
+        }
+      }
+    },
+    "qwen3:8b": {
+      "0": {
+        "consistency": {
+          "cooperative": 4.0,
+          "adversarial": 3.8666666666666667
+        },
+        "logical_reasoning": {
+          "cooperative": 2.6,
+          "adversarial": 2.533333333333333
+        },
+        "responsiveness": {
+          "cooperative": 2.4,
+          "adversarial": 2.933333333333333
+        },
+        "relevance": {
+          "cooperative": 4.0,
+          "adversarial": 4.0
+        },
+        "rhetorical_tactics": {
+          "cooperative": 0.0,
+          "adversarial": 0.26666666666666666
+        }
+      },
+      "10": {
+        "consistency": {
+          "cooperative": 3.933333333333333,
+          "adversarial": 4.0
+        },
+        "logical_reasoning": {
+          "cooperative": 2.6666666666666665,
+          "adversarial": 2.533333333333333
+        },
+        "responsiveness": {
+          "cooperative": 2.533333333333333,
+          "adversarial": 2.6
+        },
+        "relevance": {
+          "cooperative": 4.0,
+          "adversarial": 4.0
+        },
+        "rhetorical_tactics": {
+          "cooperative": 0.06666666666666667,
+          "adversarial": 0.0
+        }
+      },
+      "100": {
+        "consistency": {
+          "cooperative": 4.0,
+          "adversarial": 4.0
+        },
+        "logical_reasoning": {
+          "cooperative": 2.8666666666666667,
+          "adversarial": 2.3333333333333335
+        },
+        "responsiveness": {
+          "cooperative": 2.6666666666666665,
+          "adversarial": 2.933333333333333
+        },
+        "relevance": {
+          "cooperative": 4.0,
+          "adversarial": 4.0
+        },
+        "rhetorical_tactics": {
+          "cooperative": 0.06666666666666667,
+          "adversarial": 0.0
+        }
+      }
+    }
+  },
+  "seriesValues": {
+    "gpt-6-luna": {
+      "cooperative": {
+        "0": {
+          "consistency": 4.0,
+          "logical_reasoning": 3.0,
+          "responsiveness": 3.488888888888889,
+          "relevance": 4.0,
+          "rhetorical_tactics": 0.0
+        },
+        "10": {
+          "consistency": 4.0,
+          "logical_reasoning": 2.977777777777778,
+          "responsiveness": 3.4,
+          "relevance": 4.0,
+          "rhetorical_tactics": 0.0
+        },
+        "100": {
+          "consistency": 4.0,
+          "logical_reasoning": 3.066666666666667,
+          "responsiveness": 3.422222222222222,
+          "relevance": 4.0,
+          "rhetorical_tactics": 0.0
+        }
+      },
+      "topic_derailment": {
+        "0": {
+          "consistency": 4.0,
+          "logical_reasoning": 3.0,
+          "responsiveness": 3.6,
+          "relevance": 4.0,
+          "rhetorical_tactics": 0.0
+        },
+        "10": {
+          "consistency": 4.0,
+          "logical_reasoning": 3.0,
+          "responsiveness": 4.0,
+          "relevance": 4.0,
+          "rhetorical_tactics": 0.0
+        },
+        "100": {
+          "consistency": 4.0,
+          "logical_reasoning": 3.0,
+          "responsiveness": 3.0,
+          "relevance": 4.0,
+          "rhetorical_tactics": 0.0
+        }
+      },
+      "straw_man": {
+        "0": {
+          "consistency": 4.0,
+          "logical_reasoning": 3.0,
+          "responsiveness": 3.0,
+          "relevance": 4.0,
+          "rhetorical_tactics": 0.0
+        },
+        "10": {
+          "consistency": 4.0,
+          "logical_reasoning": 3.0,
+          "responsiveness": 3.0,
+          "relevance": 4.0,
+          "rhetorical_tactics": 0.0
+        },
+        "100": {
+          "consistency": 4.0,
+          "logical_reasoning": 3.0,
+          "responsiveness": 3.0,
+          "relevance": 4.0,
+          "rhetorical_tactics": 0.0
+        }
+      },
+      "procedural_manipulation": {
+        "0": {
+          "consistency": 4.0,
+          "logical_reasoning": 3.0,
+          "responsiveness": 3.2,
+          "relevance": 4.0,
+          "rhetorical_tactics": 0.0
+        },
+        "10": {
+          "consistency": 4.0,
+          "logical_reasoning": 3.0,
+          "responsiveness": 3.8,
+          "relevance": 4.0,
+          "rhetorical_tactics": 0.0
+        },
+        "100": {
+          "consistency": 4.0,
+          "logical_reasoning": 3.0,
+          "responsiveness": 4.0,
+          "relevance": 4.0,
+          "rhetorical_tactics": 0.0
+        }
+      }
+    },
+    "qwen3:8b": {
+      "cooperative": {
+        "0": {
+          "consistency": 3.933333333333333,
+          "logical_reasoning": 2.6444444444444444,
+          "responsiveness": 2.6666666666666665,
+          "relevance": 3.977777777777778,
+          "rhetorical_tactics": 0.022222222222222223
+        },
+        "10": {
+          "consistency": 3.911111111111111,
+          "logical_reasoning": 2.6666666666666665,
+          "responsiveness": 2.688888888888889,
+          "relevance": 4.0,
+          "rhetorical_tactics": 0.022222222222222223
+        },
+        "100": {
+          "consistency": 3.6222222222222222,
+          "logical_reasoning": 2.6222222222222222,
+          "responsiveness": 2.7111111111111112,
+          "relevance": 3.977777777777778,
+          "rhetorical_tactics": 0.044444444444444446
+        }
+      },
+      "topic_derailment": {
+        "0": {
+          "consistency": 4.0,
+          "logical_reasoning": 2.2,
+          "responsiveness": 3.0,
+          "relevance": 4.0,
+          "rhetorical_tactics": 0.0
+        },
+        "10": {
+          "consistency": 4.0,
+          "logical_reasoning": 2.8,
+          "responsiveness": 2.8,
+          "relevance": 4.0,
+          "rhetorical_tactics": 0.0
+        },
+        "100": {
+          "consistency": 4.0,
+          "logical_reasoning": 2.0,
+          "responsiveness": 3.0,
+          "relevance": 4.0,
+          "rhetorical_tactics": 0.0
+        }
+      },
+      "straw_man": {
+        "0": {
+          "consistency": 4.0,
+          "logical_reasoning": 2.6,
+          "responsiveness": 2.8,
+          "relevance": 4.0,
+          "rhetorical_tactics": 0.4
+        },
+        "10": {
+          "consistency": 4.0,
+          "logical_reasoning": 2.0,
+          "responsiveness": 2.4,
+          "relevance": 4.0,
+          "rhetorical_tactics": 0.0
+        },
+        "100": {
+          "consistency": 4.0,
+          "logical_reasoning": 2.6,
+          "responsiveness": 3.0,
+          "relevance": 4.0,
+          "rhetorical_tactics": 0.0
+        }
+      },
+      "procedural_manipulation": {
+        "0": {
+          "consistency": 3.6,
+          "logical_reasoning": 2.8,
+          "responsiveness": 3.0,
+          "relevance": 4.0,
+          "rhetorical_tactics": 0.4
+        },
+        "10": {
+          "consistency": 4.0,
+          "logical_reasoning": 2.8,
+          "responsiveness": 2.6,
+          "relevance": 4.0,
+          "rhetorical_tactics": 0.0
+        },
+        "100": {
+          "consistency": 4.0,
+          "logical_reasoning": 2.4,
+          "responsiveness": 2.8,
+          "relevance": 4.0,
+          "rhetorical_tactics": 0.0
+        }
+      }
+    }
+  },
+  "seriesSamples": {
+    "gpt-6-luna": {
+      "cooperative": {
+        "0": {
+          "runIds": [
+            "2c98fafc-546b-4388-89e5-29f00a24eaea",
+            "38078d89-e171-43e7-a609-a78850b35926",
+            "665eb6cc-0867-4451-8908-8fbee7fc6636",
+            "7495db15-1f22-4743-b8cf-b140b4b3a480",
+            "7d4b2ba9-3bab-407a-b66d-7e82892e835b",
+            "b3f296b0-2481-4a23-9ccd-4472c9223cc7",
+            "b4a2936f-6e35-4aad-8942-4ed81e419b0e",
+            "de5e99bf-219b-4c0e-b1c2-83399743b06f",
+            "e832049f-bb4e-46d9-9517-947c03d7ee01"
+          ],
+          "debates": 9,
+          "partyScoresPerMetric": 45,
+          "speeches": 225
+        },
+        "10": {
+          "runIds": [
+            "128373ac-3467-4183-a963-0ffe7b710658",
+            "15791ff5-f605-449d-8e81-b53fde1934cb",
+            "6f6900f2-8cfb-444b-8cec-5f725b71259f",
+            "77737b89-1e82-4ccb-8a50-d2284c842cd0",
+            "7b843259-ea36-4510-849e-f2ceea2654b9",
+            "8b08480c-fc1c-4f44-8d0c-4ca1f14eb27a",
+            "a62e5c2e-e2f7-4dc7-8ff8-f86648209bfd",
+            "b5d27d94-85fa-4440-8658-c8da4c826a64",
+            "f7687b2a-051d-4945-8be4-6c2c3dd95bf4"
+          ],
+          "debates": 9,
+          "partyScoresPerMetric": 45,
+          "speeches": 225
+        },
+        "100": {
+          "runIds": [
+            "27d054f5-b1e6-4550-b437-34897224a110",
+            "2970c54f-c329-473e-9ca8-4ebc13989a7e",
+            "60efa9d0-67ef-4610-bfea-68e97509e8bf",
+            "68a95c5b-96d9-4b2c-8abf-87b17eebbb5a",
+            "77a4d725-7275-430f-bbb6-a0ca13dcc5fc",
+            "871e06bb-bf8a-455e-839c-cf67c2cd2ad7",
+            "ba31ca8d-0d97-4e24-9e84-d380a110e295",
+            "c24404af-f9a3-40c5-a9ec-cf57b9591155",
+            "f84de5ca-eb5f-4293-bde2-1cf01a9329fd"
+          ],
+          "debates": 9,
+          "partyScoresPerMetric": 45,
+          "speeches": 225
+        }
+      },
+      "topic_derailment": {
+        "0": {
+          "runIds": [
+            "f705a8b9-3bf4-4ae8-b9b4-60e25de7ff18"
+          ],
+          "debates": 1,
+          "partyScoresPerMetric": 5,
+          "speeches": 25
+        },
+        "10": {
+          "runIds": [
+            "ae496976-39ad-4b01-9dec-583869b0b975"
+          ],
+          "debates": 1,
+          "partyScoresPerMetric": 5,
+          "speeches": 25
+        },
+        "100": {
+          "runIds": [
+            "0af53893-47da-42ba-a0bf-ffad794cdc96"
+          ],
+          "debates": 1,
+          "partyScoresPerMetric": 5,
+          "speeches": 25
+        }
+      },
+      "straw_man": {
+        "0": {
+          "runIds": [
+            "969baae8-1279-4178-97e0-f9fbc3e7f834"
+          ],
+          "debates": 1,
+          "partyScoresPerMetric": 5,
+          "speeches": 25
+        },
+        "10": {
+          "runIds": [
+            "2b67a5c8-214a-4718-a7ce-d8aeeae62680"
+          ],
+          "debates": 1,
+          "partyScoresPerMetric": 5,
+          "speeches": 25
+        },
+        "100": {
+          "runIds": [
+            "c3f628c5-aa31-486b-9cd3-323986ab5dde"
+          ],
+          "debates": 1,
+          "partyScoresPerMetric": 5,
+          "speeches": 25
+        }
+      },
+      "procedural_manipulation": {
+        "0": {
+          "runIds": [
+            "e0d1de72-0ae2-49d3-a218-08040fb67319"
+          ],
+          "debates": 1,
+          "partyScoresPerMetric": 5,
+          "speeches": 25
+        },
+        "10": {
+          "runIds": [
+            "e479e6fb-eba2-4a63-aeb8-11aa314d5fe4"
+          ],
+          "debates": 1,
+          "partyScoresPerMetric": 5,
+          "speeches": 25
+        },
+        "100": {
+          "runIds": [
+            "97c45e3a-0f9d-4b53-a419-e8f4bda0ffc8"
+          ],
+          "debates": 1,
+          "partyScoresPerMetric": 5,
+          "speeches": 25
+        }
+      }
+    },
+    "qwen3:8b": {
+      "cooperative": {
+        "0": {
+          "runIds": [
+            "23e98ab2-28ae-432d-a68e-4f143a4b3e78",
+            "331e1a00-49f1-43ff-aa88-5b2ffb84c134",
+            "349f0092-3f39-469f-8212-9436157a27ed",
+            "48025fce-46bf-4964-8342-35c302805033",
+            "6f5d6d6f-93e7-4acc-96f5-1617d3df2fef",
+            "7a03aa63-b7a2-4a40-aa59-a31f153c9593",
+            "97771997-a13b-46b5-bbe4-cee1ff48d9e9",
+            "cc3f9209-98f0-435e-9384-6ce5da6750b8",
+            "f255969d-79fd-4e79-835d-36f05da186e6"
+          ],
+          "debates": 9,
+          "partyScoresPerMetric": 45,
+          "speeches": 225
+        },
+        "10": {
+          "runIds": [
+            "1d9c8845-66c8-4203-b256-9e04b2702478",
+            "6fae7368-22a3-4673-ac24-bd53eca49c62",
+            "9413bacf-e549-4802-9b38-39f3eae7dcf9",
+            "b52e81be-7157-4dcf-a69e-632ea9c6eed8",
+            "c1e17fdd-0d88-491f-a064-3bdd4a469363",
+            "d192777b-0ff7-42ec-86ef-aa42cf662e90",
+            "e4365e70-8d63-4ce9-b737-0c4f9bb5e3f9",
+            "e7275734-fd7f-4e05-80d1-34722432c23e",
+            "ed87a435-fb57-4741-abfd-5b329a5af737"
+          ],
+          "debates": 9,
+          "partyScoresPerMetric": 45,
+          "speeches": 225
+        },
+        "100": {
+          "runIds": [
+            "0bf5acdd-f0f0-4545-aae1-e8207a682104",
+            "0d1d441a-49c4-4da4-9be0-f2171837e051",
+            "208f86b3-88b7-4931-8305-fc93264c91a9",
+            "4b6dc9b6-fcc7-4a1f-8c7f-0e68b752ca80",
+            "5de5c1e7-5049-4a2a-984d-4ae585f87686",
+            "63f7274f-f80f-49b0-be4f-6490778326d3",
+            "7d873921-9dce-412e-a893-d6d8a2fb3ed0",
+            "d438fd5d-e073-49f6-833e-7e1ad468a661",
+            "ded43838-f9e6-46a8-9f3e-b94038e44f81"
+          ],
+          "debates": 9,
+          "partyScoresPerMetric": 45,
+          "speeches": 225
+        }
+      },
+      "topic_derailment": {
+        "0": {
+          "runIds": [
+            "2ac3ca7d-808c-4bde-ad7a-c72d24daeb62"
+          ],
+          "debates": 1,
+          "partyScoresPerMetric": 5,
+          "speeches": 25
+        },
+        "10": {
+          "runIds": [
+            "f3b8df24-14e1-4f74-9a7e-9c6f3f15530c"
+          ],
+          "debates": 1,
+          "partyScoresPerMetric": 5,
+          "speeches": 25
+        },
+        "100": {
+          "runIds": [
+            "022c59b7-11c1-4da2-a8b2-19aee334f2f6"
+          ],
+          "debates": 1,
+          "partyScoresPerMetric": 5,
+          "speeches": 25
+        }
+      },
+      "straw_man": {
+        "0": {
+          "runIds": [
+            "89705948-09a6-401e-b7fb-ce24798a7190"
+          ],
+          "debates": 1,
+          "partyScoresPerMetric": 5,
+          "speeches": 25
+        },
+        "10": {
+          "runIds": [
+            "71e7144d-e462-4b3b-8ee6-9893b1a55229"
+          ],
+          "debates": 1,
+          "partyScoresPerMetric": 5,
+          "speeches": 25
+        },
+        "100": {
+          "runIds": [
+            "cb97b705-e834-401a-8598-897c742a37bf"
+          ],
+          "debates": 1,
+          "partyScoresPerMetric": 5,
+          "speeches": 25
+        }
+      },
+      "procedural_manipulation": {
+        "0": {
+          "runIds": [
+            "96e27e09-8aef-41ad-99a8-bcba51f6c3a0"
+          ],
+          "debates": 1,
+          "partyScoresPerMetric": 5,
+          "speeches": 25
+        },
+        "10": {
+          "runIds": [
+            "f1fbd1e0-2038-4024-8630-170a7464d166"
+          ],
+          "debates": 1,
+          "partyScoresPerMetric": 5,
+          "speeches": 25
+        },
+        "100": {
+          "runIds": [
+            "2bee1b01-3df9-4f8e-bdd3-ac907aac2ac1"
+          ],
+          "debates": 1,
+          "partyScoresPerMetric": 5,
+          "speeches": 25
+        }
+      }
+    }
+  },
+  "seriesConditionIds": {
+    "cooperative": "NONE",
+    "topic_derailment": "NZ_FIRST=TOPIC_DERAILMENT",
+    "straw_man": "ACT=STRAW_MAN",
+    "procedural_manipulation": "GREEN=PROCEDURAL_MANIPULATION"
+  },
+  "displayAxes": {
+    "consistency": {
+      "min": 3.5,
+      "max": 4.1,
+      "majorUnit": 0.1
+    },
+    "logical_reasoning": {
+      "min": 1.5,
+      "max": 3.5,
+      "majorUnit": 0.5
+    },
+    "responsiveness": {
+      "min": 2,
+      "max": 4.1,
+      "majorUnit": 0.5
+    }
+  },
+  "modelColourFamilies": {
+    "gpt-6-luna": {
+      "cooperative": "#1F4D36",
+      "topic_derailment": "#2B7340",
+      "straw_man": "#327C66",
+      "procedural_manipulation": "#607C2D"
+    },
+    "qwen3:8b": {
+      "cooperative": "#1E4F9B",
+      "topic_derailment": "#256CAE",
+      "straw_man": "#4759A8",
+      "procedural_manipulation": "#397FBC"
+    }
+  },
+  "presentationRevision": 6,
+  "seriesPerChart": 8,
+  "opaqueColouredMarkers": true
+}
