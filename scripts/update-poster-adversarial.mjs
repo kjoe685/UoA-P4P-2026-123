@@ -1,4 +1,4 @@
-// T82–T88: focused native-object revision of the supplied A1 poster, without inference.
+// T82–T89: focused native-object revision of the supplied A1 poster, without inference.
 // Usage: node scripts/update-poster-adversarial.mjs FACTS_JSON BUILD_DIR OUTPUT_DIR REVISION
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -102,9 +102,9 @@ const assigned=add('Adversarial findings',"Adversarial agents: Qwen's reasoning 
 p.delete(sourceElements.find(e=>e.name==='Google Shape;84;p1').id);
 
 move(85,24.13,747,19.8,19.8);move(86,51,745.5,530,25);
-const outcome=edit(87,'Outcomes: An AI debate engine with replaceable components and a browser-based frontend.\nWe found no consistent gain in performance metrics from extra Hansard excerpts.',24.13,774,177.74,35,21.5,{spacing:1.02,align:'justify'});outcome.text.get('Outcomes:').bold=true;
-const next=edit(88,'Next Steps: Expand testing with more providers and higher-performance language models.\nHost the web browser platform on a server accessible through the internet.',214.13,774,177.74,35,21.5,{spacing:1.02,align:'justify'});next.text.get('Next Steps:').bold=true;
-const credit=edit(89,'Albert Sun — frontend, live chamber, initial CLI and Hansard grounding.\nKieran Joe — engine, architecture and\nsupervisor coordination.',404.13,774,177.74,35,21.5,{spacing:1.02,align:'justify'});credit.text.get('Albert Sun').bold=true;credit.text.get('Kieran Joe').bold=true;
+const outcome=edit(87,'Outcomes: An AI debate engine with replaceable components and a browser-based frontend.\nWe found no consistent gain in performance metrics from extra Hansard excerpts.',33,774,160,35,21.5,{spacing:1.02,align:'justify'});outcome.text.get('Outcomes:').bold=true;
+const next=edit(88,'Next Steps: Expand testing with more providers and higher-performance language models.\nHost the web browser platform on a server accessible through the internet.',223,774,160,35,21.5,{spacing:1.02,align:'justify'});next.text.get('Next Steps:').bold=true;
+const credit=edit(89,'Albert Sun — frontend, live chamber, initial CLI and Hansard grounding.\nKieran Joe — engine, architecture and\nsupervisor coordination.',413,774,160,35,21.5,{spacing:1.02,align:'justify'});credit.text.get('Albert Sun').bold=true;credit.text.get('Kieran Joe').bold=true;
 move(90,0,814,606,39);
 move(91,24.13,817,177.74,10).text.alignment='center';
 edit(92,'[1] Du et al. (2024). Multiagent Debate.\n[2] Rauh & Schwalbach (2020). ParlSpeech V2.',24.13,829,177.74,17,20,{color:C.muted,spacing:1.02,align:'center'});

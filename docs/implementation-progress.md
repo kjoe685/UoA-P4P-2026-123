@@ -1,5 +1,17 @@
 # Implementation progress and recovery
 
+## T89 narrower justified poster paragraphs
+
+**T89 — Reduce the lower paragraph widths to improve word spacing (REQ-11, 19, 27–30, 34, 37–43, 55, 57–58).**
+
+Recorded before edits, 2026-10-11 Pacific/Auckland. Dependency: verified T88 `3316c04`; annotated source is `poster-123-aligned-thirds/Poster_123_Updated.pptx`. The user finds the justified word spacing excessive and requests narrower paragraphs. Reduce all three section 4 frames from 177.74 to 160 mm, centred within the same evenly spaced thirds. Keep justification, text/font sizes/name emphasis, centred tactic descriptions, graphs, merged note and A1 portrait trim/6 mm bleed. Adjust vertical placement only if the narrower wrapping needs more room, preserving footer clearance. No inference, paid calls, application/settings change, upload or push.
+
+Acceptance: inspect enlarged renders for improved spacing and clean wrapping, verify narrower equal widths and unchanged column centres, normalized wording/fonts/emphasis, no clipping and footer clearance. Confirm every unedited native object, chart/cache/workbook value and public data/image remains exact to T88, preserve source/evidence/refs and exact print geometry, then commit the verified local checkpoint. New output: `outputs/01a12824-15b8-7b32-8a23-945b4c18dc65/poster-123-narrower-paragraphs/`; private work: `target/T89-poster/`. Next freeze preservation, narrow the frames, render and verify spacing/fit, then record and commit/deliver without pushing.
+
+T89 verified r17, 2026-10-11 Pacific/Auckland: all three section 4 paragraphs are 160 mm wide, reduced from 177.74 mm, at 33/223/413 mm left positions. Their original evenly spaced column centres remain exact, with justification, all text, font sizes and name emphasis unchanged. The narrower frames wrap cleanly within the existing height and improve the justified spacing in native and enlarged final PDF views; no vertical movement or footer change is needed. Only these three native frame positions/widths differ from T88. Every other native object, all three chart XML definitions, 24 series, 72 cache/workbook values, filled markers, palettes, merged note/verified denominator and both source images remain exact. All upper/graph/result and footer regions are pixel-identical. Package/font/layout/workbook/import checks pass with zero findings, and the previous evidence/count certification is inherited unchanged. No study, inference or rescore occurred; native PowerPoint execution remains unverified.
+
+PPTX: 289,054 bytes / SHA256 `28eb3ee160624b53bbe06ab07fc881977324b3c763ed72cc2dbc1b9d8522cd5c`; PDF: 3,597,528 bytes / SHA256 `8c074b7e685191762fe10dacce6a89252aae936086ea4b2e2364ff3d7e500094`. The lossless 300 dpi PDF retains 594 × 841 mm portrait A1 trim, 606 × 853 mm media and 6 mm bleed on every edge, below 50 MB. All 460 protected files, six reference tips, main ancestry and six excluded evaluation ancestors pass preservation checks. The sole owned chart snapshot is retained privately; public-content checks find no credentials or private prompt payloads. No paid calls, application/settings changes, upload or push occurred. Next stage exactly the two owned source/tracker edits and five new delivery files, verify staged bytes, commit this checked T89 checkpoint locally and deliver the poster/PDF.
+
 ## T88 poster paragraph alignment
 
 **T88 — Centre the tactic descriptions and match the section 4 thirds (REQ-11, 19, 27–30, 34, 37–43, 55, 57–58).**
