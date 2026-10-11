@@ -1,4 +1,4 @@
-// T82–T86: focused native-object revision of the supplied A1 poster, without inference.
+// T82–T87: focused native-object revision of the supplied A1 poster, without inference.
 // Usage: node scripts/update-poster-adversarial.mjs FACTS_JSON BUILD_DIR OUTPUT_DIR REVISION
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -39,12 +39,13 @@ for (const n of [29,30,31]) {
   byNumber(n).text.alignment='center';
   changes.push({number:n,property:'alignment',value:'center'});
 }
-edit(32,'Real MPs can derail debate, distort claims and exploit procedure. AI multi-agent debate has been studied to improve reasoning [1]. We built a virtual NZ House of AI MPs, then privately tasked some with sabotage and tested Hansard grounding.',24.13,104,557.74,29,29);
+byNumber(30).text='Cooperative debate and hidden disruptive agents';
+edit(32,'Real MPs can derail debate, distort claims and exploit procedure. AI multi-agent debate has been studied to improve reasoning [1]. We built a virtual NZ House of AI MPs, then privately tasked some with sabotage and tested the effects of grounding agents with Hansard.',24.13,104,557.74,29,29);
 edit(44,'One MP represents each chosen party.\nSpeakers are highlighted when speaking.',360,176.5,221.87,20,24.5,{color:C.muted});
 edit(56,'Public JSON and text exports support local\nsentiment/stance analysis and separate rubric scores.',360,324.5,221.87,20,24.5);
-edit(57,'Fig. 1 A demonstration sitting with a National straw-man assignment.\nWeb browser, guided command, and terminal interfaces all connect to the debate engine backend.',24.13,330,310,22,20.5,{italic:true,color:C.muted,spacing:1.02});
+edit(57,'Fig. 1 A demonstration sitting with a National straw-man assigned adversarial agent.\nWeb browser, guided command, and terminal interfaces all connect to the debate engine backend.',24.13,330,310,22,20.5,{italic:true,color:C.muted,spacing:1.02});
 
-add('Backend engine explanation',"At run start, the backend combines each MP's party profile and selected real Hansard excerpts [2] in a private system prompt, adding any assigned tactic. The scheduler takes turns sending that MP's prompt, public debate history and a turn cue to its model's chat completion endpoint. Each returned speech joins the public record for the next MP. Other agents cannot read the private prompts.",24.13,380.5,557.74,33,25.5);
+add('Backend engine explanation',"At run start, the backend combines each MP's party profile and selected real parliamentary debate excerpts [2] in a private system prompt, adding any assigned tactic. The scheduler takes turns sending that MP's prompt, public debate history and a turn cue to its model's chat completion endpoint. Each returned speech joins the public record for the next MP. Other agents cannot read the private prompts.",24.13,380.5,557.74,33,25.5);
 const cards=[
   [24,60,61,'Real Hansard','500 reviewed excerpts\n0/10/100 per party'],
   [22,62,63,'Private setup','Frozen prompts\nand hidden tactics'],
@@ -64,11 +65,15 @@ for (const [head,body,x] of [[70,71,24.13],[72,73,214.13],[74,75,404.13]]){
 }
 // Restore an apostrophe damaged in the supplied file while preserving its definition.
 edit(73,"Misrepresent an opponent's claim,\nthen attack the distorted version.",214.13,478,177.74,20,23.5);
+for (const [head,body,x] of [[70,71,52],[72,73,242],[74,75,432]]) {
+  byNumber(head).text.alignment='center';
+  move(body,x,478,122,20).text.alignment='right';
+}
 p.delete(sourceElements.find(e=>e.name==='Google Shape;76;p1').id);
 
 move(77,24.13,502,19.8,19.8);
 edit(78,'Grounding and adversarial testing',51,500.5,530,25,53,{font:'Cambria',bold:true,color:C.heading});
-const design=edit(79,'72 debates (1,800 speeches): 54 cooperative baselines (three repeats), plus 18 adversarial runs (one repeat, one assigned MP). GPT-6 Luna and Qwen3:8b debate retirement, nuclear power and a four-day workweek at 0/10/100 excerpts, with five parties, five rounds and no interruptions.',24.13,529,557.74,23,24.5);
+const design=edit(79,'72 debates (1,800 speeches): 54 cooperative baselines (three repeats), plus 18 adversarial runs (one repeat, one assigned MP). GPT-6 Luna and Qwen3:8b debate retirement, nuclear power and a four-day workweek at 0/10/100 excerpts, with five parties, five rounds and no interjections.',24.13,529,557.74,23,24.5);
 design.text.get('72 debates (1,800 speeches)').bold=true;
 design.text.get('54 cooperative baselines').bold=true;
 design.text.get('18 adversarial runs').bold=true;
@@ -90,20 +95,23 @@ for (const [i,[metric,title]] of metrics.entries()){
   const chart=s.charts.add('line',{name:`Cooperative and adversarial ${metric}`,title,titleTextStyle:{fontSize:pt(26),bold:true,fill:C.heading},titlePlacement:'aboveChart',position:{left:mm(24.13+i*188),top:mm(555),width:mm(181.74),height:mm(100)},categories:['0','10','100'],series,hasLegend:true,legend:{position:'bottom',overlay:false,textStyle:{fontSize:pt(17),fill:C.text}},xAxis:{visible:true,position:'bottom',title:{text:'Hansard excerpts per party',textStyle:{fontSize:pt(17),fill:C.muted}},textStyle:{fontSize:pt(18),fill:C.text},line:{fill:C.line,width:1},majorGridlines:null},yAxis:{visible:true,position:'left',...displayAxes[metric],numberFormatCode:'0.0',textStyle:{fontSize:pt(18),fill:C.text},line:{fill:'none',width:0},majorGridlines:{style:'solid',fill:C.line,width:1}},lineOptions:{grouping:'standard',smooth:false},chartFill:C.paper,chartLine:{fill:'none',width:0},plotAreaFill:C.paper,plotAreaLine:{fill:'none',width:0}});
   applyPresentationChartFont(chart,{fontFamily:'Calibri'});
 }
-add('Truncated axis disclosure','Vertical axes are truncated. Rubric scores range from 0 to 4.',24.13,659,557.74,8,20.5,{color:C.muted});
-const findings=edit(83,"Co-operative agents: Consistency stays high, but Qwen falls from 3.93 to 3.62. Luna's reasoning stays near 3.0; Qwen's stays between 2.62 and 2.67. Responsiveness changes little for either model. More Hansard gives no consistent gain.",24.13,670,557.74,23,24.5,{color:C.heading});
+add('Truncated axis disclosure','Vertical axes are truncated. Rubric scores range from 0 to 4. Each co-operative point averages 9 debates (45 MP ratings per metric); each strategy point averages five MPs. GPT-6 Luna used a consistent rating prompt. Topic, party and repeats limit comparison.',24.13,659,557.74,18,20.5,{color:C.muted});
+const findings=edit(83,"Co-operative agents: Consistency stays high, but Qwen falls from 3.93 to 3.62. Luna's reasoning stays near 3.0; Qwen's stays between 2.62 and 2.67. Responsiveness changes little for either model. More Hansard gives no consistent gain.",24.13,683,557.74,23,24.5,{color:C.heading});
 findings.text.get('Co-operative agents:').bold=true;
-const assigned=add('Adversarial findings',"Adversarial agents: Qwen's reasoning varies from 2.0 to 2.8; Luna's procedural responsiveness rises from 3.2 to 4.0. Disruption scores are 2/4 for Qwen ACT only at 0 excerpts and 0 for adversarial Luna MPs; Qwen Green's paired changes span -1 to +1. Adversarial assignment alone is insufficient.",24.13,696,557.74,21,24.5,{color:C.red});assigned.text.get('Adversarial agents:').bold=true;
-edit(84,'Co-operative points average 9 debates (45 ratings); each strategy point averages five MPs. GPT-6 Luna used a consistent rating prompt. Topic, party and repeats limit comparison.',24.13,723,557.74,18,20.5,{italic:true,color:C.muted});
+const assigned=add('Adversarial findings',"Adversarial agents: Qwen's reasoning varies from 2.0 to 2.8; Luna's procedural responsiveness rises from 3.2 to 4.0. Disruption scores are 2/4 for Qwen ACT only at 0 excerpts and 0 for adversarial Luna MPs; Qwen Green's paired changes span -1 to +1. Adversarial assignment alone is insufficient for disruption.",24.13,709,557.74,23,24.5,{color:C.red});assigned.text.get('Adversarial agents:').bold=true;
+p.delete(sourceElements.find(e=>e.name==='Google Shape;84;p1').id);
 
 move(85,24.13,747,19.8,19.8);move(86,51,745.5,530,25);
-const outcome=edit(87,'Platform: An AI debate engine with replaceable components and a browser-based frontend.\nWe found no consistent gain in performance metrics from extra Hansard.',24.13,774,178,35,21.5,{spacing:1.02});outcome.text.get('Platform:').bold=true;
-const next=edit(88,'Next: Expand testing with more providers and higher-performance language models.\nHost the web browser platform on a server accessible through the internet.',216,774,175,35,21.5,{spacing:1.02});next.text.get('Next:').bold=true;
+const outcome=edit(87,'Outcomes: An AI debate engine with replaceable components and a browser-based frontend.\nWe found no consistent gain in performance metrics from extra Hansard excerpts.',24.13,774,178,35,21.5,{spacing:1.02});outcome.text.get('Outcomes:').bold=true;
+const next=edit(88,'Next Steps: Expand testing with more providers and higher-performance language models.\nHost the web browser platform on a server accessible through the internet.',216,774,175,35,21.5,{spacing:1.02});next.text.get('Next Steps:').bold=true;
 const credit=edit(89,'Albert Sun — frontend, live chamber,\ninitial CLI and Hansard grounding.\nKieran Joe — engine, architecture and\nsupervisor coordination.',405,774,177,35,21.5,{spacing:1});credit.text.get('Albert Sun').bold=true;credit.text.get('Kieran Joe').bold=true;
 move(90,0,814,606,39);
-edit(92,'[1] Du et al. (2024). Multiagent Debate.\n[2] Rauh & Schwalbach (2020). ParlSpeech V2.',24.13,829,234,17,20,{color:C.muted,spacing:1.02});
-edit(93,'Acknowledgements',223,817,160,10,22,{bold:true,color:C.heading,align:'center'});
+move(91,24.13,817,177.74,10).text.alignment='center';
+edit(92,'[1] Du et al. (2024). Multiagent Debate.\n[2] Rauh & Schwalbach (2020). ParlSpeech V2.',24.13,829,177.74,17,20,{color:C.muted,spacing:1.02,align:'center'});
+edit(93,'Acknowledgements',214.13,817,177.74,10,22,{bold:true,color:C.heading,align:'center'});
 edit(94,'Ioannis Ziogas, McCourt School of Public Policy,\nGeorgetown University',228,829,150,17,20,{color:C.muted,align:'center',spacing:1.02});
+move(95,404.13,817,177.74,10).text.alignment='center';
+move(96,404.13,829,177.74,17).text.alignment='center';
 
 s.speakerNotes.text=[
   'Sources: supplied Poster_123 (1).pptx for original branding, header, screenshot, interface annotations, references, names and acknowledgements. Original screenshot is a fixed DemoChatManager demonstration with National assigned STRAW_MAN. It does not establish genuine model inference or successful disruption.',
