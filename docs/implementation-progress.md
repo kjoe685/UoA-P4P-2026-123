@@ -1,5 +1,19 @@
 # Implementation progress and recovery
 
+## T90 narrower left-aligned poster paragraphs
+
+**T90 — Narrow the lower three paragraphs again and use left alignment (REQ-11, 19, 27–30, 34, 37–43, 55, 57–58).**
+
+Recorded before edits, 2026-10-11 Pacific/Auckland. Dependency: verified T89 `4f6a79`; annotated source is `poster-123-narrower-paragraphs/Poster_123_Updated.pptx`. The user asks to narrow these paragraphs further and left justify them. Reduce all three section 4 frames from 160 to 140 mm, keeping their evenly spaced column centres, and use native left paragraph alignment. Preserve wording, fonts and name emphasis, centred tactic descriptions, charts/data and A1 portrait trim with 6 mm bleed. Adjust section 4 vertical placement only if narrower wrapping requires more room. No inference, paid calls, application/settings change, upload or push.
+
+Acceptance: inspect enlarged renders for natural spacing, readable wrapping and footer clearance; verify equal narrower widths, unchanged column centres, left paragraph alignment and unchanged wording/fonts/emphasis. Confirm all unedited objects, chart/cache/workbook values and public data/images remain exact to T89, preserve source/evidence/reference tips and exact print geometry, then commit the verified local checkpoint. New delivery: `outputs/01a12824-15b8-7b32-8a23-945b4c18dc65/poster-123-left-aligned/`; private work: `target/T90-poster/`. Next freeze preservation, narrow and align the three frames, render and verify fit, then record and commit/deliver without pushing.
+
+T90 verified r19, 2026-10-11 Pacific/Auckland: all three section 4 paragraphs are 140 mm wide, reduced from 160 mm, at 43/233/423 mm left positions and their unchanged evenly spaced column centres. Native paragraph alignment is left, with all text, font sizes, line spacing and name emphasis preserved. Narrower wrapping needs five lines for outcomes and next steps, so the section 4 number, heading and paragraphs move upward by 12 mm; the equal paragraph frames extend to 47 mm high and retain 5 mm geometric clearance above the unchanged footer band. Full-page and enlarged native/Poppler PDF views show complete text, natural word spacing and clean footer separation. Private r18 is superseded by the checked r19 and is not delivered.
+
+Package/font/layout/workbook/import checks pass with zero findings. Every unedited native object, all three chart XML definitions, 24 series, 72 cache/workbook values, filled markers, palettes, merged methods note/verified denominator and both source images remain exact to T89. Upper/graph/findings and footer render regions are pixel-identical. The previous evidence/count certification is inherited unchanged; no new study, inference or rescore occurred. Native PowerPoint execution remains unverified. PPTX: 289,048 bytes / SHA256 `a25e3c345af490215fd1c34146dca005c38812c0de9fe6e382c243e06c246c26`; PDF: 3,604,412 bytes / SHA256 `446321d287da24c36efa6e55e8556fedcc7673d2624a1deb83c47fd901c7de56`. The lossless 300 dpi PDF retains 594 × 841 mm A1 portrait trim, 606 × 853 mm media and exactly 6 mm bleed per edge, below 50 MB.
+
+All 465 protected files, six reference tips, main ancestry and six excluded evaluation ancestors pass preservation checks. The two owned chart snapshots are retained privately. Public-content checks find no credentials or private prompt payloads. No paid calls, application/settings changes, upload or push occurred. Next stage exactly the two owned source/tracker edits and five new delivery files, verify staged bytes, commit the verified T90 checkpoint locally and deliver the poster/PDF.
+
 ## T89 narrower justified poster paragraphs
 
 **T89 — Reduce the lower paragraph widths to improve word spacing (REQ-11, 19, 27–30, 34, 37–43, 55, 57–58).**
