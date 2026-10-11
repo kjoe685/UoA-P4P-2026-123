@@ -1,4 +1,4 @@
-// T82/T83/T84: focused native-object revision of the supplied A1 poster, without inference.
+// T82–T85: focused native-object revision of the supplied A1 poster, without inference.
 // Usage: node scripts/update-poster-adversarial.mjs FACTS_JSON BUILD_DIR OUTPUT_DIR REVISION
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -35,11 +35,16 @@ function add(name,value,x,y,w,h,size,opts={}){
   changes.push({name,value,x,y,w,h,size});return o;
 }
 
-edit(32,'Real MPs can derail debate, distort claims and exploit procedure. AI multi-agent debate has been studied to improve reasoning [2]. We built a virtual NZ House of AI MPs, then privately tasked some with sabotage and tested Hansard grounding.',24.13,104,557.74,29,29);
+for (const n of [29,30,31]) {
+  byNumber(n).text.alignment='center';
+  changes.push({number:n,property:'alignment',value:'center'});
+}
+edit(32,'Real MPs can derail debate, distort claims and exploit procedure. AI multi-agent debate has been studied to improve reasoning [1]. We built a virtual NZ House of AI MPs, then privately tasked some with sabotage and tested Hansard grounding.',24.13,104,557.74,29,29);
+edit(44,'One MP represents each chosen party.\nSpeakers are highlighted when speaking.',360,176.5,221.87,20,24.5,{color:C.muted});
 edit(56,'Public JSON and text exports support local\nsentiment/stance analysis and separate rubric scores.',360,324.5,221.87,20,24.5);
 edit(57,'Fig. 1 A demonstration sitting with a National straw-man assignment.\nWeb browser, guided command, and terminal interfaces all connect to the debate engine backend.',24.13,330,310,22,20.5,{italic:true,color:C.muted,spacing:1.02});
 
-add('Backend engine explanation',"At run start, the backend combines each MP's party profile and selected real Hansard excerpts [1] in a private system prompt, adding any assigned tactic. The scheduler takes turns sending that MP's prompt, public debate history and a turn cue to its model's chat completion endpoint. Each returned speech joins the public record for the next MP. Other agents cannot read the private prompts.",24.13,380.5,557.74,33,25.5);
+add('Backend engine explanation',"At run start, the backend combines each MP's party profile and selected real Hansard excerpts [2] in a private system prompt, adding any assigned tactic. The scheduler takes turns sending that MP's prompt, public debate history and a turn cue to its model's chat completion endpoint. Each returned speech joins the public record for the next MP. Other agents cannot read the private prompts.",24.13,380.5,557.74,33,25.5);
 const cards=[
   [24,60,61,'Real Hansard','500 reviewed excerpts\n0/10/100 per party'],
   [22,62,63,'Private setup','Frozen prompts\nand hidden tactics'],
@@ -49,7 +54,7 @@ const cards=[
 ];
 for (const [i,[box,heading,body,title,copy]] of cards.entries()){
   const x=24.13+i*114.5;
-  move(box,x,418,99.74,39);
+  move(box,x,418,99.74,39).line={style:'solid',fill:'#8C9E92',width:2};
   edit(heading,title,x+3,421,93.74,11,27,{font:'Cambria',bold:true,color:C.heading,align:'center'});
   edit(body,copy,x+3.5,433.5,92.74,20,22.5,{color:C.muted,align:'center',spacing:1.02});
 }
@@ -86,22 +91,23 @@ for (const [i,[metric,title]] of metrics.entries()){
   applyPresentationChartFont(chart,{fontFamily:'Calibri'});
 }
 add('Truncated axis disclosure','Vertical axes are truncated. Rubric scores range from 0 to 4.',24.13,659,557.74,8,20.5,{color:C.muted});
-const findings=edit(83,"Findings: Consistency stays high, but Qwen's cooperative score falls from 3.93 to 3.62. Luna's reasoning stays near 3.0; Qwen's strategy scores range from 2.0 to 2.8. Responsiveness varies by strategy: Luna's procedural score rises from 3.2 to 4.0. More Hansard gives no consistent gain.",24.13,670,557.74,23,24.5,{color:C.heading});
-findings.text.get('Findings:').bold=true;
-const assigned=add('Adversarial findings','Disruption: Qwen ACT scores 2/4 for disruptive rhetoric only at 0 excerpts; assigned Luna MPs score 0. Matched Qwen Green changes range from -1 to +1. Higher scores mean more disruption; assignment alone does not establish successful disruption.',24.13,696,557.74,21,24.5,{color:C.red});assigned.text.get('Disruption:').bold=true;
-edit(84,'Cooperative points average 9 debates (45 scores); each strategy point averages all five MPs in one debate. Assignments: retirement/NZ First/derailment, workweek/ACT/straw man, nuclear/Green/procedural. A consistent prompt to GPT-6 Luna generated the ratings. Topic, party and one assigned repeat limit comparison.',24.13,723,557.74,18,20.5,{italic:true,color:C.muted});
+const findings=edit(83,"Co-operative agents: Consistency stays high, but Qwen falls from 3.93 to 3.62. Luna's reasoning stays near 3.0; Qwen's stays between 2.62 and 2.67. Responsiveness changes little for either model. More Hansard gives no consistent gain.",24.13,670,557.74,23,24.5,{color:C.heading});
+findings.text.get('Co-operative agents:').bold=true;
+const assigned=add('Adversarial findings',"Adversarial agents: Qwen's reasoning varies from 2.0 to 2.8; Luna's procedural responsiveness rises from 3.2 to 4.0. Disruption scores are 2/4 for Qwen ACT only at 0 excerpts and 0 for assigned Luna MPs; Qwen Green's paired changes span -1 to +1. Assignment alone does not establish success.",24.13,696,557.74,21,24.5,{color:C.red});assigned.text.get('Adversarial agents:').bold=true;
+edit(84,'Co-operative points average 9 debates (45 ratings); each strategy point averages five MPs. GPT-6 Luna used a consistent rating prompt. Topic, party and repeats limit comparison.',24.13,723,557.74,18,20.5,{italic:true,color:C.muted});
 
 move(85,24.13,747,19.8,19.8);move(86,51,745.5,530,25);
-const outcome=edit(87,'Platform: An AI debate engine with replaceable components and a browser-based frontend. Our study found no consistent score gain from extra Hansard.',24.13,774,178,32,21.5,{spacing:1.02});outcome.text.get('Platform:').bold=true;
-const next=edit(88,'Next: Repeat assigned conditions and rotate parties. Human reviewers should assess disruption, reasoning and concessions before wider conclusions.',216,774,175,30,21.5,{spacing:1.02});next.text.get('Next:').bold=true;
-const credit=edit(89,'Contributions: Albert Sun developed the frontend,\nlive chamber, initial CLI and Hansard grounding.\nKieran Joe developed the engine and architecture,\nand coordinated with the supervisor.',405,774,177,32,21.5,{spacing:1});credit.text.get('Contributions:').bold=true;credit.text.get('Albert Sun').bold=true;credit.text.get('Kieran Joe').bold=true;
-edit(92,'[1] Rauh & Schwalbach (2020). ParlSpeech V2.\n[2] Du et al. (2024). Multiagent Debate.',24.13,829,234,17,20,{color:C.muted,spacing:1.02});
+const outcome=edit(87,'Platform: An AI debate engine with replaceable components and a browser-based frontend.\nWe found no consistent gain in performance metrics from extra Hansard.',24.13,774,178,35,21.5,{spacing:1.02});outcome.text.get('Platform:').bold=true;
+const next=edit(88,'Next: Expand testing with more providers and higher-performance language models.\nHost the web browser platform on a server accessible through the internet.',216,774,175,35,21.5,{spacing:1.02});next.text.get('Next:').bold=true;
+const credit=edit(89,'Contributions: Albert Sun — frontend, live chamber,\ninitial CLI and Hansard grounding.\nKieran Joe — engine, architecture and\nsupervisor coordination.',405,774,177,35,21.5,{spacing:1});credit.text.get('Contributions:').bold=true;credit.text.get('Albert Sun').bold=true;credit.text.get('Kieran Joe').bold=true;
+move(90,0,814,606,39);
+edit(92,'[1] Du et al. (2024). Multiagent Debate.\n[2] Rauh & Schwalbach (2020). ParlSpeech V2.',24.13,829,234,17,20,{color:C.muted,spacing:1.02});
 edit(93,'Acknowledgements',223,817,160,10,22,{bold:true,color:C.heading,align:'center'});
 edit(94,'Ioannis Ziogas, McCourt School of Public Policy,\nGeorgetown University',228,829,150,17,20,{color:C.muted,align:'center',spacing:1.02});
 
 s.speakerNotes.text=[
   'Sources: supplied Poster_123 (1).pptx for original branding, header, screenshot, interface annotations, references, names and acknowledgements. Original screenshot is a fixed DemoChatManager demonstration with National assigned STRAW_MAN. It does not establish genuine model inference or successful disruption.',
-  'Reference [2]: Du, Y., Li, S., Torralba, A., Tenenbaum, J. B., and Mordatch, I. (2024). Improving Factuality and Reasoning in Language Models through Multiagent Debate. ICML 2024, Proceedings of Machine Learning Research 235:11733-11763. https://proceedings.mlr.press/v235/du24e.html . This paper supports the specific background statement that multi-agent debate has been studied to improve reasoning; it does not establish that most AI debate research has the same focus. The supplied Qwen attribution, Qwen Team (2025), Qwen3 Technical Report, remains original-source context rather than support for that debate-literature claim.',
+  'Reference [1]: Du, Y., Li, S., Torralba, A., Tenenbaum, J. B., and Mordatch, I. (2024). Improving Factuality and Reasoning in Language Models through Multiagent Debate. ICML 2024, Proceedings of Machine Learning Research 235:11733-11763. https://proceedings.mlr.press/v235/du24e.html . This paper supports the specific background statement that multi-agent debate has been studied to improve reasoning; it does not establish that most AI debate research has the same focus. Reference [2]: Rauh and Schwalbach (2020), ParlSpeech V2, retains the supplied Hansard-source attribution. The supplied Qwen attribution, Qwen Team (2025), Qwen3 Technical Report, remains original-source context rather than support for that debate-literature claim.',
   'Backend wording: src/main/java/engine/application/DebateApplication.java (configuration snapshot, party/Hansard prompt construction, private setup); engine/prompt/PromptManager.java; engine/agent/Agent.java and PrivateAgentContext.java (recipient-specific private system prompt plus public messages); engine/debate/DebateManager.java (serial scheduled turns and public publication); engine/provider/OpenAIChatManager.java and OllamaChatManager.java (chat endpoints). Private prompts never become a public state before isolation.',
   'Evidence: completed T80 public delivery, outputs/01a11f04-d4c3-7b51-8f85-f996967db913/adversarial-batch1/runs.csv, rubric.csv, matched-rubric.csv and 72 retained public rubric reports. 54 all-NONE baseline debates / 1350 speeches, three topics, three grounding levels, three repetitions, two generators. 18 assigned debates / 450 speeches, one assigned repetition, one assigned party per debate and four NONE parties, zero interruptions. The 18 matched controls belong to the 54 baseline debates and do not add another 18 observations.',
   'Original three baseline chart means remain exact in the single cooperative series per model. Each cooperative point averages 45 party/topic ratings from 9 debates, covering three topics and three repetitions. Consistency, logical reasoning and responsiveness retain separate 0-4 rubric score scales. The displayed vertical axes are truncated: consistency 3.5-4.1 at 0.1 intervals, reasoning 1.5-3.5 at 0.5 intervals, responsiveness 2.0-4.1 at 0.5 intervals. Explicit decimal labels and boundary headroom keep markers readable. Relevance and disruptive rhetoric remain separate measures, without an overall quality score.',
