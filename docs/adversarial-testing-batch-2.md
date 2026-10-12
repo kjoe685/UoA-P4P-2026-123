@@ -30,6 +30,12 @@ Record actual collected coverage. Retained batch 1 covers block 1; this batch co
 
 Work and verified local commits remain on `codex/dual-interface-integration`; do not push.
 
+## Qwen collection outcome
+
+The subsequent Qwen request is collected and independently verified in `runs/studies/2026-10-12-adversarial-testing-batch-2-qwen`: all 18 block-4/5 conditions complete, 450 speeches, 450 local Qwen generation calls and 19 common Luna judge API calls. One permitted judge repair is retained; there are no generation replacements or missing scores. All 54 local method reports and 450 separate rubric observations pass the evidence checks. API usage/cost estimates and exact ledger/manifest identities are recorded in the progress tracker. The named matrix now has all 36 conditions / 900 new speeches collected. Collection and automated evidence checks do not establish research accuracy or tactic success.
+
+The combined version-2 workbook and public evidence bundle are being rebuilt with all 108 planned debates / 2,700 speeches, preserving the earlier version and keeping the supplemental T91 scope-error run outside the selected-result tables. Native artifact, privacy and visual review remain pending until the delivery record is completed.
+
 ## Luna collection outcome
 
 Collected and independently verified 2026-10-12 in `runs/studies/2026-10-12-adversarial-testing-batch-2-luna`: all 18 correct block-4/5 conditions complete, 450 speeches, 450 generation API calls and 18 blind judge API calls. No repair, retry or missing score. All 54 local method reports are OK; the five rubric metrics retain 450 separate observations. The manifest and usage ledger retain exact identities and hashes; the progress tracker records verification and cost estimates. Software/evidence checks do not establish research accuracy or tactic enactment. Qwen's 18 planned conditions remain pending.

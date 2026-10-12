@@ -331,6 +331,7 @@ if(splitCharts) {
     conditionIndices:chartConditions.flatMap((condition,i)=>condition.model===model?[i]:[])})));
   helperRow=localHeadingRow+70;
 }
+summary.getRange(`A${totalRow+5}:P${Math.max(...chartDefinitions.map(c=>c.row))+15}`).format.rowHeight=23;
 summary.getRange(`A${totalRow+5}`).values=[[descriptiveConditions.length?'Blocks 4–5 and pooled historical cooperative context — descriptive, all five MPs.':'LLM rubric scores — '+firstGroup+'; separate model / strategy series, pooled across topics and completed repetitions.']];
 summary.getRange(`A${totalRow+5}`).format.font={name:font,size:14,bold:true,color:navy};
 summary.getRange(`A${localHeadingRow}`).values=[['Local sentiment and stance scores']];
