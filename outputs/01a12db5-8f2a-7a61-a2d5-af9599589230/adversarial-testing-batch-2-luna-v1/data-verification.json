@@ -1,0 +1,105 @@
+{
+  "state": "PASS",
+  "records": {
+    "assignments": 450,
+    "runs": 90,
+    "speeches": 2250,
+    "sentences": 22245,
+    "rubric": 2250,
+    "usage": 2390
+  },
+  "rubricStatuses": {
+    "OK": 2250
+  },
+  "modelCoverage": {
+    "qwen3:8b [ollama]": {
+      "repetitions": [
+        1,
+        2,
+        3
+      ],
+      "debates": 36,
+      "speeches": 900
+    },
+    "gpt-6-luna [openai]": {
+      "repetitions": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "debates": 54,
+      "speeches": 1350
+    }
+  },
+  "strategyConditions": 10,
+  "strategyAssignmentsAndGroupingVerified": true,
+  "localSpeechCoverage": {
+    "vader-sentiment": 2250,
+    "cardiff-sentiment": 2250,
+    "deberta-stance": 2250
+  },
+  "abstainedChunks": {
+    "cardiff-sentiment": 1917,
+    "deberta-stance": 4982
+  },
+  "localProvenance": {
+    "vader-sentiment": {
+      "modelId": "vaderSentiment",
+      "revision": "3.3.2",
+      "implementationVersion": "0.3.0",
+      "configSha256": "f3a822d5988e47abef5b923b055fe3945adee7186a627da3d26d9fa1250ff05b",
+      "scoreSemantics": "lexical proportions [0,1]; compound [-1,1]; not probabilities"
+    },
+    "cardiff-sentiment": {
+      "modelId": "cardiffnlp/twitter-roberta-base-sentiment-latest",
+      "revision": "3216a57f2a0d9c45a2e6c20157c20c49fb4bf9c7",
+      "implementationVersion": "0.3.0",
+      "configSha256": "f3a822d5988e47abef5b923b055fe3945adee7186a627da3d26d9fa1250ff05b",
+      "scoreSemantics": "uncalibrated softmax scores [0,1]; sum=1 within this method only"
+    },
+    "deberta-stance": {
+      "modelId": "MoritzLaurer/deberta-v3-base-zeroshot-v2.0-c",
+      "revision": "bddf8c5411c34ac3565e16e04384fd68b2618dda",
+      "implementationVersion": "0.3.0",
+      "configSha256": "f3a822d5988e47abef5b923b055fe3945adee7186a627da3d26d9fa1250ff05b",
+      "scoreSemantics": "uncalibrated softmax scores [0,1]; sum=1 within this method only"
+    }
+  },
+  "standardEstimateUsd": 1.1456707000000002,
+  "conservativeAllowanceUsd": 3.060935075,
+  "cumulativeCeilingUsd": null,
+  "prepaidBatches": [
+    "2026-10-09-adversarial-r1",
+    "2026-10-12-adversarial-testing-batch-2-luna"
+  ],
+  "matchedComparisonRows": {
+    "matched-rubric.csv": 450,
+    "matched-local.csv": 270
+  },
+  "descriptiveDebates": 18,
+  "descriptiveComparisonRows": 144,
+  "descriptiveCountsMeansAndNativeCachesVerified": true,
+  "paidRequests": 1470,
+  "priorLedgerChecks": [
+    "Original root resources unchanged",
+    "Prior usage ledger unchanged",
+    "Prior workbook and ZIP unchanged",
+    "Prior usage ledger unchanged",
+    "Prior workbook and ZIP unchanged",
+    "Prior usage ledger unchanged",
+    "Prior workbook and ZIP unchanged"
+  ],
+  "sourceAndPublicCopyHashesVerified": true,
+  "csvAndNativeXlsxCachesVerified": true,
+  "nativeCharts": 8,
+  "exportStageSeconds": {
+    "source-tables": 106.52418660000001,
+    "formulas-and-charts": 238.72981259999997,
+    "recalculation-and-checks": 239.46704559999998,
+    "previews-and-evidence": 314.43025,
+    "xlsx-saved": 410.4767992
+  },
+  "workbookSha256": "cb5d9939b4ab53e1e1e6c854ab031fa250ace769185b47498b62e33550e0d046"
+}

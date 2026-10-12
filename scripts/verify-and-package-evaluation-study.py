@@ -70,6 +70,7 @@ def main():
     strategy_by_run = {}
     prepaid_batches = []
     rubric_values, matched_runs = {}, {}
+    conditions_by_run = {}
     for directory in args.batches:
         batch = directory.resolve()
         manifest = read(batch / "manifest.json")
@@ -78,6 +79,8 @@ def main():
         for relative, sha in manifest["frozenSourceHashes"].items():
             assert digest(batch / "application" / relative) == sha, relative
         ledger = read(batch / "operations/usage.json")
+        if manifest.get("previousBatch"):
+            assert digest(Path(manifest["previousBatch"]) / "operations/usage.json") == manifest["previousUsageSha256"], "Prior accounting lineage changed"
         if manifest.get("budgetMode") == "prepaid-account":
             assert manifest["budgetLimitUsd"] is None and manifest["cumulativeBudgetLimitUsd"] is None
             assert ledger["budgetMode"] == "prepaid-account" and ledger["budgetLimitUsd"] is None
@@ -119,6 +122,13 @@ def main():
             assignments = {m["party"]:m["strategy"] for m in cell["settings"]["members"]}
             assert all(m["strategy"] == assignments[m["party"]] and m["modelPreset"] == cell["modelPreset"] for m in setup["settings"]["members"])
             strategy_by_run[run_id] = strategy_metadata(cell,manifest)
+            active = [v for v in cell["settings"]["members"] if v["strategy"] != "NONE"]
+            conditions_by_run[run_id] = {"block":cell.get("assignmentBlock",cell["repetition"]) if active else None,
+                "mode":cell.get("comparisonMode",manifest.get("comparisonMode","matched")) if active else "cooperative",
+                "actor":active[0]["party"] if len(active)==1 else None,"cell":cell,"manifest":manifest}
+            if conditions_by_run[run_id]["mode"] == "descriptive":
+                assert "matchedBaseline" not in cell
+                assert cell["assignmentBlock"] == cell["repetition"]
             if cell.get("matchedBaseline"):
                 matched_runs[run_id] = cell["matchedBaseline"]["runId"]
             expected["assignments"] += sum(len(a["strategies"]) for a in strategy_by_run[run_id]["assignments"])
@@ -246,6 +256,10 @@ def main():
     for name in ["runs","rubric","speeches","sentences"]:
         for row in csv_data[name]:
             metadata = strategy_by_run[row["Run ID"]]
+            condition = conditions_by_run[row["Run ID"]]
+            if "Assignment block" in row:
+                assert row["Assignment block"] == (str(condition["block"]) if condition["block"] is not None else "")
+                assert row["Comparison mode"] == condition["mode"]
             for label,expected_value in metadata.items():
                 if label != "assignments": assert row[label] == expected_value, (name,label)
             expected_key = "SG-" + json_digest([row["Evaluation group"],row["Model key"],int(row["Hansard excerpts"]),metadata["Strategy condition ID"]])
@@ -257,6 +271,10 @@ def main():
     assignment_pairs = defaultdict(list)
     for row in csv_data["assignments"]:
         metadata = strategy_by_run[row["Run ID"]]
+        condition = conditions_by_run[row["Run ID"]]
+        if "Assignment block" in row:
+            assert row["Assignment block"] == (str(condition["block"]) if condition["block"] is not None else "")
+            assert row["Comparison mode"] == condition["mode"]
         for label in ["Study condition ID","Strategy condition ID","Strategy condition","Strategy config SHA256"]: assert row[label] == metadata[label]
         assert row["Assigned adversarial"] == str(row["Strategy"] != "NONE").lower()
         assignment_pairs[row["Run ID"]].append((row["Party"],row["Strategy"]))
@@ -276,6 +294,42 @@ def main():
                 assert int(row[abstain_label]) == sum(flag is True for flag in source["flags"])
                 for i, flag in enumerate(source["flags"], 1):
                     assert row[flag_prefix + " abstained chunk " + str(i)] == ("" if flag is None else "1" if flag else "0")
+    descriptive_rows = []
+    descriptive_runs = {run:condition for run,condition in conditions_by_run.items() if condition["mode"] == "descriptive"}
+    if descriptive_runs:
+        assert len(descriptive_runs) == exported["descriptiveDebates"]
+        with (output / "descriptive-comparisons.csv").open(encoding="utf-8", newline="") as file:
+            reader = csv.DictReader(file)
+            assert reader.fieldnames == exported["descriptiveHeaders"]
+            descriptive_rows = list(reader)
+        assert len(descriptive_rows) == len(descriptive_runs)*8 == len(exported["descriptiveRows"])
+        seen_descriptive = set()
+        local_labels = {"vader-sentiment":"VADER mean compound", "cardiff-sentiment":"Cardiff mean positive", "deberta-stance":"DeBERTa mean support"}
+        for row in descriptive_rows:
+            run = row["Assigned run ID"]
+            condition = descriptive_runs[run]
+            cell = condition["cell"]
+            method = row["Metric / method ID"]
+            assert (run,method) not in seen_descriptive
+            seen_descriptive.add((run,method))
+            assert row["Assignment block"] == str(condition["block"]) and row["Assigned party"] == condition["actor"]
+            assert row["Topic key"] == cell["topicKey"] and int(row["Hansard excerpts"]) == cell["groundingCount"]
+            rubric = method not in local_labels
+            source = csv_data["rubric" if rubric else "speeches"]
+            current_group = next(v["Evaluation group"] for v in csv_data["runs"] if v["Run ID"] == run)
+            selected = [v for v in source if v["Model key"] == row["Model key"] and v["Topic key"] == cell["topicKey"] and int(v["Hansard excerpts"]) == cell["groundingCount"] and v["Evaluation group"] == current_group and v["Generation outcome"] == "COMPLETE" and (v["Status"] == "OK" and v["Metric"] == method if rubric else v[local_labels[method]] != "")]
+            subsets = [[v for v in selected if v["Run ID"] == run and v["Strategy role"] == "ASSIGNED"],
+                       [v for v in selected if v["Strategy condition"] == "NONE" and v["Party"] == condition["actor"]],
+                       [v for v in selected if v["Run ID"] == run and v["Strategy role"] == "OTHER"],
+                       [v for v in selected if v["Strategy condition"] == "NONE" and v["Party"] != condition["actor"]]]
+            for subset,prefix in zip(subsets,["Assigned","Historical same-party","Other MPs","Historical other MPs"]):
+                assert int(row[prefix+" n"]) == len(subset)
+                values = [float(v["Score" if rubric else local_labels[method]]) for v in subset]
+                assert (row[prefix+" mean"] == "" if not values else abs(float(row[prefix+" mean"])-sum(values)/len(values)) < 1e-9)
+            assert row["Scale"] == ("0–4" if rubric else "−1 to 1" if method == "vader-sentiment" else "0–1")
+        assert {run for run,method in seen_descriptive} == set(descriptive_runs)
+        for run in descriptive_runs:
+            assert {method for source_run,method in seen_descriptive if source_run==run} == set(local_labels) | {"consistency","logical_reasoning","responsiveness","relevance","rhetorical_tactics"}
     xlsx = output / "debate-evaluation.xlsx"
     assert digest(xlsx) == exported["xlsxSha256"]
     ns = {"x": "http://schemas.openxmlformats.org/spreadsheetml/2006/main", "r": "http://schemas.openxmlformats.org/officeDocument/2006/relationships", "c": "http://schemas.openxmlformats.org/drawingml/2006/chart", "a": "http://schemas.openxmlformats.org/drawingml/2006/main"}
@@ -310,7 +364,7 @@ def main():
             for col, label in [("L", "VADER mean compound"), ("M", "Cardiff mean positive"), ("N", "DeBERTa mean support")]:
                 assert abs(value(speech_cells[col + str(i)]) - float(row[label])) < 1e-9
         tables = {ET.fromstring(file.read(n)).attrib["displayName"] for n in names if re.fullmatch(r"xl/tables/table\d+\.xml", n)}
-        assert tables == {"SpeechData", "RubricScores", "SentenceMetrics", "StudyRuns", "ProviderUsage", "StudyProtocol", "StrategyAssignments"}
+        assert tables == {"SpeechData", "RubricScores", "SentenceMetrics", "StudyRuns", "ProviderUsage", "StudyProtocol", "StrategyAssignments"} | ({"DescriptiveComparisons"} if descriptive_rows else set())
         def letter(n):
             label = ""
             while n:
@@ -321,12 +375,21 @@ def main():
             cells = {c.attrib["r"]:c for c in sheets[sheet_name].findall(".//x:sheetData/x:row/x:c",ns)}
             columns = {label:letter(i) for i,label in enumerate(exported["headers"][key],1)}
             for label,col in columns.items(): assert value(cells[col+"1"]) == label
-            labels = [label for label in columns if "Strategy" in label or label in {"Adversarial parties","Adversarial party count","Adversarial strategies","Party strategy assignments","Study condition ID","Summary key","Assigned adversarial"}]
+            labels = [label for label in columns if "Strategy" in label or label in {"Adversarial parties","Adversarial party count","Adversarial strategies","Party strategy assignments","Study condition ID","Summary key","Assigned adversarial","Assignment block","Comparison mode"}]
             for i,row in enumerate(csv_data[key],2):
                 for label in labels:
-                    expected_value = float(row[label]) if label in {"Adversarial party count","Strategy count"} else (1.0 if row[label]=="true" else 0.0) if label=="Assigned adversarial" else row[label]
+                    expected_value = float(row[label]) if label in {"Adversarial party count","Strategy count","Assignment block"} and row[label] else (1.0 if row[label]=="true" else 0.0) if label=="Assigned adversarial" else row[label]
                     actual = value(cells.get(columns[label]+str(i)))
                     assert actual == expected_value or actual is None and expected_value == "", (key,i,label)
+        if descriptive_rows:
+            assert next(iter(sheets)) == "Batch 2 descriptive"
+            cells = {c.attrib["r"]:c for c in sheets["Batch 2 descriptive"].findall(".//x:sheetData/x:row/x:c",ns)}
+            for j,label in enumerate(exported["descriptiveHeaders"],1):
+                assert value(cells[letter(j)+"7"]) == label
+            for i,row in enumerate(exported["descriptiveRows"],8):
+                for j,expected_value in enumerate(row,1):
+                    actual = value(cells.get(letter(j)+str(i)))
+                    assert (actual == expected_value or actual is None and expected_value in {None,""} or isinstance(expected_value,(int,float)) and isinstance(actual,float) and abs(actual-expected_value)<1e-9), (i,j)
         summary = {c.attrib["r"]: c for c in sheets["Summary"].findall(".//x:sheetData/x:row/x:c", ns)}
         for i, row in enumerate(exported["summaryValues"], 8):
             for j, score in enumerate(row, 6):
@@ -385,22 +448,32 @@ def main():
             if p.is_file() and p.suffix in {".json", ".txt"}:
                 shutil.copyfile(p, destination / p.name)
     coverage = {k: {**v, "repetitions": sorted(v["repetitions"])} for k, v in models.items()}
-    result = {"state": "PASS", "records": dict(expected), "rubricStatuses": dict(statuses), "modelCoverage": coverage, "strategyConditions":len({m["Strategy condition ID"] for m in strategy_by_run.values()}),"strategyAssignmentsAndGroupingVerified":True,"localSpeechCoverage": dict(native_coverage), "abstainedChunks": dict(abstentions), "localProvenance": local_provenance, "standardEstimateUsd": standard, "conservativeAllowanceUsd": allowance, "cumulativeCeilingUsd": exported["cumulativeBudgetCeilingUsd"], "prepaidBatches":prepaid_batches,"matchedComparisonRows":matched_counts,"paidRequests": len(paid), "priorLedgerChecks": protected, "sourceAndPublicCopyHashesVerified": True, "csvAndNativeXlsxCachesVerified": True, "nativeCharts": len(charts), "exportStageSeconds":exported["exportStageSeconds"],"workbookSha256": digest(xlsx)}
+    result = {"state": "PASS", "records": dict(expected), "rubricStatuses": dict(statuses), "modelCoverage": coverage, "strategyConditions":len({m["Strategy condition ID"] for m in strategy_by_run.values()}),"strategyAssignmentsAndGroupingVerified":True,"localSpeechCoverage": dict(native_coverage), "abstainedChunks": dict(abstentions), "localProvenance": local_provenance, "standardEstimateUsd": standard, "conservativeAllowanceUsd": allowance, "cumulativeCeilingUsd": exported["cumulativeBudgetCeilingUsd"], "prepaidBatches":prepaid_batches,"matchedComparisonRows":matched_counts,"descriptiveDebates":len(descriptive_runs),"descriptiveComparisonRows":len(descriptive_rows),"descriptiveCountsMeansAndNativeCachesVerified":bool(descriptive_rows),"paidRequests": len(paid), "priorLedgerChecks": protected, "sourceAndPublicCopyHashesVerified": True, "csvAndNativeXlsxCachesVerified": True, "nativeCharts": len(charts), "exportStageSeconds":exported["exportStageSeconds"],"workbookSha256": digest(xlsx)}
     (output / "data-verification.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
     descriptions = "\n".join("- " + model + ": repetitions " + ", ".join(map(str, c["repetitions"])) + "; " + str(c["debates"]) + " complete debates and " + str(c["speeches"]) + " speeches." for model, c in coverage.items())
     spending_boundary = "User-authorized loaded account credit; no fixed USD admission gate or balance polling for " + ", ".join(prepaid_batches) if prepaid_batches else f"One cumulative gate: US${exported['cumulativeBudgetCeilingUsd']:.2f}"
     matched_note = "For direct block-one control comparisons, use matched-rubric.csv and matched-local.csv (both retain paired run IDs), described in MATCHED-COMPARISONS.md. The general Summary pools NONE topics, whereas each assigned condition belongs to one topic; compare paired rows or filter by Topic rather than comparing that pooled baseline with a single topic/tactic. Rebuild these tables before packaging with `python scripts/export-adversarial-batch1-comparisons.py OUTPUT CONTROL_BATCH ASSIGNED_BATCH`; this reads retained evidence and makes no model calls." if matched_runs else ""
+    descriptive_note = f"""## Named adversarial-testing-batch-2 coverage
+
+This version adds {len(descriptive_runs)} Luna debates / {len(descriptive_runs)*25} speeches for assignment blocks 4–5: ACT/National retirement derailment, Green/Labour workweek straw man, and NZ First/ACT nuclear procedural manipulation. Qwen's 18 new conditions remain pending. Earlier cooperative blocks 1–3 and adversarial block 1 remain included unchanged. These blocks change assigned actors and speaking orders; they are not identical treatment repetitions.
+
+The first sheet, Batch 2 descriptive, and descriptive-comparisons.csv separate assigned actors from the other four MPs. They give topic/model/grounding-specific historical cooperative context using the same party or the other four parties, with explicit available-observation counts. Rubric counts are participant-topic ratings; local counts are speeches and means average the original per-speech chunk scores. Each metric/method keeps its own scale. No matched controls, significance, causal effects or successful tactic enactment are claimed. Summary's charts show the new Luna assignments and pooled historical Luna NONE context across all five MPs; the first sheet gives the topic-specific role comparisons.
+
+The nine T91 Luna block-2 debates resulted from the earlier mistaken interpretation of the batch name. They remain unchanged separately in `runs/studies/2026-10-12-adversarial-r2-luna` and do not count toward this batch's coverage. Their usage remains included in the new batch's complete accounting ancestry, while this version's selected-result usage excludes that supplemental batch. All preserved failed batch-one attempts remain archived.
+""" if descriptive_runs else ""
     readme = f"""# Extended debate evaluation dataset
 
 {descriptions}
 
 {matched_note}
 
+{descriptive_note}
+
 All conditions use the original three topics, 0/10/100 Hansard excerpts per party, five rounds and all five parties. Strategy conditions are recorded in Strategy assignments and separated in every summary/chart series. This delivery contains the selected baseline and/or assigned batches, with zero interruptions. Original frozen corpus, prompts, rubric, model settings and local methods are preserved. Speaking order uses the original declared topic/repetition rotation. Technical replacements retain their repetition ID; original failures remain archived. Assigned conditions are treatments, not evidence of successful tactic enactment. In the one-strategy-per-topic extension, tactic and topic are confounded.
 
 GPT-6 Luna generation: temperature0.6, reasoning none, maximum4096completion tokens, timeout180seconds. Common GPT-6 Luna judge: temperature0, reasoning none, maximum8192completion tokens, timeout180seconds and at most one repair. Qwen3:8b: temperature0.6, think=false, cap4096, timeout600seconds, Q4_K_M, Ollama0.35.0; requested context131072/observed native40960, flash attention/q4_0KV cache/serial inference. Full configuration/source/model hashes are in Protocol and saved raw reports.
 
-The eight-sheet workbook contains seven named source tables, five independent0–4rubric charts and three local score charts on Summary: VADER mean compound(−1to1), Cardiff mean positive(0to1), and DeBERTa mean support(0to1). Summary lists repetition coverage per model/strategy/Hansard combination and pools complete debates. Use raw Repetition, Topic, Party, Model, Provider, Hansard, Strategy condition, Speaker strategy, Strategy role and Evaluation group columns in PivotTables for individual conditions. Strategy assignments stores one party/strategy pair per row, with NONE baseline rows and support for multiple parties/strategies. IDs include canonical assignments and frozen strategy prompt hashes; study condition IDs also include the repetition/model/topic/grounding/order. Metadata is for the researcher and is kept outside unchanged public transcripts/blind judging; private prompt text and credentials are excluded.
+The {'nine' if descriptive_runs else 'eight'}-sheet workbook contains seven named source tables{' and a descriptive comparison table' if descriptive_runs else ''}, five independent0–4rubric charts and three local score charts on Summary: VADER mean compound(−1to1), Cardiff mean positive(0to1), and DeBERTa mean support(0to1). Summary lists repetition/order-block coverage per model/strategy/Hansard combination and pools complete debates. Use raw Repetition, Assignment block, Comparison mode, Topic, Party, Model, Provider, Hansard, Strategy condition, Speaker strategy, Strategy role and Evaluation group columns in PivotTables for individual conditions. Strategy assignments stores one party/strategy pair per row, with NONE baseline rows and support for multiple parties/strategies. IDs include canonical assignments and frozen strategy prompt hashes; study condition IDs also include the repetition/model/topic/grounding/order. Metadata is for the researcher and is kept outside unchanged public transcripts/blind judging; private prompt text and credentials are excluded.
 
 Rubric scores are participant/topic/metric observations. Sentiment and stance are sentence observations, with per-speech means. Speeches appends original raw chunk scores and abstention flags(1=true,0=false,blank=unavailable); bounded row-local SUM/COUNT formulas remain correct when either source table is sorted. Full sentence text/offsets/provenance remain in Sentence metrics. Transformer scores are uncalibrated0–1. Higher disruptive rhetoric means more disruption. Missing scores remain blank and numeric zeros remain zero. Abstained raw transformer scores/flags are retained, including in means. No combined or normalized quality score is calculated. Speeches/sentences within debates are dependent; automated scores have not been validated against human ratings. Repetition coverage is recorded explicitly.
 

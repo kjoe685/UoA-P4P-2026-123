@@ -8,20 +8,22 @@ import {spawnSync} from 'node:child_process';
 import {getHeapStatistics} from 'node:v8';
 import {strategyCondition,studyConditionId,summaryKey,indexSentenceGroups} from './evaluation-study-schema.mjs';
 
-// The SDK's final XLSX serialization needs more than Node's default 4 GiB for
-// the full sentence evidence. Keep this bounded and reproducible for CLI users.
-if(getHeapStatistics().heap_size_limit<7.5*1024**3) {
-  if(process.env.EVALUATION_STUDY_EXPORT_HEAP==='8192') throw new Error('Node cannot provide the required 8 GiB export heap');
-  console.log('EXPORT_HEAP restarting with an 8 GiB maximum; no inference occurs in this script');
-  const child=spawnSync(process.execPath,['--max-old-space-size=8192',process.argv[1],...process.argv.slice(2)],{stdio:'inherit',env:{...process.env,EVALUATION_STUDY_EXPORT_HEAP:'8192'}});
+const [outputArgument, ...batchArguments] = process.argv.slice(2);
+if (!outputArgument || !batchArguments.length) throw new Error('Use OUTPUT_DIRECTORY BATCH_DIRECTORY [BATCH_DIRECTORY ...]');
+// Size the bounded heap for final XLSX serialization, which holds the full
+// sentence evidence and the serialized package together. Read manifests only.
+const exportDebates=(await Promise.all(batchArguments.map(async batch=>JSON.parse((await fs.readFile(path.join(path.resolve(batch),'manifest.json'),'utf8')).replace(/^\uFEFF/,''))))).reduce((sum,m)=>sum+m.cells.length,0);
+const exportHeapMb=exportDebates>=90?16384:8192;
+if(getHeapStatistics().heap_size_limit<(exportHeapMb/1024-.5)*1024**3) {
+  if(process.env.EVALUATION_STUDY_EXPORT_HEAP===String(exportHeapMb)) throw new Error(`Node cannot provide the required ${exportHeapMb/1024} GiB export heap`);
+  console.log(`EXPORT_HEAP restarting with a ${exportHeapMb/1024} GiB maximum; no inference occurs in this script`);
+  const child=spawnSync(process.execPath,[`--max-old-space-size=${exportHeapMb}`,process.argv[1],...process.argv.slice(2)],{stdio:'inherit',env:{...process.env,EVALUATION_STUDY_EXPORT_HEAP:String(exportHeapMb)}});
   if(child.error) throw child.error;
   process.exit(child.status??1);
 }
 const exportStarted=performance.now(), timings={};
 const stage=name=>{timings[name]=(performance.now()-exportStarted)/1000;console.log(`EXPORT_STAGE ${name} ${timings[name].toFixed(2)}s`);};
 
-const [outputArgument, ...batchArguments] = process.argv.slice(2);
-if (!outputArgument || !batchArguments.length) throw new Error('Use OUTPUT_DIRECTORY BATCH_DIRECTORY [BATCH_DIRECTORY ...]');
 const output = path.resolve(outputArgument);
 const runtimeRequire = createRequire(path.join(output, 'artifact-loader.cjs'));
 const {Workbook, SpreadsheetFile} = await import(pathToFileURL(runtimeRequire.resolve('@oai/artifact-tool')).href);
@@ -34,6 +36,7 @@ const methods = ['vader-sentiment','cardiff-sentiment','deberta-stance'];
 const records={runs:[],rubric:[],sentences:[],speeches:[],usage:[],protocol:[],assignments:[]};
 const seenRuns=new Set(), sourceBatches=[], groups=new Map(), budgetGroups=new Map();
 const strategyByRun=new Map(), strategies=new Map(), seenConditions=new Set();
+const conditionByRun=new Map();
 let capturedSpeeches=0, capturedRubric=0;
 for (const batchArgument of batchArguments) {
   const batch=path.resolve(batchArgument), m=await read(path.join(batch,'manifest.json'));
@@ -62,6 +65,7 @@ for (const batchArgument of batchArguments) {
     if(seenConditions.has(conditionId)) throw new Error('Duplicate study condition across selected batches');
     seenConditions.add(conditionId); strategies.set(strategy.id,strategy);
     if(runId) strategyByRun.set(runId,{strategy,conditionId,key:summaryKey(group,`${settings.model} [${settings.provider}]`,c.groundingCount,strategy.id)});
+    if(runId) conditionByRun.set(runId,{...c,assignmentBlock:strategy.label==='NONE'?null:c.assignmentBlock??c.repetition,comparisonMode:strategy.label==='NONE'?'cooperative':c.comparisonMode??m.comparisonMode??'matched',modelKey:`${settings.model} [${settings.provider}]`,group,actor:strategy.parties,strategyId:strategy.id});
     for(const assignment of strategy.assignments) for(const assigned of assignment.strategies) records.assignments.push([m.batchId,c.cellId,runId,conditionId,strategy.id,strategy.label,assignment.party,assigned,assigned!=='NONE',strategy.configSha256,settings.model,settings.provider,c.topicKey,c.groundingCount,c.repetition]);
     if(runId && seenRuns.has(runId)) throw new Error('Duplicate run ID across selected batches');
     if(runId) seenRuns.add(runId);
@@ -123,6 +127,7 @@ for (const batchArgument of batchArguments) {
   ]) records.protocol.push([m.batchId,label,value]);
   records.protocol.push([m.batchId,'Budget group',budgetGroup],[m.batchId,'Prior conservative allowance USD',m.priorBudgetCommittedUsd??0],[m.batchId,'Cumulative ceiling USD',budgetCeiling],[m.batchId,'First repetition',m.firstRepetition??Math.min(...m.cells.map(c=>c.repetition))],[m.batchId,'Last repetition',m.lastRepetition??Math.max(...m.cells.map(c=>c.repetition))]);
   records.protocol.push([m.batchId,'Treatment',m.treatmentId??'baseline'],[m.batchId,'Spending boundary',m.budgetMode==='prepaid-account'?'User-authorized loaded account credit':`Fixed cumulative USD ${budgetCeiling}`]);
+  records.protocol.push([m.batchId,'Assignment blocks',JSON.stringify(m.assignmentBlocks??[])],[m.batchId,'Comparison mode',m.comparisonMode??(m.treatmentId==='adversarial-topic-v1'?'matched':'cooperative')],[m.batchId,'Comparison note',m.comparisonNote??'']);
 }
 const cumulativeBudgetCeilingUsd=[...budgetGroups.values()].some(v=>v==null)?null:[...budgetGroups.values()].reduce((a,b)=>a+b,0);
 records.protocol.push(['All batches','Metric grain','Rubric: one participant/topic/metric. Sentiment and stance: sentence chunks. Speeches: mean of available chunks for that one speech.'],['All batches','Separate scales','Rubric 0–4. Higher rhetorical-tactics values mean more disruption. VADER compound −1 to 1. Cardiff/DeBERTa uncalibrated model scores 0–1.'],['All batches','Uncertainty','Abstained transformer chunks retain their scores and an explicit abstained field. Speech means include available raw scores, including abstained chunks.'],['All batches','Missing values','Blank numerical scores mean unavailable or insufficient evidence. They are never changed to zero. Chunk counts are zero when no valid chunks are available. Pending and failed jobs stay visible in Runs.'],['All batches','Research scope','Repetition coverage is listed per model and strategy condition in Summary. Speeches and sentences within a debate are dependent observations. Automated judgments have not been validated against human ratings.'],['All batches','Graph construction','Use RubricScores, SpeechData, SentenceMetrics and StrategyAssignments in Excel PivotTables. Filter by provider, model, topic, Hansard count, repetition, party, strategy condition, speaker strategy, strategy role and evaluation group. Five rubric charts and three local method charts show the first judge group, with separate model/strategy series and pooled available complete repetitions. Each metric retains its original scale.'],['All batches','Append later runs','Regenerate from the original and additional batch directories with this builder. Original run IDs and unique study conditions are retained; duplicates are rejected. Additional models/repetitions/strategy assignments create new rows, not new provider worksheets.'],['All batches','Cost meaning','Usage and Runs token/cost totals include all attempts, including archived failures. Related batches share one cumulative ceiling, with prior allowance reserved before a new batch starts. Standard-price estimate uses reported tokens and uncached Standard rates, excluding cache discounts. Budget allowance uses conservative prices and retains full reservations for failures/unknown usage. Neither is an account invoice.'],['All batches','Summary means','Complete debates only. Rubric means average participant/topic scores. Native method means average per-speech chunk means. Automated ratings and model confidence scores are separate measurements.']);
@@ -158,6 +163,15 @@ for(const key of ['runs','rubric','speeches','sentences']) {
   }
 }
 const column=(key,label)=>{const index=headers[key].indexOf(label);if(index<0) throw new Error(`Missing column ${key}: ${label}`);return index;};
+for(const key of ['runs','rubric','speeches','sentences','assignments']) {
+  headers[key].push('Assignment block','Comparison mode');
+  for(const row of records[key]) {
+    const condition=conditionByRun.get(row[key==='assignments'?2:1]);
+    row.push(condition.assignmentBlock,condition.comparisonMode);
+  }
+}
+const descriptiveConditions=[...conditionByRun.values()].filter(c=>c.comparisonMode==='descriptive');
+records.protocol.push(['All batches','Assignment blocks and comparisons','Assignment block retains the actor/order block alongside legacy Repetition fields. Cooperative records have no assigned block. Matched and descriptive assigned conditions remain explicit. Descriptive blocks 4–5 have different orders from historical cooperative blocks 1–3; comparisons do not establish causal effects.']);
 // Project original chunk scores into their speech row. Row-local formulas remain
 // correct when either source table is sorted and avoid repeated full-table scans.
 const {groups:sentenceGroups,widths:chunkWidths}=indexSentenceGroups(records.sentences);
@@ -183,9 +197,10 @@ for(const row of records.speeches) {
 }
 records.protocol.push(['All batches','Speech chunk projection','Speeches projects original native chunk scores and abstention flags into appended columns. Flags use 1=true, 0=false, blank=unavailable; Sentence metrics retains original booleans. Means/counts use row-local SUM/COUNT formulas; the full Sentence metrics table retains text, offsets, labels, uncertainty and provenance. Sorting either table preserves the speech calculations.']);
 records.protocol.push(['All batches','Strategy metadata','Researcher condition labels come from frozen roster assignments and strategy prompt hashes. Strategy assignments lists every party/strategy pair, including NONE. Multiple parties and multiple strategies per party are supported by the export schema. Private prompt text/setup remains excluded from public evidence and blind judging.'],['All batches','Strategy grouping','Summary, repetition coverage and each chart series distinguish strategy condition IDs, including assigned parties and strategy configuration. Speaker strategy and BASELINE/ASSIGNED/OTHER roles allow assignment outcomes and effects on other parties to be analysed separately. These are assignments, not proof a tactic was exhibited.'],['All batches','Export method','Linear-time indexing of calls/chunks and strategy groups, batch formula writes, bounded row-local chunk formulas and numeric chart caches. Stage timing is saved in workbook-verification.json. Rebuild from all selected source batches to append data.']);
-records.protocol.push(['All batches','Exporter source SHA256',sha(await fs.readFile(new URL(import.meta.url)))],['All batches','Strategy schema source SHA256',sha(await fs.readFile(new URL('./evaluation-study-schema.mjs',import.meta.url)))],['All batches','Verifier source SHA256',sha(await fs.readFile(new URL('./verify-and-package-evaluation-study.py',import.meta.url)))],['All batches','Export memory','The exporter automatically uses a bounded 8 GiB Node heap for SDK XLSX serialization. Raw source tables use native table styling and only required column/number/text formats; avoid formatting every raw cell with repeated font/alignment properties.']);
+records.protocol.push(['All batches','Exporter source SHA256',sha(await fs.readFile(new URL(import.meta.url)))],['All batches','Strategy schema source SHA256',sha(await fs.readFile(new URL('./evaluation-study-schema.mjs',import.meta.url)))],['All batches','Verifier source SHA256',sha(await fs.readFile(new URL('./verify-and-package-evaluation-study.py',import.meta.url)))],['All batches','Export memory',`The exporter uses a bounded ${exportHeapMb/1024} GiB Node heap for SDK XLSX serialization (${exportDebates} selected debates). Fewer than 90 debates retain the earlier 8 GiB bound. Raw source tables use native table styling and only required column/number/text formats; avoid formatting every raw cell with repeated font/alignment properties.`]);
 for(const [key,rows] of Object.entries(records)) for(const row of rows) if(row.length!==headers[key].length) throw new Error(`Wrong final row width: ${key}`);
 const wb=Workbook.create();
+const descriptiveSheet=descriptiveConditions.length?wb.worksheets.add('Batch 2 descriptive'):null;
 const summary=wb.worksheets.add('Summary');
 const sheetNames={speeches:'Speeches',rubric:'Rubric scores',sentences:'Sentence metrics',runs:'Runs',assignments:'Strategy assignments',usage:'Usage',protocol:'Protocol'};
 const tableNames={speeches:'SpeechData',rubric:'RubricScores',sentences:'SentenceMetrics',runs:'StudyRuns',assignments:'StrategyAssignments',usage:'ProviderUsage',protocol:'StudyProtocol'};
@@ -252,7 +267,7 @@ for(const row of records.speeches) add(speechesBySummary,row[column('speeches','
 const modelOrder=[...new Set(records.runs.map(row=>row[38]))];
 const combinations=[...runsBySummary.values()].map(rows=>{const r=rows[0];return [r[34],r[38],r[6],r[column('runs','Strategy condition ID')]];}).sort((a,b)=>a[0].localeCompare(b[0])||Number(strategies.get(b[3]).label==='NONE')-Number(strategies.get(a[3]).label==='NONE')||modelOrder.indexOf(a[1])-modelOrder.indexOf(b[1])||strategies.get(a[3]).label.localeCompare(strategies.get(b[3]).label)||a[2]-b[2]);
 const replicationCoverage=combinations.map(([group,model,h,strategyId])=>[...new Set(runsBySummary.get(summaryKey(group,model,h,strategyId)).filter(row=>row[10]==='COMPLETE').map(row=>row[7]))].sort((a,b)=>a-b));
-summary.getRange('A6').values=[[[...strategies.values()].some(s=>s.label!=='NONE')?'NONE pools three topics; named assignments are topic-specific. Use matched tables or filter Topic for direct comparisons.':'Each model / strategy condition / Hansard level has separate means and repetition coverage. Use source-table filters for topic or party comparisons.']];
+summary.getRange('A6').values=[[descriptiveConditions.length?'Blocks 4–5 use descriptive historical context. Batch 2 descriptive separates assigned and other MPs by topic; NONE here pools topics.':[...strategies.values()].some(s=>s.label!=='NONE')?'NONE pools three topics; named assignments are topic-specific. Use matched tables or filter Topic for direct comparisons.':'Each model / strategy condition / Hansard level has separate means and repetition coverage. Use source-table filters for topic or party comparisons.']];
 summary.getRange('A6').format.font={italic:true,color:muted};
 const summaryHead=['Judge group','Model','Strategy condition','Adversarial parties','Hansard excerpts','Complete debates','Consistency','Logical reasoning','Responsiveness','Relevance','Disruptive rhetoric','VADER compound','Cardiff positive','DeBERTa support','Repetition IDs','Repetitions','Strategy condition ID','Strategy config SHA256','Summary key'];
 summary.getRange('A7:S7').values=[summaryHead];
@@ -295,9 +310,9 @@ summary.getRange(`D${totalRow}:E${totalRow+3}`).format.columnWidth=17;
 let helperRow=totalRow+116;
 const chartSources=[];
 const firstGroup=[...groups.values()][0];
-const chartConditions=[...new Map(combinations.filter(r=>r[0]===firstGroup).map(r=>[JSON.stringify([r[1],r[3]]),{model:r[1],strategyId:r[3]}])).values()];
+const chartConditions=[...new Map(combinations.filter(r=>r[0]===firstGroup && (!descriptiveConditions.length || descriptiveConditions.some(c=>c.modelKey===r[1] && (c.strategyId===r[3] || strategies.get(r[3]).label==='NONE')))).map(r=>[JSON.stringify([r[1],r[3]]),{model:r[1],strategyId:r[3]}])).values()];
 const multiStrategy=new Set(chartConditions.map(c=>c.strategyId)).size>1;
-const shortAssignments={'NZ_FIRST=TOPIC_DERAILMENT':'NZF derail','ACT=STRAW_MAN':'ACT straw man','GREEN=PROCEDURAL_MANIPULATION':'Green procedural'};
+const shortAssignments={'NZ_FIRST=TOPIC_DERAILMENT':'NZF derail','ACT=STRAW_MAN':'ACT straw man','GREEN=PROCEDURAL_MANIPULATION':'Green procedural','ACT=TOPIC_DERAILMENT':'ACT derail','NATIONAL=TOPIC_DERAILMENT':'National derail','GREEN=STRAW_MAN':'Green straw man','LABOUR=STRAW_MAN':'Labour straw man','NZ_FIRST=PROCEDURAL_MANIPULATION':'NZF procedural','ACT=PROCEDURAL_MANIPULATION':'ACT procedural'};
 const chartLabels=chartConditions.map(c=>{
   if(!multiStrategy) return c.model;
   const model=c.model==='qwen3:8b [ollama]'?'Qwen':c.model==='gpt-6-luna [openai]'?'Luna':c.model;
@@ -306,7 +321,7 @@ const chartLabels=chartConditions.map(c=>{
 });
 const chartColors=['#315A96','#CB7435','#357A50','#7056A2','#2C8796','#9B466D','#B0453B','#96782D'];
 const chartDefinitions=[...metrics.map((metric,i)=>({metric,title:metricLabels[i]+' (0–4)',column:7+i,min:0,max:4,section:'rubric',row:totalRow+7+Math.floor(i/2)*18,side:i%2})),...['VADER mean compound (−1 to 1)','Cardiff mean positive (0–1)','DeBERTa mean support (0–1)'].map((title,i)=>({metric:methods[i],title,column:12+i,min:i===0?-1:0,max:1,section:'local',row:totalRow+67+Math.floor(i/2)*18,side:i%2}))];
-summary.getRange(`A${totalRow+5}`).values=[['LLM rubric scores — '+firstGroup+'; separate model / strategy series, pooled across topics and completed repetitions.']];
+summary.getRange(`A${totalRow+5}`).values=[[descriptiveConditions.length?'Luna blocks 4–5 and pooled historical cooperative context — descriptive, all five MPs.':'LLM rubric scores — '+firstGroup+'; separate model / strategy series, pooled across topics and completed repetitions.']];
 summary.getRange(`A${totalRow+5}`).format.font={name:font,size:14,bold:true,color:navy};
 summary.getRange(`A${totalRow+64}`).values=[['Local sentiment and stance scores']];
 summary.getRange(`A${totalRow+64}`).format.font={name:font,size:14,bold:true,color:navy};
@@ -328,6 +343,45 @@ for(const definition of chartDefinitions) {
   chart.setPosition((definition.side?'H':'A')+definition.row,(definition.side?'P':'G')+(definition.row+15));
   chart.series.items.forEach((series,i)=>{series.line={fill:chartColors[i%chartColors.length],style:'solid',width:2};});
   helperRow+=6;
+}
+const descriptiveHeaders=['Assignment block','Topic','Assigned party','Hansard excerpts','Metric / method','Scale','Assigned n','Assigned mean','Historical same-party n','Historical same-party mean','Other MPs n','Other MPs mean','Historical other MPs n','Historical other MPs mean','Assigned run ID','Model key','Topic key','Metric / method ID'];
+const descriptiveRows=[], descriptiveSources=[];
+if(descriptiveSheet) {
+  const definitions=[...metrics.map((id,i)=>({key:'rubric',id,label:metricLabels[i],scale:'0–4',value:'Score'})),
+    ...methods.map((id,i)=>({key:'speeches',id,label:['VADER compound','Cardiff positive','DeBERTa support'][i],scale:i===0?'−1 to 1':'0–1',value:['VADER mean compound','Cardiff mean positive','DeBERTa mean support'][i],chunks:['VADER chunks','Cardiff chunks','DeBERTa chunks'][i]}))];
+  const sorted=descriptiveConditions.slice().sort((a,b)=>a.assignmentBlock-b.assignmentBlock || ['retirement','four_day_week','nuclear_power'].indexOf(a.topicKey)-['retirement','four_day_week','nuclear_power'].indexOf(b.topicKey) || a.groundingCount-b.groundingCount || a.modelKey.localeCompare(b.modelKey));
+  for(const c of sorted) for(const d of definitions) {
+    descriptiveRows.push([c.assignmentBlock,{retirement:'Retirement age',four_day_week:'Four-day workweek',nuclear_power:'Nuclear power'}[c.topicKey]??c.topicTitle,c.actor,c.groundingCount,d.label,d.scale,...Array(8).fill(null),c.runId,c.modelKey,c.topicKey,d.id]);
+    descriptiveSources.push({condition:c,definition:d});
+  }
+  const end=7+descriptiveRows.length;
+  descriptiveSheet.showGridLines=false;descriptiveSheet.tabColor=navy;
+  descriptiveSheet.getRange(`A1:R${end}`).format={font:{name:font,size:10,color:ink},columnWidth:14,rowHeight:24,verticalAlignment:'center'};
+  descriptiveSheet.getRange('A2').values=[['Adversarial testing batch 2 — Luna']];
+  descriptiveSheet.getRange('A2').format.font={name:font,size:16,bold:true,color:navy};
+  descriptiveSheet.getRange('A4').values=[[`${descriptiveConditions.length} new debates; ${descriptiveConditions.length*25} speeches. Assignment blocks ${[...new Set(descriptiveConditions.map(c=>c.assignmentBlock))].join(', ')}.`]];
+  descriptiveSheet.getRange('A5').values=[['Descriptive context: historical cooperative blocks 1–3 have different speaking orders. No matched controls or causal effects are claimed.']];
+  descriptiveSheet.getRange('A6').values=[['Rubric n counts participant-topic ratings; local n counts speeches. Scores retain their separate scales; higher disruptive rhetoric means more disruption.']];
+  descriptiveSheet.getRange('A4:A6').format.font={name:font,size:10,italic:true,color:muted};
+  descriptiveSheet.getRange(`A7:R${end}`).values=[descriptiveHeaders,...descriptiveRows];
+  descriptiveSheet.getRange('A7:R7').format={fill:navy,font:{name:font,size:10,bold:true,color:'#FFFFFF'},wrapText:true,rowHeight:62,horizontalAlignment:'center',verticalAlignment:'center'};
+  const widths=[12,24,16,12,22,12,12,13,16,17,12,13,17,18,40,27,22,27];
+  widths.forEach((width,i)=>{descriptiveSheet.getRange(`${letter(i+1)}1:${letter(i+1)}${end}`).format.columnWidth=width;});
+  descriptiveSheet.tables.add(`A7:R${end}`,true,'DescriptiveComparisons').style='TableStyleMedium2';
+  descriptiveSheet.freezePanes.freezeRows(7);descriptiveSheet.freezePanes.freezeColumns(4);
+  const quoted=text=>`"${text.replaceAll('"','""')}"`;
+  const formulas=descriptiveSources.map(({condition:c,definition:d},i)=>{
+    const r=i+8, key=d.key, source=sheetNames[key], last=key==='rubric'?rubEnd:speechEnd;
+    const range=label=>`'${source}'!$${letter(column(key,label)+1)}$2:$${letter(column(key,label)+1)}$${last}`;
+    const common=[[range('Model key'),`$P${r}`],[range('Topic key'),`$Q${r}`],[range('Hansard excerpts'),`$D${r}`],[range('Generation outcome'),'"COMPLETE"'],[range('Evaluation group'),quoted(c.group)],
+      ...(key==='rubric'?[[range('Status'),'"OK"'],[range('Metric'),`$R${r}`]]:[[range(d.chunks),'">0"']])];
+    const subsets=[[[range('Run ID'),`$O${r}`],[range('Strategy role'),'"ASSIGNED"']],[[range('Strategy condition'),'"NONE"'],[range('Party'),`$C${r}`]],
+      [[range('Run ID'),`$O${r}`],[range('Strategy role'),'"OTHER"']],[[range('Strategy condition'),'"NONE"'],[range('Party'),`"<>"&$C${r}`]]];
+    return subsets.flatMap((subset,j)=>{const criteria=[...common,...subset].flat().join(','),countCol=letter(7+j*2);return [`=COUNTIFS(${criteria})`,`=IF($${countCol}${r}=0,"",SUMIFS(${range(d.value)},${criteria})/$${countCol}${r})`];});
+  });
+  descriptiveSheet.getRange(`G8:N${end}`).formulas=formulas;
+  for(const col of ['G','I','K','M']) descriptiveSheet.getRange(`${col}8:${col}${end}`).setNumberFormat('0');
+  for(const col of ['H','J','L','N']) descriptiveSheet.getRange(`${col}8:${col}${end}`).setNumberFormat('0.000');
 }
 stage('formulas-and-charts');
 wb.recalculate();
@@ -352,6 +406,18 @@ for(let i=0;i<combinations.length;i++) {
   const mean=values=>values.length?values.reduce((a,b)=>a+b,0)/values.length:'';
   const expected=[runsBySummary.get(key).filter(row=>row[10]==='COMPLETE').length,...metrics.map(metric=>mean(selectedRubric.filter(row=>row[8]===metric).map(row=>row[10]))),...[11,12,13].map(col=>mean(selectedSpeeches.map(row=>row[col]).filter(value=>typeof value==='number')))];
   expected.forEach((value,j)=>{if(value===''?summaryValues[i][j]!=='' && summaryValues[i][j]!==null:Math.abs(summaryValues[i][j]-value)>1e-9) throw new Error('Summary mean disagrees with public scores');});
+}
+if(descriptiveSheet) {
+  const actual=descriptiveSheet.getRange(`G8:N${7+descriptiveRows.length}`).values;
+  descriptiveSources.forEach(({condition:c,definition:d},i)=>{
+    const key=d.key, rows=records[key], at=label=>column(key,label);
+    const valid=rows.filter(r=>r[at('Model key')]===c.modelKey && r[at('Topic key')]===c.topicKey && r[at('Hansard excerpts')]===c.groundingCount && r[at('Generation outcome')]==='COMPLETE' && r[at('Evaluation group')]===c.group && (key==='rubric'?r[at('Status')]==='OK' && r[at('Metric')]===d.id:r[at(d.chunks)]>0));
+    const subsets=[valid.filter(r=>r[at('Run ID')]===c.runId && r[at('Strategy role')]==='ASSIGNED'),valid.filter(r=>r[at('Strategy condition')]==='NONE' && r[at('Party')]===c.actor),
+      valid.filter(r=>r[at('Run ID')]===c.runId && r[at('Strategy role')]==='OTHER'),valid.filter(r=>r[at('Strategy condition')]==='NONE' && r[at('Party')]!==c.actor)];
+    const expected=subsets.flatMap(selected=>[selected.length,selected.length?selected.reduce((sum,r)=>sum+r[at(d.value)],0)/selected.length:'']);
+    expected.forEach((value,j)=>{if(value===''?actual[i][j]!=='' && actual[i][j]!==null:typeof actual[i][j]!=='number' || Math.abs(actual[i][j]-value)>1e-9) throw new Error('Descriptive comparison disagrees with public evidence');});
+    descriptiveRows[i].splice(6,8,...actual[i]);
+  });
 }
 // Supply saved numeric chart caches as well as editable source references.
 for(const {chart,helperRow} of chartSources) for(let i=0;i<chart.series.items.length;i++) {
@@ -386,7 +452,13 @@ for(const batchArgument of batchArguments) {
     };
     await copyPublic(source,destination);
   }
-  await fs.writeFile(path.join(output,'evidence',m.batchId,'index.json'),JSON.stringify({batchId:m.batchId,state:m.state,cells:m.cells.map(c=>({cellId:c.cellId,runId:c.runId,previousRunIds:c.previousRunIds??[],topic:c.topicTitle,groundingCount:c.groundingCount,repetition:c.repetition,model:m.models[c.modelPreset],judge:m.models['study-judge'],thinkingEnabled:m.ollamaThinkingEnabled,localJobId:c.localJobId,rubricJobId:c.rubricJobId,previousLocalJobId:c.previousLocalJobId,previousRubricJobId:c.previousRubricJobId,previousLocalJobIds:c.previousLocalJobIds??[]}))},null,2));
+  await fs.writeFile(path.join(output,'evidence',m.batchId,'index.json'),JSON.stringify({batchId:m.batchId,state:m.state,cells:m.cells.map(c=>({cellId:c.cellId,runId:c.runId,previousRunIds:c.previousRunIds??[],topic:c.topicTitle,groundingCount:c.groundingCount,repetition:c.repetition,assignmentBlock:c.assignmentBlock??(c.settings.members.some(v=>v.strategy!=='NONE')?c.repetition:null),comparisonMode:c.comparisonMode??m.comparisonMode??(c.settings.members.every(v=>v.strategy==='NONE')?'cooperative':'matched'),model:m.models[c.modelPreset],judge:m.models['study-judge'],thinkingEnabled:m.ollamaThinkingEnabled,localJobId:c.localJobId,rubricJobId:c.rubricJobId,previousLocalJobId:c.previousLocalJobId,previousRubricJobId:c.previousRubricJobId,previousLocalJobIds:c.previousLocalJobIds??[]}))},null,2));
+}
+if(descriptiveRows.length) {
+  const quote=value=>value==null?'':typeof value==='string'?`"${value.replaceAll('"','""')}"`:String(value);
+  await fs.writeFile(path.join(output,'descriptive-comparisons.csv'),[descriptiveHeaders,...descriptiveRows].map(row=>row.map(quote).join(',')).join('\r\n'),'utf8');
+  const preview=await wb.render({sheetName:'Batch 2 descriptive',range:'A1:N18',scale:1.25,format:'png'});
+  await fs.writeFile(path.join(output,'preview-Batch-2-descriptive.png'),new Uint8Array(await preview.arrayBuffer()));
 }
 for(const [key,rows] of Object.entries(records)) {
   const quote=value=>value==null?'':typeof value==='string'?`"${value.replaceAll('"','""')}"`:value instanceof Date?value.toISOString():String(value);
@@ -397,6 +469,11 @@ for(const sheetName of ['Summary',...Object.values(sheetNames)]) {
   const preview=await wb.render({sheetName,range,scale:1.25,format:'png'});
   await fs.writeFile(path.join(output,`preview-${sheetName.replaceAll(' ','-')}.png`),new Uint8Array(await preview.arrayBuffer()));
 }
+if(descriptiveRows.length) for(const key of ['runs','rubric','speeches','sentences','assignments']) {
+  const start=letter(column(key,'Assignment block')+1),end=letter(column(key,'Comparison mode')+1);
+  const preview=await wb.render({sheetName:sheetNames[key],range:`${start}1:${end}7`,scale:1.5,format:'png'});
+  await fs.writeFile(path.join(output,`preview-blocks-${key}.png`),new Uint8Array(await preview.arrayBuffer()));
+}
 for(const row of [...new Set(chartDefinitions.map(c=>c.row))]) {
   const preview=await wb.render({sheetName:'Summary',range:`A${row}:P${row+15}`,scale:1,format:'png'});
   await fs.writeFile(path.join(output,`preview-charts-${row}.png`),new Uint8Array(await preview.arrayBuffer()));
@@ -405,6 +482,6 @@ stage('previews-and-evidence');
 const file=await SpreadsheetFile.exportXlsx(wb);
 await file.save(path.join(output,'debate-evaluation.xlsx'));
 stage('xlsx-saved');
-const result={state:'EXPORTED',batches:sourceBatches,records:Object.fromEntries(Object.entries(records).map(([k,v])=>[k,v.length])),headers,capturedSpeeches,capturedRubric,summaryHeaders:summaryHead,summaryCombinations:combinations,summaryValues,replicationCoverage,strategyConditions:[...strategies.values()].map(({speaker,...strategy})=>strategy),cumulativeBudgetCeilingUsd,charts:chartDefinitions.length,chartDefinitions,chartConditions,chartLabels,chartColors,exportStageSeconds:timings,generatedAt:new Date().toISOString(),workbook:path.join(output,'debate-evaluation.xlsx'),xlsxSha256:sha(await fs.readFile(path.join(output,'debate-evaluation.xlsx')))};
+const result={state:'EXPORTED',batches:sourceBatches,records:Object.fromEntries(Object.entries(records).map(([k,v])=>[k,v.length])),headers,capturedSpeeches,capturedRubric,summaryHeaders:summaryHead,summaryCombinations:combinations,summaryValues,replicationCoverage,strategyConditions:[...strategies.values()].map(({speaker,...strategy})=>strategy),descriptiveHeaders,descriptiveRows,descriptiveDebates:descriptiveConditions.length,cumulativeBudgetCeilingUsd,charts:chartDefinitions.length,chartDefinitions,chartConditions,chartLabels,chartColors,exportStageSeconds:timings,generatedAt:new Date().toISOString(),workbook:path.join(output,'debate-evaluation.xlsx'),xlsxSha256:sha(await fs.readFile(path.join(output,'debate-evaluation.xlsx')))};
 await fs.writeFile(path.join(output,'workbook-verification.json'),JSON.stringify(result,null,2));
 console.log(JSON.stringify({state:result.state,records:result.records,charts:result.charts,exportStageSeconds:timings,workbook:result.workbook,xlsxSha256:result.xlsxSha256}));
