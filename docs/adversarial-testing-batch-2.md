@@ -29,3 +29,7 @@ Reconcile assignment metadata, speech counts, native local outputs, raw judge re
 Record actual collected coverage. Retained batch 1 covers block 1; this batch covers the two requested parties per topic without automatically collecting blocks 2–3 or claiming complete five-party coverage. Qwen remains pending after Luna-only execution. Topic and tactic remain coupled; procedural manipulation measures demands within speeches. Assignment and automated evidence checks do not establish tactic success or research accuracy.
 
 Work and verified local commits remain on `codex/dual-interface-integration`; do not push.
+
+## Luna collection outcome
+
+Collected and independently verified 2026-10-12 in `runs/studies/2026-10-12-adversarial-testing-batch-2-luna`: all 18 correct block-4/5 conditions complete, 450 speeches, 450 generation API calls and 18 blind judge API calls. No repair, retry or missing score. All 54 local method reports are OK; the five rubric metrics retain 450 separate observations. The manifest and usage ledger retain exact identities and hashes; the progress tracker records verification and cost estimates. Software/evidence checks do not establish research accuracy or tactic enactment. Qwen's 18 planned conditions remain pending.
