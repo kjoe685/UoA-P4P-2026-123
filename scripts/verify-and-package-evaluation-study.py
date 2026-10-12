@@ -314,6 +314,10 @@ def main():
             seen_descriptive.add((run,method))
             assert row["Assignment block"] == str(condition["block"]) and row["Assigned party"] == condition["actor"]
             assert row["Topic key"] == cell["topicKey"] and int(row["Hansard excerpts"]) == cell["groundingCount"]
+            current_model = next(v["Model key"] for v in csv_data["runs"] if v["Run ID"] == run)
+            assert row["Model key"] == current_model
+            if "Generator" in row:
+                assert row["Generator"] == {"gpt-6-luna [openai]":"Luna", "qwen3:8b [ollama]":"Qwen"}.get(current_model,current_model)
             rubric = method not in local_labels
             source = csv_data["rubric" if rubric else "speeches"]
             current_group = next(v["Evaluation group"] for v in csv_data["runs"] if v["Run ID"] == run)
@@ -409,26 +413,31 @@ def main():
         else:
             assert abs(value(summary["F" + str(total_row + 3)]) - exported["cumulativeBudgetCeilingUsd"]) < 1e-12
         charts = [n for n in names if re.fullmatch(r"xl/(?:drawings/)?charts/chart\d+\.xml", n)]
-        assert len(charts) == exported["charts"] == 8
-        expected_series = len(exported["chartConditions"])
+        assert len(charts) == exported["charts"] == len(exported["chartDefinitions"])
         definitions = {d["title"]:d for d in exported["chartDefinitions"]}
-        assert len(definitions) == 8 and sum(d["section"]=="local" for d in definitions.values()) == 3
+        assert len(definitions) == len(charts)
+        panel_count = len({d.get("model") for d in definitions.values()})
+        assert len(definitions) == panel_count*8 and sum(d["section"]=="local" for d in definitions.values()) == panel_count*3
         seen_titles = set()
         palette = [color.lstrip("#").upper() for color in exported.get("chartColors", ["315A96", "CB7435", "669966", "9066A5"])]
         assert all(re.fullmatch(r"[0-9A-F]{6}", color) for color in palette)
-        if expected_series == 8: assert len(palette) >= 8 and len(set(palette[:8])) == 8
+        assert len(set(palette)) == len(palette)
         for name in charts:
             chart = ET.fromstring(file.read(name))
             title = "".join(t.text or "" for t in chart.findall(".//c:title//a:t",ns))
             definition = definitions[title]
             seen_titles.add(title)
+            indices = definition.get("conditionIndices",list(range(len(exported["chartConditions"]))))
+            assert len(indices) == len(set(indices)) and all(0 <= i < len(exported["chartConditions"]) for i in indices)
+            if "model" in definition:
+                assert indices == [i for i,c in enumerate(exported["chartConditions"]) if c["model"] == definition["model"]]
             assert float(chart.find(".//c:valAx/c:scaling/c:min", ns).attrib["val"]) == definition["min"]
             assert float(chart.find(".//c:valAx/c:scaling/c:max", ns).attrib["val"]) == definition["max"]
             series = chart.findall(".//c:lineChart/c:ser", ns)
-            assert len(series) == expected_series
+            assert len(series) == len(indices)
             for i, s in enumerate(series):
                 label = "".join(t.text or "" for t in s.findall("c:tx/c:v", ns) + s.findall("c:tx/c:strRef/c:strCache/c:pt/c:v", ns))
-                assert label == exported["chartLabels"][i]
+                assert label == exported["chartLabels"][indices[i]]
                 ref = s.find("c:val/c:numRef/c:f", ns).text
                 match = re.fullmatch(r"'Summary'!\$([A-Z]+)\$(\d+):\$\1\$(\d+)", ref)
                 assert match is not None and int(match[3]) - int(match[2]) == 2
@@ -448,16 +457,23 @@ def main():
             if p.is_file() and p.suffix in {".json", ".txt"}:
                 shutil.copyfile(p, destination / p.name)
     coverage = {k: {**v, "repetitions": sorted(v["repetitions"])} for k, v in models.items()}
+    generator_names = {"gpt-6-luna [openai]":"Luna", "qwen3:8b [ollama]":"Qwen"}
+    descriptive_counts = Counter(next(row["Model key"] for row in csv_data["runs"] if row["Run ID"] == run) for run in descriptive_runs)
+    batch2_coverage = "; ".join(f"{generator_names.get(model,model)}: {count} debates / {count*25} speeches" for model,count in sorted(descriptive_counts.items()))
+    expected_batch2 = {(model,block,topic,h) for model in generator_names for block in [4,5] for topic in ["retirement","four_day_week","nuclear_power"] for h in [0,10,100]}
+    actual_batch2 = {(next(row["Model key"] for row in csv_data["runs"] if row["Run ID"] == run),condition["block"],condition["cell"]["topicKey"],condition["cell"]["groundingCount"]) for run,condition in descriptive_runs.items()}
+    batch2_status = "All 36 planned conditions / 900 speeches are complete." if actual_batch2 == expected_batch2 else f"{len(expected_batch2-actual_batch2)} planned conditions remain outside this delivery."
     result = {"state": "PASS", "records": dict(expected), "rubricStatuses": dict(statuses), "modelCoverage": coverage, "strategyConditions":len({m["Strategy condition ID"] for m in strategy_by_run.values()}),"strategyAssignmentsAndGroupingVerified":True,"localSpeechCoverage": dict(native_coverage), "abstainedChunks": dict(abstentions), "localProvenance": local_provenance, "standardEstimateUsd": standard, "conservativeAllowanceUsd": allowance, "cumulativeCeilingUsd": exported["cumulativeBudgetCeilingUsd"], "prepaidBatches":prepaid_batches,"matchedComparisonRows":matched_counts,"descriptiveDebates":len(descriptive_runs),"descriptiveComparisonRows":len(descriptive_rows),"descriptiveCountsMeansAndNativeCachesVerified":bool(descriptive_rows),"paidRequests": len(paid), "priorLedgerChecks": protected, "sourceAndPublicCopyHashesVerified": True, "csvAndNativeXlsxCachesVerified": True, "nativeCharts": len(charts), "exportStageSeconds":exported["exportStageSeconds"],"workbookSha256": digest(xlsx)}
+    result.update(namedBatch2Complete=actual_batch2==expected_batch2,batch2ModelDebates=dict(descriptive_counts),plannedBatch2ConditionsVerified=len(actual_batch2 & expected_batch2))
     (output / "data-verification.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
     descriptions = "\n".join("- " + model + ": repetitions " + ", ".join(map(str, c["repetitions"])) + "; " + str(c["debates"]) + " complete debates and " + str(c["speeches"]) + " speeches." for model, c in coverage.items())
     spending_boundary = "User-authorized loaded account credit; no fixed USD admission gate or balance polling for " + ", ".join(prepaid_batches) if prepaid_batches else f"One cumulative gate: US${exported['cumulativeBudgetCeilingUsd']:.2f}"
     matched_note = "For direct block-one control comparisons, use matched-rubric.csv and matched-local.csv (both retain paired run IDs), described in MATCHED-COMPARISONS.md. The general Summary pools NONE topics, whereas each assigned condition belongs to one topic; compare paired rows or filter by Topic rather than comparing that pooled baseline with a single topic/tactic. Rebuild these tables before packaging with `python scripts/export-adversarial-batch1-comparisons.py OUTPUT CONTROL_BATCH ASSIGNED_BATCH`; this reads retained evidence and makes no model calls." if matched_runs else ""
     descriptive_note = f"""## Named adversarial-testing-batch-2 coverage
 
-This version adds {len(descriptive_runs)} Luna debates / {len(descriptive_runs)*25} speeches for assignment blocks 4–5: ACT/National retirement derailment, Green/Labour workweek straw man, and NZ First/ACT nuclear procedural manipulation. Qwen's 18 new conditions remain pending. Earlier cooperative blocks 1–3 and adversarial block 1 remain included unchanged. These blocks change assigned actors and speaking orders; they are not identical treatment repetitions.
+This version includes {len(descriptive_runs)} batch-2 debates / {len(descriptive_runs)*25} speeches for assignment blocks 4–5: ACT/National retirement derailment, Green/Labour workweek straw man, and NZ First/ACT nuclear procedural manipulation. {batch2_coverage}. {batch2_status} Earlier cooperative blocks 1–3 and adversarial block 1 remain included unchanged. These blocks change assigned actors and speaking orders; they are not identical treatment repetitions.
 
-The first sheet, Batch 2 descriptive, and descriptive-comparisons.csv separate assigned actors from the other four MPs. They give topic/model/grounding-specific historical cooperative context using the same party or the other four parties, with explicit available-observation counts. Rubric counts are participant-topic ratings; local counts are speeches and means average the original per-speech chunk scores. Each metric/method keeps its own scale. No matched controls, significance, causal effects or successful tactic enactment are claimed. Summary's charts show the new Luna assignments and pooled historical Luna NONE context across all five MPs; the first sheet gives the topic-specific role comparisons.
+The first sheet, Batch 2 descriptive, and descriptive-comparisons.csv separate assigned actors from the other four MPs and identify the generator. They give topic/model/grounding-specific historical cooperative context using the same party or the other four parties, with explicit available-observation counts. Rubric counts are participant-topic ratings; local counts are speeches and means average the original per-speech chunk scores. Each metric/method keeps its own scale. No matched controls, significance, causal effects or successful tactic enactment are claimed. Summary's charts show the selected generators' new assignments and pooled historical NONE context across all five MPs; separate generator panels are used when the combined legend exceeds eight series. The first sheet gives the topic-specific role comparisons.
 
 The nine T91 Luna block-2 debates resulted from the earlier mistaken interpretation of the batch name. They remain unchanged separately in `runs/studies/2026-10-12-adversarial-r2-luna` and do not count toward this batch's coverage. Their usage remains included in the new batch's complete accounting ancestry, while this version's selected-result usage excludes that supplemental batch. All preserved failed batch-one attempts remain archived.
 """ if descriptive_runs else ""
@@ -473,7 +489,7 @@ All conditions use the original three topics, 0/10/100 Hansard excerpts per part
 
 GPT-6 Luna generation: temperature0.6, reasoning none, maximum4096completion tokens, timeout180seconds. Common GPT-6 Luna judge: temperature0, reasoning none, maximum8192completion tokens, timeout180seconds and at most one repair. Qwen3:8b: temperature0.6, think=false, cap4096, timeout600seconds, Q4_K_M, Ollama0.35.0; requested context131072/observed native40960, flash attention/q4_0KV cache/serial inference. Full configuration/source/model hashes are in Protocol and saved raw reports.
 
-The {'nine' if descriptive_runs else 'eight'}-sheet workbook contains seven named source tables{' and a descriptive comparison table' if descriptive_runs else ''}, five independent0–4rubric charts and three local score charts on Summary: VADER mean compound(−1to1), Cardiff mean positive(0to1), and DeBERTa mean support(0to1). Summary lists repetition/order-block coverage per model/strategy/Hansard combination and pools complete debates. Use raw Repetition, Assignment block, Comparison mode, Topic, Party, Model, Provider, Hansard, Strategy condition, Speaker strategy, Strategy role and Evaluation group columns in PivotTables for individual conditions. Strategy assignments stores one party/strategy pair per row, with NONE baseline rows and support for multiple parties/strategies. IDs include canonical assignments and frozen strategy prompt hashes; study condition IDs also include the repetition/model/topic/grounding/order. Metadata is for the researcher and is kept outside unchanged public transcripts/blind judging; private prompt text and credentials are excluded.
+The {'nine' if descriptive_runs else 'eight'}-sheet workbook contains seven named source tables{' and a descriptive comparison table' if descriptive_runs else ''}, {sum(d['section']=='rubric' for d in definitions.values())} independent0–4rubric charts and {sum(d['section']=='local' for d in definitions.values())} local score charts on Summary: VADER mean compound(−1to1), Cardiff mean positive(0to1), and DeBERTa mean support(0to1). Summary lists repetition/order-block coverage per model/strategy/Hansard combination and pools complete debates. Use raw Repetition, Assignment block, Comparison mode, Topic, Party, Model, Provider, Hansard, Strategy condition, Speaker strategy, Strategy role and Evaluation group columns in PivotTables for individual conditions. Strategy assignments stores one party/strategy pair per row, with NONE baseline rows and support for multiple parties/strategies. IDs include canonical assignments and frozen strategy prompt hashes; study condition IDs also include the repetition/model/topic/grounding/order. Metadata is for the researcher and is kept outside unchanged public transcripts/blind judging; private prompt text and credentials are excluded.
 
 Rubric scores are participant/topic/metric observations. Sentiment and stance are sentence observations, with per-speech means. Speeches appends original raw chunk scores and abstention flags(1=true,0=false,blank=unavailable); bounded row-local SUM/COUNT formulas remain correct when either source table is sorted. Full sentence text/offsets/provenance remain in Sentence metrics. Transformer scores are uncalibrated0–1. Higher disruptive rhetoric means more disruption. Missing scores remain blank and numeric zeros remain zero. Abstained raw transformer scores/flags are retained, including in means. No combined or normalized quality score is calculated. Speeches/sentences within debates are dependent; automated scores have not been validated against human ratings. Repetition coverage is recorded explicitly.
 

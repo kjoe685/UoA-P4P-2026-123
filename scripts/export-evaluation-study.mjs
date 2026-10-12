@@ -13,7 +13,7 @@ if (!outputArgument || !batchArguments.length) throw new Error('Use OUTPUT_DIREC
 // Size the bounded heap for final XLSX serialization, which holds the full
 // sentence evidence and the serialized package together. Read manifests only.
 const exportDebates=(await Promise.all(batchArguments.map(async batch=>JSON.parse((await fs.readFile(path.join(path.resolve(batch),'manifest.json'),'utf8')).replace(/^\uFEFF/,''))))).reduce((sum,m)=>sum+m.cells.length,0);
-const exportHeapMb=exportDebates>=90?16384:8192;
+const exportHeapMb=exportDebates>=108?24576:exportDebates>=90?16384:8192;
 if(getHeapStatistics().heap_size_limit<(exportHeapMb/1024-.5)*1024**3) {
   if(process.env.EVALUATION_STUDY_EXPORT_HEAP===String(exportHeapMb)) throw new Error(`Node cannot provide the required ${exportHeapMb/1024} GiB export heap`);
   console.log(`EXPORT_HEAP restarting with a ${exportHeapMb/1024} GiB maximum; no inference occurs in this script`);
@@ -130,7 +130,7 @@ for (const batchArgument of batchArguments) {
   records.protocol.push([m.batchId,'Assignment blocks',JSON.stringify(m.assignmentBlocks??[])],[m.batchId,'Comparison mode',m.comparisonMode??(m.treatmentId==='adversarial-topic-v1'?'matched':'cooperative')],[m.batchId,'Comparison note',m.comparisonNote??'']);
 }
 const cumulativeBudgetCeilingUsd=[...budgetGroups.values()].some(v=>v==null)?null:[...budgetGroups.values()].reduce((a,b)=>a+b,0);
-records.protocol.push(['All batches','Metric grain','Rubric: one participant/topic/metric. Sentiment and stance: sentence chunks. Speeches: mean of available chunks for that one speech.'],['All batches','Separate scales','Rubric 0–4. Higher rhetorical-tactics values mean more disruption. VADER compound −1 to 1. Cardiff/DeBERTa uncalibrated model scores 0–1.'],['All batches','Uncertainty','Abstained transformer chunks retain their scores and an explicit abstained field. Speech means include available raw scores, including abstained chunks.'],['All batches','Missing values','Blank numerical scores mean unavailable or insufficient evidence. They are never changed to zero. Chunk counts are zero when no valid chunks are available. Pending and failed jobs stay visible in Runs.'],['All batches','Research scope','Repetition coverage is listed per model and strategy condition in Summary. Speeches and sentences within a debate are dependent observations. Automated judgments have not been validated against human ratings.'],['All batches','Graph construction','Use RubricScores, SpeechData, SentenceMetrics and StrategyAssignments in Excel PivotTables. Filter by provider, model, topic, Hansard count, repetition, party, strategy condition, speaker strategy, strategy role and evaluation group. Five rubric charts and three local method charts show the first judge group, with separate model/strategy series and pooled available complete repetitions. Each metric retains its original scale.'],['All batches','Append later runs','Regenerate from the original and additional batch directories with this builder. Original run IDs and unique study conditions are retained; duplicates are rejected. Additional models/repetitions/strategy assignments create new rows, not new provider worksheets.'],['All batches','Cost meaning','Usage and Runs token/cost totals include all attempts, including archived failures. Related batches share one cumulative ceiling, with prior allowance reserved before a new batch starts. Standard-price estimate uses reported tokens and uncached Standard rates, excluding cache discounts. Budget allowance uses conservative prices and retains full reservations for failures/unknown usage. Neither is an account invoice.'],['All batches','Summary means','Complete debates only. Rubric means average participant/topic scores. Native method means average per-speech chunk means. Automated ratings and model confidence scores are separate measurements.']);
+records.protocol.push(['All batches','Metric grain','Rubric: one participant/topic/metric. Sentiment and stance: sentence chunks. Speeches: mean of available chunks for that one speech.'],['All batches','Separate scales','Rubric 0–4. Higher rhetorical-tactics values mean more disruption. VADER compound −1 to 1. Cardiff/DeBERTa uncalibrated model scores 0–1.'],['All batches','Uncertainty','Abstained transformer chunks retain their scores and an explicit abstained field. Speech means include available raw scores, including abstained chunks.'],['All batches','Missing values','Blank numerical scores mean unavailable or insufficient evidence. They are never changed to zero. Chunk counts are zero when no valid chunks are available. Pending and failed jobs stay visible in Runs.'],['All batches','Research scope','Repetition coverage is listed per model and strategy condition in Summary. Speeches and sentences within a debate are dependent observations. Automated judgments have not been validated against human ratings.'],['All batches','Graph construction','Use RubricScores, SpeechData, SentenceMetrics and StrategyAssignments in Excel PivotTables. Filter by provider, model, topic, Hansard count, repetition, party, strategy condition, speaker strategy, strategy role and evaluation group. Five rubric metrics and three local methods show the first judge group, with separate model/strategy series and pooled available complete repetitions. When a combined descriptive legend exceeds eight series, paired generator panels each retain the same eight metrics and their original scales. Each metric retains its original scale.'],['All batches','Append later runs','Regenerate from the original and additional batch directories with this builder. Original run IDs and unique study conditions are retained; duplicates are rejected. Additional models/repetitions/strategy assignments create new rows, not new provider worksheets.'],['All batches','Cost meaning','Usage and Runs token/cost totals include all attempts, including archived failures. Related batches share one cumulative ceiling, with prior allowance reserved before a new batch starts. Standard-price estimate uses reported tokens and uncached Standard rates, excluding cache discounts. Budget allowance uses conservative prices and retains full reservations for failures/unknown usage. Neither is an account invoice.'],['All batches','Summary means','Complete debates only. Rubric means average participant/topic scores. Native method means average per-speech chunk means. Automated ratings and model confidence scores are separate measurements.']);
 
 const headers={
   runs:['Cell ID','Run ID','Model','Provider','Topic key','Topic','Hansard excerpts','Repetition','Rounds','Speeches','Outcome','Local evaluation','Rubric evaluation','Duration (s)','Generation input tokens (all attempts)','Generation output tokens (all attempts)','Judge input tokens (all attempts)','Judge output tokens (all attempts)','Standard estimate (USD)','Budget allowance (USD)','Temperature','Reasoning','Completion cap','Judge model','Judge reasoning','Judge temperature','Judge cap','Speaking order','Transcript SHA256','Corpus SHA256','Local model digest','Requested context','Native context','Cell state','Evaluation group','Batch','Attempt count','Archived run IDs','Model key'],
@@ -313,28 +313,40 @@ const firstGroup=[...groups.values()][0];
 const chartConditions=[...new Map(combinations.filter(r=>r[0]===firstGroup && (!descriptiveConditions.length || descriptiveConditions.some(c=>c.modelKey===r[1] && (c.strategyId===r[3] || strategies.get(r[3]).label==='NONE')))).map(r=>[JSON.stringify([r[1],r[3]]),{model:r[1],strategyId:r[3]}])).values()];
 const multiStrategy=new Set(chartConditions.map(c=>c.strategyId)).size>1;
 const shortAssignments={'NZ_FIRST=TOPIC_DERAILMENT':'NZF derail','ACT=STRAW_MAN':'ACT straw man','GREEN=PROCEDURAL_MANIPULATION':'Green procedural','ACT=TOPIC_DERAILMENT':'ACT derail','NATIONAL=TOPIC_DERAILMENT':'National derail','GREEN=STRAW_MAN':'Green straw man','LABOUR=STRAW_MAN':'Labour straw man','NZ_FIRST=PROCEDURAL_MANIPULATION':'NZF procedural','ACT=PROCEDURAL_MANIPULATION':'ACT procedural'};
+const generatorLabel=model=>model==='qwen3:8b [ollama]'?'Qwen':model==='gpt-6-luna [openai]'?'Luna':model;
 const chartLabels=chartConditions.map(c=>{
   if(!multiStrategy) return c.model;
-  const model=c.model==='qwen3:8b [ollama]'?'Qwen':c.model==='gpt-6-luna [openai]'?'Luna':c.model;
+  const model=generatorLabel(c.model);
   const label=strategies.get(c.strategyId).label;
   return model+': '+(shortAssignments[label]??label);
 });
 const chartColors=['#315A96','#CB7435','#357A50','#7056A2','#2C8796','#9B466D','#B0453B','#96782D'];
-const chartDefinitions=[...metrics.map((metric,i)=>({metric,title:metricLabels[i]+' (0–4)',column:7+i,min:0,max:4,section:'rubric',row:totalRow+7+Math.floor(i/2)*18,side:i%2})),...['VADER mean compound (−1 to 1)','Cardiff mean positive (0–1)','DeBERTa mean support (0–1)'].map((title,i)=>({metric:methods[i],title,column:12+i,min:i===0?-1:0,max:1,section:'local',row:totalRow+67+Math.floor(i/2)*18,side:i%2}))];
-summary.getRange(`A${totalRow+5}`).values=[[descriptiveConditions.length?'Luna blocks 4–5 and pooled historical cooperative context — descriptive, all five MPs.':'LLM rubric scores — '+firstGroup+'; separate model / strategy series, pooled across topics and completed repetitions.']];
+const chartModels=[...new Set(chartConditions.map(c=>c.model))];
+const splitCharts=descriptiveConditions.length>0 && chartModels.length===2 && chartConditions.length>8;
+const localHeadingRow=totalRow+(splitCharts?106:64);
+let chartDefinitions=[...metrics.map((metric,i)=>({metric,title:metricLabels[i]+' (0–4)',column:7+i,min:0,max:4,section:'rubric',row:totalRow+7+Math.floor(i/2)*18,side:i%2})),...['VADER mean compound (−1 to 1)','Cardiff mean positive (0–1)','DeBERTa mean support (0–1)'].map((title,i)=>({metric:methods[i],title,column:12+i,min:i===0?-1:0,max:1,section:'local',row:totalRow+67+Math.floor(i/2)*18,side:i%2}))];
+if(splitCharts) {
+  chartDefinitions=chartDefinitions.flatMap((definition,index)=>chartModels.map((model,side)=>({...definition,title:generatorLabel(model)+' — '+definition.title,model,
+    row:definition.section==='rubric'?totalRow+7+index*18:localHeadingRow+3+(index-metrics.length)*18,side,
+    conditionIndices:chartConditions.flatMap((condition,i)=>condition.model===model?[i]:[])})));
+  helperRow=localHeadingRow+70;
+}
+summary.getRange(`A${totalRow+5}`).values=[[descriptiveConditions.length?'Blocks 4–5 and pooled historical cooperative context — descriptive, all five MPs.':'LLM rubric scores — '+firstGroup+'; separate model / strategy series, pooled across topics and completed repetitions.']];
 summary.getRange(`A${totalRow+5}`).format.font={name:font,size:14,bold:true,color:navy};
-summary.getRange(`A${totalRow+64}`).values=[['Local sentiment and stance scores']];
-summary.getRange(`A${totalRow+64}`).format.font={name:font,size:14,bold:true,color:navy};
-summary.getRange(`A${totalRow+65}`).values=[['Means average per-speech chunk scores; available abstained transformer scores are included. Sentiment and stance measure distinct properties.']];
-summary.getRange(`A${totalRow+65}`).format.font={italic:true,color:muted};
+summary.getRange(`A${localHeadingRow}`).values=[['Local sentiment and stance scores']];
+summary.getRange(`A${localHeadingRow}`).format.font={name:font,size:14,bold:true,color:navy};
+summary.getRange(`A${localHeadingRow+1}`).values=[['Means average per-speech chunk scores; available abstained transformer scores are included. Sentiment and stance measure distinct properties.']];
+summary.getRange(`A${localHeadingRow+1}`).format.font={italic:true,color:muted};
 for(const definition of chartDefinitions) {
-  const helper=[['Excerpts',...chartLabels],...['0','10','100'].map(h=>[`${h} excerpts`,...chartLabels.map(()=>null)])];
-  summary.getRange(`A${helperRow}:${letter(chartConditions.length+1)}${helperRow+3}`).values=helper;
-  summary.getRange(`B${helperRow+1}:${letter(chartConditions.length+1)}${helperRow+3}`).formulas=[0,10,100].map(h=>chartConditions.map(c=>{
+  const indices=definition.conditionIndices??chartConditions.map((_,i)=>i);
+  const conditions=indices.map(i=>chartConditions[i]), labels=indices.map(i=>chartLabels[i]);
+  const helper=[['Excerpts',...labels],...['0','10','100'].map(h=>[`${h} excerpts`,...labels.map(()=>null)])];
+  summary.getRange(`A${helperRow}:${letter(conditions.length+1)}${helperRow+3}`).values=helper;
+  summary.getRange(`B${helperRow+1}:${letter(conditions.length+1)}${helperRow+3}`).formulas=[0,10,100].map(h=>conditions.map(c=>{
     const index=combinations.findIndex(r=>r[0]===firstGroup && r[1]===c.model && r[2]===h && r[3]===c.strategyId);
     return index<0?'=""':`=IF(ISNUMBER(${letter(definition.column)}${index+8}),${letter(definition.column)}${index+8},"")`;
   }));
-  const chart=summary.charts.add('line',summary.getRange(`A${helperRow}:${letter(chartConditions.length+1)}${helperRow+3}`));
+  const chart=summary.charts.add('line',summary.getRange(`A${helperRow}:${letter(conditions.length+1)}${helperRow+3}`));
   chartSources.push({chart,helperRow,...definition});
   chart.title=definition.title;chart.titleTextStyle.typeface=font;chart.titleTextStyle.fontSize=14;
   chart.legend={position:'top',textStyle:{typeface:font,fontSize:11}};
@@ -344,44 +356,44 @@ for(const definition of chartDefinitions) {
   chart.series.items.forEach((series,i)=>{series.line={fill:chartColors[i%chartColors.length],style:'solid',width:2};});
   helperRow+=6;
 }
-const descriptiveHeaders=['Assignment block','Topic','Assigned party','Hansard excerpts','Metric / method','Scale','Assigned n','Assigned mean','Historical same-party n','Historical same-party mean','Other MPs n','Other MPs mean','Historical other MPs n','Historical other MPs mean','Assigned run ID','Model key','Topic key','Metric / method ID'];
+const descriptiveHeaders=['Assignment block','Generator','Topic','Assigned party','Hansard excerpts','Metric / method','Scale','Assigned n','Assigned mean','Historical same-party n','Historical same-party mean','Other MPs n','Other MPs mean','Historical other MPs n','Historical other MPs mean','Assigned run ID','Model key','Topic key','Metric / method ID'];
 const descriptiveRows=[], descriptiveSources=[];
 if(descriptiveSheet) {
   const definitions=[...metrics.map((id,i)=>({key:'rubric',id,label:metricLabels[i],scale:'0–4',value:'Score'})),
     ...methods.map((id,i)=>({key:'speeches',id,label:['VADER compound','Cardiff positive','DeBERTa support'][i],scale:i===0?'−1 to 1':'0–1',value:['VADER mean compound','Cardiff mean positive','DeBERTa mean support'][i],chunks:['VADER chunks','Cardiff chunks','DeBERTa chunks'][i]}))];
   const sorted=descriptiveConditions.slice().sort((a,b)=>a.assignmentBlock-b.assignmentBlock || ['retirement','four_day_week','nuclear_power'].indexOf(a.topicKey)-['retirement','four_day_week','nuclear_power'].indexOf(b.topicKey) || a.groundingCount-b.groundingCount || a.modelKey.localeCompare(b.modelKey));
   for(const c of sorted) for(const d of definitions) {
-    descriptiveRows.push([c.assignmentBlock,{retirement:'Retirement age',four_day_week:'Four-day workweek',nuclear_power:'Nuclear power'}[c.topicKey]??c.topicTitle,c.actor,c.groundingCount,d.label,d.scale,...Array(8).fill(null),c.runId,c.modelKey,c.topicKey,d.id]);
+    descriptiveRows.push([c.assignmentBlock,generatorLabel(c.modelKey),{retirement:'Retirement age',four_day_week:'Four-day workweek',nuclear_power:'Nuclear power'}[c.topicKey]??c.topicTitle,c.actor,c.groundingCount,d.label,d.scale,...Array(8).fill(null),c.runId,c.modelKey,c.topicKey,d.id]);
     descriptiveSources.push({condition:c,definition:d});
   }
   const end=7+descriptiveRows.length;
   descriptiveSheet.showGridLines=false;descriptiveSheet.tabColor=navy;
-  descriptiveSheet.getRange(`A1:R${end}`).format={font:{name:font,size:10,color:ink},columnWidth:14,rowHeight:24,verticalAlignment:'center'};
-  descriptiveSheet.getRange('A2').values=[['Adversarial testing batch 2 — Luna']];
+  descriptiveSheet.getRange(`A1:S${end}`).format={font:{name:font,size:10,color:ink},columnWidth:14,rowHeight:24,verticalAlignment:'center'};
+  descriptiveSheet.getRange('A2').values=[['Adversarial testing batch 2 — '+[...new Set(descriptiveConditions.map(c=>generatorLabel(c.modelKey)))].join(' and ')]];
   descriptiveSheet.getRange('A2').format.font={name:font,size:16,bold:true,color:navy};
   descriptiveSheet.getRange('A4').values=[[`${descriptiveConditions.length} new debates; ${descriptiveConditions.length*25} speeches. Assignment blocks ${[...new Set(descriptiveConditions.map(c=>c.assignmentBlock))].join(', ')}.`]];
   descriptiveSheet.getRange('A5').values=[['Descriptive context: historical cooperative blocks 1–3 have different speaking orders. No matched controls or causal effects are claimed.']];
   descriptiveSheet.getRange('A6').values=[['Rubric n counts participant-topic ratings; local n counts speeches. Scores retain their separate scales; higher disruptive rhetoric means more disruption.']];
   descriptiveSheet.getRange('A4:A6').format.font={name:font,size:10,italic:true,color:muted};
-  descriptiveSheet.getRange(`A7:R${end}`).values=[descriptiveHeaders,...descriptiveRows];
-  descriptiveSheet.getRange('A7:R7').format={fill:navy,font:{name:font,size:10,bold:true,color:'#FFFFFF'},wrapText:true,rowHeight:62,horizontalAlignment:'center',verticalAlignment:'center'};
-  const widths=[12,24,16,12,22,12,12,13,16,17,12,13,17,18,40,27,22,27];
+  descriptiveSheet.getRange(`A7:S${end}`).values=[descriptiveHeaders,...descriptiveRows];
+  descriptiveSheet.getRange('A7:S7').format={fill:navy,font:{name:font,size:10,bold:true,color:'#FFFFFF'},wrapText:true,rowHeight:62,horizontalAlignment:'center',verticalAlignment:'center'};
+  const widths=[12,12,24,16,12,22,12,12,13,16,17,12,13,17,18,40,27,22,27];
   widths.forEach((width,i)=>{descriptiveSheet.getRange(`${letter(i+1)}1:${letter(i+1)}${end}`).format.columnWidth=width;});
-  descriptiveSheet.tables.add(`A7:R${end}`,true,'DescriptiveComparisons').style='TableStyleMedium2';
-  descriptiveSheet.freezePanes.freezeRows(7);descriptiveSheet.freezePanes.freezeColumns(4);
+  descriptiveSheet.tables.add(`A7:S${end}`,true,'DescriptiveComparisons').style='TableStyleMedium2';
+  descriptiveSheet.freezePanes.freezeRows(7);descriptiveSheet.freezePanes.freezeColumns(5);
   const quoted=text=>`"${text.replaceAll('"','""')}"`;
   const formulas=descriptiveSources.map(({condition:c,definition:d},i)=>{
     const r=i+8, key=d.key, source=sheetNames[key], last=key==='rubric'?rubEnd:speechEnd;
     const range=label=>`'${source}'!$${letter(column(key,label)+1)}$2:$${letter(column(key,label)+1)}$${last}`;
-    const common=[[range('Model key'),`$P${r}`],[range('Topic key'),`$Q${r}`],[range('Hansard excerpts'),`$D${r}`],[range('Generation outcome'),'"COMPLETE"'],[range('Evaluation group'),quoted(c.group)],
-      ...(key==='rubric'?[[range('Status'),'"OK"'],[range('Metric'),`$R${r}`]]:[[range(d.chunks),'">0"']])];
-    const subsets=[[[range('Run ID'),`$O${r}`],[range('Strategy role'),'"ASSIGNED"']],[[range('Strategy condition'),'"NONE"'],[range('Party'),`$C${r}`]],
-      [[range('Run ID'),`$O${r}`],[range('Strategy role'),'"OTHER"']],[[range('Strategy condition'),'"NONE"'],[range('Party'),`"<>"&$C${r}`]]];
-    return subsets.flatMap((subset,j)=>{const criteria=[...common,...subset].flat().join(','),countCol=letter(7+j*2);return [`=COUNTIFS(${criteria})`,`=IF($${countCol}${r}=0,"",SUMIFS(${range(d.value)},${criteria})/$${countCol}${r})`];});
+    const common=[[range('Model key'),`$Q${r}`],[range('Topic key'),`$R${r}`],[range('Hansard excerpts'),`$E${r}`],[range('Generation outcome'),'"COMPLETE"'],[range('Evaluation group'),quoted(c.group)],
+      ...(key==='rubric'?[[range('Status'),'"OK"'],[range('Metric'),`$S${r}`]]:[[range(d.chunks),'">0"']])];
+    const subsets=[[[range('Run ID'),`$P${r}`],[range('Strategy role'),'"ASSIGNED"']],[[range('Strategy condition'),'"NONE"'],[range('Party'),`$D${r}`]],
+      [[range('Run ID'),`$P${r}`],[range('Strategy role'),'"OTHER"']],[[range('Strategy condition'),'"NONE"'],[range('Party'),`"<>"&$D${r}`]]];
+    return subsets.flatMap((subset,j)=>{const criteria=[...common,...subset].flat().join(','),countCol=letter(8+j*2);return [`=COUNTIFS(${criteria})`,`=IF($${countCol}${r}=0,"",SUMIFS(${range(d.value)},${criteria})/$${countCol}${r})`];});
   });
-  descriptiveSheet.getRange(`G8:N${end}`).formulas=formulas;
-  for(const col of ['G','I','K','M']) descriptiveSheet.getRange(`${col}8:${col}${end}`).setNumberFormat('0');
-  for(const col of ['H','J','L','N']) descriptiveSheet.getRange(`${col}8:${col}${end}`).setNumberFormat('0.000');
+  descriptiveSheet.getRange(`H8:O${end}`).formulas=formulas;
+  for(const col of ['H','J','L','N']) descriptiveSheet.getRange(`${col}8:${col}${end}`).setNumberFormat('0');
+  for(const col of ['I','K','M','O']) descriptiveSheet.getRange(`${col}8:${col}${end}`).setNumberFormat('0.000');
 }
 stage('formulas-and-charts');
 wb.recalculate();
@@ -408,7 +420,7 @@ for(let i=0;i<combinations.length;i++) {
   expected.forEach((value,j)=>{if(value===''?summaryValues[i][j]!=='' && summaryValues[i][j]!==null:Math.abs(summaryValues[i][j]-value)>1e-9) throw new Error('Summary mean disagrees with public scores');});
 }
 if(descriptiveSheet) {
-  const actual=descriptiveSheet.getRange(`G8:N${7+descriptiveRows.length}`).values;
+  const actual=descriptiveSheet.getRange(`H8:O${7+descriptiveRows.length}`).values;
   descriptiveSources.forEach(({condition:c,definition:d},i)=>{
     const key=d.key, rows=records[key], at=label=>column(key,label);
     const valid=rows.filter(r=>r[at('Model key')]===c.modelKey && r[at('Topic key')]===c.topicKey && r[at('Hansard excerpts')]===c.groundingCount && r[at('Generation outcome')]==='COMPLETE' && r[at('Evaluation group')]===c.group && (key==='rubric'?r[at('Status')]==='OK' && r[at('Metric')]===d.id:r[at(d.chunks)]>0));
@@ -416,7 +428,7 @@ if(descriptiveSheet) {
       valid.filter(r=>r[at('Run ID')]===c.runId && r[at('Strategy role')]==='OTHER'),valid.filter(r=>r[at('Strategy condition')]==='NONE' && r[at('Party')]!==c.actor)];
     const expected=subsets.flatMap(selected=>[selected.length,selected.length?selected.reduce((sum,r)=>sum+r[at(d.value)],0)/selected.length:'']);
     expected.forEach((value,j)=>{if(value===''?actual[i][j]!=='' && actual[i][j]!==null:typeof actual[i][j]!=='number' || Math.abs(actual[i][j]-value)>1e-9) throw new Error('Descriptive comparison disagrees with public evidence');});
-    descriptiveRows[i].splice(6,8,...actual[i]);
+    descriptiveRows[i].splice(7,8,...actual[i]);
   });
 }
 // Supply saved numeric chart caches as well as editable source references.
@@ -457,7 +469,7 @@ for(const batchArgument of batchArguments) {
 if(descriptiveRows.length) {
   const quote=value=>value==null?'':typeof value==='string'?`"${value.replaceAll('"','""')}"`:String(value);
   await fs.writeFile(path.join(output,'descriptive-comparisons.csv'),[descriptiveHeaders,...descriptiveRows].map(row=>row.map(quote).join(',')).join('\r\n'),'utf8');
-  const preview=await wb.render({sheetName:'Batch 2 descriptive',range:'A1:N18',scale:1.25,format:'png'});
+  const preview=await wb.render({sheetName:'Batch 2 descriptive',range:'A1:O24',scale:1.25,format:'png'});
   await fs.writeFile(path.join(output,'preview-Batch-2-descriptive.png'),new Uint8Array(await preview.arrayBuffer()));
 }
 for(const [key,rows] of Object.entries(records)) {
@@ -473,6 +485,11 @@ if(descriptiveRows.length) for(const key of ['runs','rubric','speeches','sentenc
   const start=letter(column(key,'Assignment block')+1),end=letter(column(key,'Comparison mode')+1);
   const preview=await wb.render({sheetName:sheetNames[key],range:`${start}1:${end}7`,scale:1.5,format:'png'});
   await fs.writeFile(path.join(output,`preview-blocks-${key}.png`),new Uint8Array(await preview.arrayBuffer()));
+}
+if(descriptiveRows.length) for(const [key,[left,right]] of Object.entries({runs:['C','T'],rubric:['C','M'],speeches:['C','Q'],sentences:['C','Z'],assignments:['D','O'],usage:['C','N'],protocol:['A','C']})) {
+  const end=records[key].length+1, start=Math.max(2,end-4);
+  const preview=await wb.render({sheetName:sheetNames[key],range:`${left}${start}:${right}${end}`,scale:1.25,format:'png'});
+  await fs.writeFile(path.join(output,`preview-added-${key}.png`),new Uint8Array(await preview.arrayBuffer()));
 }
 for(const row of [...new Set(chartDefinitions.map(c=>c.row))]) {
   const preview=await wb.render({sheetName:'Summary',range:`A${row}:P${row+15}`,scale:1,format:'png'});
