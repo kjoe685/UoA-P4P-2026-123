@@ -1,4 +1,4 @@
-"""Freeze one explicitly requested study batch; never reads or copies credentials."""
+"""Freeze an explicitly selected study batch; never reads or copies credentials."""
 import argparse
 from datetime import datetime
 import hashlib
@@ -20,6 +20,49 @@ def assignment_key(cell):
     return tuple(sorted((m["party"], m["strategy"]) for m in cell["settings"]["members"]))
 
 
+def condition_key(cell):
+    block = cell.get("assignmentBlock", cell["repetition"])
+    if block != cell["repetition"]:
+        raise SystemExit("Assignment block must agree with legacy repetition ID")
+    return (cell["modelPreset"], cell["topicKey"], cell["groundingCount"], block, assignment_key(cell))
+
+
+def selected_blocks(args):
+    if args.comparison_mode == "descriptive" and args.treatment == "baseline":
+        raise SystemExit("Descriptive comparison mode requires an adversarial treatment")
+    if args.assignment_blocks is not None:
+        if args.treatment == "baseline":
+            raise SystemExit("Assignment blocks require an adversarial treatment")
+        if args.first_repetition != 1 or args.repetitions != 1:
+            raise SystemExit("Use assignment blocks separately from legacy repetition selection")
+        if len(args.assignment_blocks) != len(set(args.assignment_blocks)):
+            raise SystemExit("Duplicate assignment blocks requested")
+        return list(args.assignment_blocks)
+    if args.first_repetition + args.repetitions - 1 > 5:
+        raise SystemExit("Repetition IDs must stay between 1 and 5")
+    return list(range(args.first_repetition, args.first_repetition + args.repetitions))
+
+
+def verify_resources(root, hashes):
+    for relative, expected in hashes.items():
+        file = root / relative
+        if not file.is_file() or hashlib.sha256(file.read_bytes()).hexdigest() != expected:
+            raise SystemExit("Previous frozen study resource changed")
+
+
+def check_new_conditions(blocks, generators, treatment, conditions):
+    for block in blocks:
+        for topic in ADVERSARIAL_ASSIGNMENTS:
+            # The condition identity includes the assignment, independently of speaking order.
+            members = members_for(["LABOUR", "NATIONAL", "GREEN", "ACT", "NZ_FIRST"], topic, block, treatment)
+            for grounding in [0, 10, 100]:
+                for preset in set(generators):
+                    cell = {"modelPreset": preset, "topicKey": topic, "groundingCount": grounding,
+                            "repetition": block, "settings": {"members": members}}
+                    if condition_key(cell) in conditions:
+                        raise SystemExit("Duplicate study condition requested from prior batch lineage")
+
+
 def members_for(order, topic, repetition, treatment):
     strategy, actors = ADVERSARIAL_ASSIGNMENTS[topic]
     actor = actors[repetition - 1] if treatment == "adversarial-topic-v1" else None
@@ -31,9 +74,11 @@ def write(path, value):
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-def previous_repetitions(previous, treatment="baseline", controls=None):
+def previous_repetitions(previous, treatment="baseline", controls=None, conditions=None):
     """Follow all usage, with repetition counts specific to generator and treatment."""
-    counts, seen, conditions = {}, set(), set()
+    counts, seen = {}, set()
+    if conditions is None:
+        conditions = set()
     current = previous
     while current:
         current = current.resolve()
@@ -43,8 +88,10 @@ def previous_repetitions(previous, treatment="baseline", controls=None):
         manifest = json.loads((current / "manifest.json").read_text(encoding="utf-8"))
         if manifest["state"] not in {"COLLECTED", "ANALYZED"} or any(c["state"] != "COMPLETE" for c in manifest["cells"]):
             raise SystemExit("Every prior batch must be complete before extending the study")
+        if "frozenSourceHashes" in manifest:
+            verify_resources(current / "application", manifest["frozenSourceHashes"])
         for cell in manifest["cells"]:
-            condition = (cell["modelPreset"], cell["topicKey"], cell["groundingCount"], cell["repetition"], assignment_key(cell))
+            condition = condition_key(cell)
             if condition in conditions:
                 raise SystemExit("Duplicate study condition in prior batch lineage")
             conditions.add(condition)
@@ -69,12 +116,14 @@ def main():
     parser.add_argument("--generators", nargs="+", choices=["study-luna", "study-qwen"], default=["study-qwen", "study-luna"])
     parser.add_argument("--previous-batch", type=Path)
     parser.add_argument("--treatment", choices=TREATMENTS, default="baseline")
+    parser.add_argument("--assignment-blocks", nargs="+", type=int, choices=range(1, 6),
+                        help="Explicit actor/order blocks; legacy repetition selection remains the default")
+    parser.add_argument("--comparison-mode", choices=["matched", "descriptive"], default="matched")
     parser.add_argument("--budget-mode", choices=["fixed-usd", "prepaid-account"],
                         help="Use prepaid-account only when the user authorizes the loaded account balance")
     args = parser.parse_args()
     date_local = datetime.now(ZoneInfo("Pacific/Auckland")).date().isoformat()
-    if args.first_repetition + args.repetitions - 1 > 5:
-        raise SystemExit("Repetition IDs must stay between 1 and 5")
+    blocks = selected_blocks(args)
     repo, batch = args.repository.resolve(), args.batch.resolve()
     if batch.exists():
         raise SystemExit("Batch already exists; inspect its manifest instead of overwriting it")
@@ -89,14 +138,16 @@ def main():
     resource_source = repo
     repetition_history = {}
     controls = {}
+    conditions = set()
     budget_mode = args.budget_mode or "fixed-usd"
     if previous:
         previous_manifest = json.loads((previous / "manifest.json").read_text(encoding="utf-8"))
         if previous_manifest["state"] not in {"COLLECTED", "ANALYZED"} or any(c["state"] != "COMPLETE" for c in previous_manifest["cells"]):
             raise SystemExit("Previous batch must be complete before extending the study")
-        repetition_history = previous_repetitions(previous, args.treatment, controls)
-        if any(args.first_repetition != repetition_history.get(preset, 0) + 1 for preset in set(args.generators)):
+        repetition_history = previous_repetitions(previous, args.treatment, controls, conditions)
+        if args.assignment_blocks is None and any(args.first_repetition != repetition_history.get(preset, 0) + 1 for preset in set(args.generators)):
             raise SystemExit("Additional repetition IDs must follow each selected generator's prior repetitions")
+        check_new_conditions(blocks, args.generators, args.treatment, conditions)
         previous_ledger = json.loads((previous / "operations/usage.json").read_text(encoding="utf-8"))
         prior_committed = previous_manifest.get("priorBudgetCommittedUsd", 0) + sum(c["budgetUsd"] for c in previous_ledger["calls"])
         inherited_limit = previous_manifest.get("cumulativeBudgetLimitUsd", previous_manifest["budgetLimitUsd"])
@@ -104,11 +155,9 @@ def main():
         if budget_mode == "fixed-usd" and prior_committed >= global_limit:
             raise SystemExit("No cumulative study allowance remains")
         resource_source = previous / "application"
-        for relative, expected in previous_manifest["frozenSourceHashes"].items():
-            if hashlib.sha256((resource_source / relative).read_bytes()).hexdigest() != expected:
-                raise SystemExit("Previous frozen study resource changed")
-        if args.treatment != "baseline":
-            for repetition in range(args.first_repetition, args.first_repetition + args.repetitions):
+        verify_resources(resource_source, previous_manifest["frozenSourceHashes"])
+        if args.treatment != "baseline" and args.comparison_mode == "matched":
+            for repetition in blocks:
                 for topic in ADVERSARIAL_ASSIGNMENTS:
                     for grounding in [0, 10, 100]:
                         for preset in set(args.generators):
@@ -160,7 +209,7 @@ def main():
     parties = ["LABOUR", "NATIONAL", "GREEN", "ACT", "NZ_FIRST"]
     cells = []
     # Start the largest local condition first, as part of the requested data, to establish feasibility.
-    for repetition in range(args.first_repetition, args.first_repetition + args.repetitions):
+    for repetition in blocks:
         for ti, (topic_key, title, target) in enumerate(topics):
             rotation = (ti + repetition - 1) % len(parties)
             order = parties[rotation:] + parties[:rotation]
@@ -171,6 +220,9 @@ def main():
                     settings = {"topics": [{"title": title, "policyTarget": target}], "rounds": 5, "groundingCount": grounding, "agentModelPreset": preset, "evaluatorModelPreset": "study-judge", "members": members_for(order, topic_key, repetition, args.treatment)}
                     cell = {"cellId": cell_id, "topicKey": topic_key, "topicTitle": title, "policyTarget": target, "groundingCount": grounding, "repetition": repetition, "modelPreset": preset, "speakingOrder": order, "settings": settings, "state": "PENDING"}
                     if args.treatment != "baseline":
+                        cell["assignmentBlock"] = repetition
+                    cell["comparisonMode"] = args.comparison_mode
+                    if args.treatment != "baseline" and args.comparison_mode == "matched":
                         control_batch, control_manifest, control = controls[(preset, topic_key, grounding, repetition)]
                         baseline_settings = {**settings, "members": [{"party": p, "strategy": "NONE"} for p in order]}
                         if baseline_settings != control["settings"] or control_manifest["models"] != {p: engine["models"][p] for p in ["study-luna", "study-qwen", "study-judge"]}:
@@ -183,8 +235,14 @@ def main():
     frozen = {f.relative_to(root).as_posix(): hashlib.sha256(f.read_bytes()).hexdigest() for f in root.rglob("*") if f.is_file() and ".runtime" not in f.parts and ".models" not in f.parts}
     manifest = {"schemaVersion": 1, "batchId": batch.name, "state": "PREPARED", "dateLocal": date_local, "timezone": "Pacific/Auckland", "sourceCommit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=repo, text=True).strip(), "repetitions": args.repetitions, "expectedDebates": len(cells), "expectedSpeeches": len(cells) * 25, "budgetLimitUsd": 4.50, "standardInputUsdPerMillion": 0.10, "standardOutputUsdPerMillion": 0.50, "budgetInputUsdPerMillion": 0.275, "budgetOutputUsdPerMillion": 1.10, "pricingSource": "https://developers.openai.com/api/docs/models/gpt-6-luna", "budgetMethod": "UTF-8 serialized request bytes plus 4096 protocol tokens bound input; full output cap reserved before dispatch. Short-context fast/cache-write/regional prices conservatively covered. Reported usage releases unused reservation; errors or missing usage retain full reservation. No automatic retries.", "models": {p: engine["models"][p] for p in ["study-luna", "study-qwen", "study-judge"]}, "localReasoning": "Disabled: Ollama think=false, frozen thinkingEnabled=false", "ollamaContextTokens": 131072, "ollamaEnvironment": {"OLLAMA_FLASH_ATTENTION": "1", "OLLAMA_KV_CACHE_TYPE": "q4_0", "OLLAMA_NUM_PARALLEL": "1", "OLLAMA_NO_CLOUD": "1"}, "ollamaExecutable": str(fixture / ".runtime/ollama-0.35.0-windows-amd64/ollama.exe"), "ollamaModels": str(fixture / ".runtime/ollama-models"), "originalSourceHashes": originals, "frozenSourceHashes": frozen, "cells": cells}
     manifest["localReasoning"] = "Disabled: Ollama think=false, frozen thinkingEnabled=false"
-    manifest["firstRepetition"] = args.first_repetition
-    manifest["lastRepetition"] = args.first_repetition + args.repetitions - 1
+    manifest["repetitions"] = len(blocks)
+    manifest["firstRepetition"] = min(blocks)
+    manifest["lastRepetition"] = max(blocks)
+    manifest["comparisonMode"] = args.comparison_mode
+    if args.treatment != "baseline":
+        manifest["assignmentBlocks"] = blocks
+    if args.comparison_mode == "descriptive":
+        manifest["comparisonNote"] = "Existing cooperative results provide descriptive context; speaking orders differ and no matched controls are claimed."
     manifest["ollamaThinkingEnabled"] = False
     manifest["rawOutputRetention"] = "Original judge reply text per attempt and native local method batches, plus complete public transcripts and evaluation reports"
     manifest["nlpRuntimeSource"] = str(nlp_cache)
